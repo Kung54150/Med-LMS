@@ -14,49 +14,103 @@
   *{box-sizing:border-box}
   body{margin:0;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;
        font-family:'Segoe UI','Noto Sans Thai',Tahoma,sans-serif;background:#f4f6fb;color:#1f2937;padding:32px 20px;}
-  img.logo{width:132px;height:132px;border-radius:28px;box-shadow:0 8px 24px rgba(31,41,55,.14);background:#fff}
-  h1{font-size:20px;margin:22px 0 6px;font-weight:700}
-  p{margin:0;color:#6b7280;font-size:14px;line-height:1.7;text-align:center;max-width:320px}
+  img.logo{width:128px;height:128px;border-radius:28px;box-shadow:0 8px 24px rgba(31,41,55,.14);background:#fff}
+  h1{font-size:20px;margin:20px 0 6px;font-weight:700}
+  p.sub{margin:0;color:#6b7280;font-size:14px;line-height:1.7;text-align:center;max-width:330px}
   .spin{width:22px;height:22px;border:3px solid #e5e7eb;border-top-color:#2563eb;border-radius:50%;
-        animation:s .8s linear infinite;margin:26px 0 0}
+        animation:s .8s linear infinite;margin:24px 0 0}
   @keyframes s{to{transform:rotate(360deg)}}
-  a.btn{display:none;margin-top:24px;padding:13px 28px;background:#2563eb;color:#fff;border-radius:10px;
-        text-decoration:none;font-weight:700;font-size:15px}
-  a.btn.show{display:inline-block}
-  .hint{margin-top:20px;font-size:12.5px;color:#9ca3af}
+  .btns{display:none;flex-direction:column;gap:10px;margin-top:24px;width:100%;max-width:300px}
+  .btns.show{display:flex}
+  .b{display:block;text-align:center;padding:13px 22px;border-radius:11px;text-decoration:none;
+     font-weight:700;font-size:15px;border:none;cursor:pointer;font-family:inherit}
+  .b1{background:#2563eb;color:#fff}
+  .b2{background:#fff;color:#2563eb;border:1.5px solid #bfdbfe}
+  .hint{margin-top:18px;font-size:12.5px;color:#9ca3af;text-align:center;line-height:1.7;max-width:320px}
 </style>
 </head>
 <body>
   <img class="logo" src="icon-512.png" alt="Med-LMS">
   <h1>Med-LMS</h1>
-  <p>ระบบสะสมการเรียนรู้พนักงาน<br>กำลังเปิดระบบ กรุณารอสักครู่…</p>
+  <p class="sub" id="sub">ระบบสะสมการเรียนรู้พนักงาน<br>กำลังเปิดระบบ กรุณารอสักครู่…</p>
   <div class="spin" id="sp"></div>
-  <a class="btn" id="go" href="#">เปิดระบบ Med-LMS</a>
+
+  <div class="btns" id="btns">
+    <button class="b b1" id="btnInstall" style="display:none">📲 ติดตั้งเป็นแอปบนหน้าจอ</button>
+    <a class="b b2" id="btnGo" href="#">→ เข้าระบบเลย</a>
+  </div>
   <div class="hint" id="hint"></div>
 
 <script>
 /* ================================================================
-   วางลิงก์ Web App ของคุณตรงนี้ (ตัวที่ลงท้ายด้วย /exec)
+   ลิงก์ Web App (ตัวที่ลงท้ายด้วย /exec)
    ================================================================ */
 const APP_URL = 'https://script.google.com/macros/s/AKfycbzwfJ_oxmVge5tdkR-GZhtma6-Ny_zGLk_j1rVY8p1PzqHQV5Gytwr0tu_wnzClpYwsAQ/exec';
-// จดทะเบียน service worker — เงื่อนไขที่ทำให้ Chrome ยอมให้ "ติดตั้ง" เป็นแอปจริง
+
+var sp    = document.getElementById('sp');
+var sub   = document.getElementById('sub');
+var btns  = document.getElementById('btns');
+var hint  = document.getElementById('hint');
+var bGo   = document.getElementById('btnGo');
+var bIns  = document.getElementById('btnInstall');
+
+bGo.href = APP_URL;
+
+var deferredPrompt = null;
+var redirectTimer  = null;
+var cancelled      = false;
+
+/* เปิดจากไอคอนที่ติดตั้งแล้ว = เข้าระบบทันที ไม่ต้องถามอะไร */
+var standalone = window.matchMedia('(display-mode: standalone)').matches
+              || window.navigator.standalone === true;
+
+/* ?go=1 = ข้ามทุกอย่าง เข้าระบบเลย (ใช้ตอนแจกลิงก์ให้พนักงานที่ไม่อยากติดตั้ง) */
+var forceGo = location.search.indexOf('go=1') !== -1;
+
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('sw.js').catch(function(){});
+  navigator.serviceWorker.register('sw.js').catch(function () {});
 }
 
-var ready = APP_URL.indexOf('XXXXXXX') === -1;
-document.getElementById('go').href = APP_URL;
+function goNow() { window.location.replace(APP_URL); }
 
-if (!ready) {
-  document.getElementById('sp').style.display = 'none';
-  document.getElementById('hint').textContent = 'ยังไม่ได้ตั้งค่าลิงก์ — แก้ค่า APP_URL ในไฟล์ index.html';
+function cancelRedirect() {
+  cancelled = true;
+  if (redirectTimer) clearTimeout(redirectTimer);
+  sp.style.display = 'none';
+  btns.className = 'btns show';
+}
+
+/* Chrome บอกว่าติดตั้งเป็นแอปได้ → หยุดการวิ่งเข้าระบบ แล้วเสนอปุ่มติดตั้ง */
+window.addEventListener('beforeinstallprompt', function (e) {
+  e.preventDefault();
+  deferredPrompt = e;
+  if (standalone || forceGo) return;
+  cancelRedirect();
+  bIns.style.display = 'block';
+  sub.innerHTML = 'ระบบสะสมการเรียนรู้พนักงาน<br>ติดตั้งเป็นแอปเพื่อให้ได้ไอคอนสะอาด ไม่มีตราเบราว์เซอร์';
+  hint.textContent = 'ติดตั้งครั้งเดียว ครั้งต่อไปกดไอคอนเข้าได้เลย';
+});
+
+bIns.addEventListener('click', function () {
+  if (!deferredPrompt) return;
+  deferredPrompt.prompt();
+  deferredPrompt.userChoice.then(function () { deferredPrompt = null; });
+});
+
+window.addEventListener('appinstalled', function () {
+  hint.textContent = 'ติดตั้งเรียบร้อย กำลังเข้าระบบ…';
+  bIns.style.display = 'none';
+  setTimeout(goNow, 800);
+});
+
+/* เข้าระบบอัตโนมัติ — เว้นเวลาให้ Chrome ตัดสินใจเรื่องปุ่มติดตั้งก่อน */
+if (standalone || forceGo) {
+  redirectTimer = setTimeout(goNow, 500);
 } else {
-  setTimeout(function(){ window.location.replace(APP_URL); }, 900);
-  setTimeout(function(){
-    document.getElementById('sp').style.display = 'none';
-    document.getElementById('go').className = 'btn show';
-    document.getElementById('hint').textContent = 'ถ้าไม่เปลี่ยนหน้าอัตโนมัติ ให้กดปุ่มด้านบน';
-  }, 4000);
+  redirectTimer = setTimeout(function () { if (!cancelled) goNow(); }, 2600);
+  setTimeout(function () {
+    if (!cancelled) { btns.className = 'btns show'; hint.textContent = 'ถ้าไม่เปลี่ยนหน้าอัตโนมัติ ให้กดปุ่มด้านบน'; }
+  }, 5000);
 }
 </script>
 </body>
