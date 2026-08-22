@@ -38,8 +38,7 @@
 /* ================================================================
    วางลิงก์ Web App ของคุณตรงนี้ (ตัวที่ลงท้ายด้วย /exec)
    ================================================================ */
-https://script.google.com/macros/s/AKfycbzwfJ_oxmVge5tdkR-GZhtma6-Ny_zGLk_j1rVY8p1PzqHQV5Gytwr0tu_wnzClpYwsAQ/exec';
-
+const APP_URL = 'https://script.google.com/macros/s/AKfycbzwfJ_oxmVge5tdkR-GZhtma6-Ny_zGLk_j1rVY8p1PzqHQV5Gytwr0tu_wnzClpYwsAQ/exec';
 // จดทะเบียน service worker — เงื่อนไขที่ทำให้ Chrome ยอมให้ "ติดตั้ง" เป็นแอปจริง
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('sw.js').catch(function(){});
