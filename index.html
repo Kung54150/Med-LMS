@@ -111,6 +111,12 @@ var oneSignalStarted = false;
 var isStandalone = window.matchMedia('(display-mode: standalone)').matches ||
                    window.navigator.standalone === true;
 var isIOS        = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+
+/* ตรวจว่ากำลังเปิดอยู่ในเบราว์เซอร์ที่ฝังมากับแอปแชท (LINE, Facebook, IG ฯลฯ)
+   เบราว์เซอร์พวกนี้รับการแจ้งเตือนไม่ได้ ต้องบอกให้ผู้ใช้เปิดด้วยเบราว์เซอร์จริงก่อน
+   ไม่งั้นจะกดปุ่มแล้วค้างโดยไม่รู้สาเหตุ */
+var isInAppBrowser = /\bLine\//i.test(navigator.userAgent) ||
+                     /FBAN|FBAV|FB_IAB|Instagram|Messenger|MicroMessenger|TikTok/i.test(navigator.userAgent);
 var hasOneSignal = ONESIGNAL_APP_ID.indexOf('PASTE-') === -1;
 var appReady     = APP_URL.indexOf('XXXXXXX') === -1;
 
@@ -183,6 +189,29 @@ function askPermission() {
 }
 
 
+/* ---------- รอจนกว่า OneSignal จะลงทะเบียนเครื่องนี้เสร็จจริง ----------
+   สำคัญมาก: หลังผู้ใช้กดอนุญาต OneSignal ยังต้องคุยกับเซิร์ฟเวอร์อีกครู่หนึ่ง
+   ถ้าเปลี่ยนหน้าไปก่อน การลงทะเบียนจะถูกตัดกลางคัน และเครื่องจะไม่ได้รับแจ้งเตือนเลย
+   คืนค่า true ถ้าลงทะเบียนสำเร็จ, false ถ้ารอเกิน 15 วินาทีแล้วยังไม่สำเร็จ */
+function waitForSubscription() {
+  return new Promise(function (resolve) {
+    var tries = 0;
+    var timer = setInterval(function () {
+      tries++;
+      try {
+        if (window.OneSignal && OneSignal.User && OneSignal.User.PushSubscription &&
+            OneSignal.User.PushSubscription.id) {
+          clearInterval(timer);
+          resolve(true);
+          return;
+        }
+      } catch (e) { /* SDK ยังไม่พร้อม รอรอบหน้า */ }
+      if (tries >= 30) { clearInterval(timer); resolve(false); }
+    }, 500);
+  });
+}
+
+
 /* ---------- เข้าสู่ระบบ Apps Script ---------- */
 function go() {
   window.location.replace(APP_URL);
@@ -219,7 +248,19 @@ function openSettings() {
   var perm = ('Notification' in window) ? Notification.permission : 'unsupported';
   var badge = $('setStatus'), hint = $('setHint'), btn = $('btnAllow2');
 
-  if (!hasOneSignal) {
+  /* คืนสภาพปุ่มทุกครั้งที่เปิดหน้านี้ ไม่งั้นถ้าขอสิทธิ์ไม่สำเร็จ
+     ปุ่มจะค้างอยู่ที่ข้อความ "กำลังเปิด…" และกดซ้ำไม่ได้ */
+  btn.disabled = false;
+  btn.textContent = 'เปิดการแจ้งเตือน';
+
+  if (isInAppBrowser && !isStandalone) {
+    badge.className = 'status off';
+    badge.textContent = 'ต้องเปิดด้วยเบราว์เซอร์ก่อน';
+    hint.innerHTML = 'ตอนนี้กำลังเปิดอยู่ในแอปแชท (เช่น LINE) ซึ่งรับการแจ้งเตือนไม่ได้<br><br>' +
+                     'กดปุ่ม <b>⋮</b> หรือ <b>•••</b> ที่มุมจอ แล้วเลือก <b>เปิดในเบราว์เซอร์</b><br>' +
+                     'จากนั้นค่อยเพิ่มลงหน้าจอโฮมและเปิดการแจ้งเตือน';
+    btn.className = 'btn hide';
+  } else if (!hasOneSignal) {
     badge.className = 'status ask';
     badge.textContent = 'ยังไม่ได้ตั้งค่าระบบแจ้งเตือน';
     hint.textContent = 'ผู้ดูแลระบบยังไม่ได้ใส่ OneSignal App ID ในไฟล์ index.html';
@@ -231,10 +272,28 @@ function openSettings() {
                      'กดปุ่มแชร์ <b>&#x2934;</b> ใน Safari แล้วเลือก <b>Add to Home Screen</b>';
     btn.className = 'btn hide';
   } else if (perm === 'granted') {
-    badge.className = 'status on';
-    badge.textContent = '✔ เปิดการแจ้งเตือนอยู่';
-    hint.textContent = 'เมื่อมีบทเรียนใหม่ จะมีตัวเลขขึ้นบนไอคอน Med-LMS';
+    /* อนุญาตแล้วยังไม่พอ ต้องเช็คด้วยว่าลงทะเบียนกับเซิร์ฟเวอร์สำเร็จหรือไม่
+       เพราะถ้าลงทะเบียนไม่ผ่าน เครื่องนี้จะไม่ได้รับแจ้งเตือนแม้จะกดอนุญาตแล้วก็ตาม */
+    badge.className = 'status ask';
+    badge.textContent = 'กำลังตรวจสอบการลงทะเบียน…';
+    hint.textContent = 'กรุณารอสักครู่ อย่าเพิ่งปิดหน้านี้';
     btn.className = 'btn hide';
+
+    startOneSignal().then(waitForSubscription).then(function (ok) {
+      if (ok) {
+        badge.className = 'status on';
+        badge.textContent = '✔ พร้อมรับการแจ้งเตือนแล้ว';
+        hint.textContent = 'เมื่อมีบทเรียนใหม่ จะมีตัวเลขขึ้นบนไอคอน Med-LMS';
+        btn.className = 'btn hide';
+      } else {
+        badge.className = 'status off';
+        badge.textContent = 'อนุญาตแล้ว แต่ลงทะเบียนไม่สำเร็จ';
+        hint.innerHTML = 'ลองกดปุ่มด้านล่างอีกครั้ง<br>' +
+                         'ถ้ายังไม่ได้ ให้ปิดแอปแล้วเปิดใหม่ หรือลบไอคอนแล้วติดตั้งใหม่';
+        btn.className = 'btn';
+        btn.textContent = 'ลองลงทะเบียนอีกครั้ง';
+      }
+    });
   } else if (perm === 'denied') {
     badge.className = 'status off';
     badge.textContent = '✘ ถูกปิดการแจ้งเตือนไว้';
@@ -279,10 +338,13 @@ function openSettings() {
   $('btnBack').onclick = go;
 
   $('btnAllow').onclick = function () {
-    this.disabled = true;
-    this.textContent = 'กำลังเปิด…';
+    var b = this;
+    b.disabled = true;
+    b.textContent = 'กำลังเปิด…';
     try { localStorage.setItem('ml_asked', '1'); } catch (e) {}
-    askPermission().then(go);
+    askPermission()
+      .then(function () { b.textContent = 'กำลังลงทะเบียน…'; return waitForSubscription(); })
+      .then(go);
   };
 
   $('btnSkip').onclick = function () {
@@ -293,7 +355,7 @@ function openSettings() {
   $('btnAllow2').onclick = function () {
     this.disabled = true;
     this.textContent = 'กำลังเปิด…';
-    askPermission().then(openSettings);
+    askPermission().then(openSettings);   /* openSettings จะรอผลลงทะเบียนและรายงานให้เอง */
   };
 
   /* เปิดหน้าตั้งค่าโดยตรงด้วยลิงก์ ...?settings=1 */
