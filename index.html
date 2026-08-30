@@ -14,104 +14,306 @@
   *{box-sizing:border-box}
   body{margin:0;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;
        font-family:'Segoe UI','Noto Sans Thai',Tahoma,sans-serif;background:#f4f6fb;color:#1f2937;padding:32px 20px;}
-  img.logo{width:128px;height:128px;border-radius:28px;box-shadow:0 8px 24px rgba(31,41,55,.14);background:#fff}
-  h1{font-size:20px;margin:20px 0 6px;font-weight:700}
-  p.sub{margin:0;color:#6b7280;font-size:14px;line-height:1.7;text-align:center;max-width:330px}
+  img.logo{width:132px;height:132px;border-radius:28px;box-shadow:0 8px 24px rgba(31,41,55,.14);background:#fff}
+  h1{font-size:20px;margin:22px 0 6px;font-weight:700}
+  p{margin:0;color:#6b7280;font-size:14px;line-height:1.7;text-align:center;max-width:340px}
   .spin{width:22px;height:22px;border:3px solid #e5e7eb;border-top-color:#2563eb;border-radius:50%;
-        animation:s .8s linear infinite;margin:24px 0 0}
+        animation:s .8s linear infinite;margin:26px 0 0}
   @keyframes s{to{transform:rotate(360deg)}}
-  .btns{display:none;flex-direction:column;gap:10px;margin-top:24px;width:100%;max-width:300px}
-  .btns.show{display:flex}
-  .b{display:block;text-align:center;padding:13px 22px;border-radius:11px;text-decoration:none;
-     font-weight:700;font-size:15px;border:none;cursor:pointer;font-family:inherit}
-  .b1{background:#2563eb;color:#fff}
-  .b2{background:#fff;color:#2563eb;border:1.5px solid #bfdbfe}
-  .hint{margin-top:18px;font-size:12.5px;color:#9ca3af;text-align:center;line-height:1.7;max-width:320px}
+  a.btn,button.btn{display:inline-block;margin-top:22px;padding:13px 28px;background:#2563eb;color:#fff;border:none;
+        border-radius:10px;text-decoration:none;font-weight:700;font-size:15px;font-family:inherit;cursor:pointer}
+  button.btn.ghost{background:#fff;color:#4b5563;border:1px solid #d1d5db;margin-top:10px}
+  .hint{margin-top:20px;font-size:12.5px;color:#9ca3af;text-align:center;max-width:320px;line-height:1.7}
+  .hide{display:none!important}
+  .card{background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:26px 24px;max-width:380px;width:100%;
+        text-align:center;box-shadow:0 4px 18px rgba(31,41,55,.07);margin-top:24px}
+  .card .bell{font-size:40px;line-height:1}
+  .card h2{font-size:17px;margin:12px 0 8px;font-weight:700}
+  .card p{max-width:none}
+  .status{display:inline-block;margin-top:14px;padding:6px 14px;border-radius:20px;font-size:12.5px;font-weight:700}
+  .status.on{background:#dcfce7;color:#166534}
+  .status.off{background:#fee2e2;color:#991b1b}
+  .status.ask{background:#fef3c7;color:#92400e}
+  .gear{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);font-size:13px;color:#9ca3af;
+        background:none;border:none;font-family:inherit;cursor:pointer;padding:8px 14px}
+  .gear:hover{color:#2563eb}
 </style>
 </head>
 <body>
+
   <img class="logo" src="icon-512.png" alt="Med-LMS">
   <h1>Med-LMS</h1>
-  <p class="sub" id="sub">ระบบสะสมการเรียนรู้พนักงาน<br>กำลังเปิดระบบ กรุณารอสักครู่…</p>
-  <div class="spin" id="sp"></div>
 
-  <div class="btns" id="btns">
-    <button class="b b1" id="btnInstall" style="display:none">📲 ติดตั้งเป็นแอปบนหน้าจอ</button>
-    <a class="b b2" id="btnGo" href="#">→ เข้าระบบเลย</a>
+  <!-- ---------- หน้าจอปกติ: กำลังเข้าระบบ ---------- -->
+  <div id="viewLoad">
+    <p>ระบบสะสมการเรียนรู้พนักงาน<br>กำลังเปิดระบบ กรุณารอสักครู่…</p>
+    <div style="display:flex;justify-content:center"><div class="spin" id="sp"></div></div>
+    <div style="text-align:center"><a class="btn hide" id="go" href="#">เปิดระบบ Med-LMS</a></div>
+    <div class="hint" id="hint"></div>
   </div>
-  <div class="hint" id="hint"></div>
+
+  <!-- ---------- หน้าจอชวนเปิดการแจ้งเตือน (แสดงครั้งแรกครั้งเดียว) ---------- -->
+  <div id="viewAsk" class="card hide">
+    <div class="bell">🔔</div>
+    <h2>เปิดการแจ้งเตือนบทเรียนใหม่</h2>
+    <p>เมื่อมีบทเรียนใหม่เผยแพร่ ระบบจะเด้งแจ้งเตือน<br>และขึ้นตัวเลขสีแดงบนไอคอน Med-LMS ให้ทันที</p>
+    <button class="btn" id="btnAllow">เปิดการแจ้งเตือน</button>
+    <button class="btn ghost" id="btnSkip">ข้ามไปก่อน</button>
+  </div>
+
+  <!-- ---------- หน้าจอตั้งค่าการแจ้งเตือน (กดจากปุ่มเฟือง) ---------- -->
+  <div id="viewSet" class="card hide">
+    <div class="bell">⚙️</div>
+    <h2>ตั้งค่าการแจ้งเตือน</h2>
+    <div id="setStatus" class="status ask">กำลังตรวจสอบ…</div>
+    <p id="setHint" style="margin-top:14px"></p>
+    <button class="btn hide" id="btnAllow2">เปิดการแจ้งเตือน</button>
+    <button class="btn ghost" id="btnBack">เข้าสู่ระบบ Med-LMS</button>
+  </div>
+
+  <button class="gear hide" id="gear">⚙︎ ตั้งค่าการแจ้งเตือน</button>
+
+
+<!-- ============================================================
+     OneSignal SDK — ตัวรับ-ส่งการแจ้งเตือน
+     ============================================================ -->
+<script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
 
 <script>
 /* ================================================================
-   ลิงก์ Web App (ตัวที่ลงท้ายด้วย /exec)
+   ⚙️ ค่าที่ต้องตั้ง — แก้แค่ 2 บรรทัดนี้
    ================================================================ */
-const APP_URL = 'https://script.google.com/macros/s/AKfycbzwfJ_oxmVge5tdkR-GZhtma6-Ny_zGLk_j1rVY8p1PzqHQV5Gytwr0tu_wnzClpYwsAQ/exec';
 
-var sp    = document.getElementById('sp');
-var sub   = document.getElementById('sub');
-var btns  = document.getElementById('btns');
-var hint  = document.getElementById('hint');
-var bGo   = document.getElementById('btnGo');
-var bIns  = document.getElementById('btnInstall');
+/* 1) ลิงก์ Web App ของ Google Apps Script (ของเดิม ไม่ต้องแก้) */
+var APP_URL = 'https://script.google.com/macros/s/AKfycbzwfJ_oxmVge5tdkR-GZhtma6-Ny_zGLk_j1rVY8p1PzqHQV5Gytwr0tu_wnzClpYwsAQ/exec';
 
-bGo.href = APP_URL;
+/* 2) OneSignal App ID — คัดลอกมาจากหน้า Settings > Keys & IDs ของ OneSignal
+      ตราบใดที่ยังไม่ได้ใส่ ระบบจะทำงานปกติทุกอย่าง เพียงแต่ยังไม่มีการแจ้งเตือน */
+var ONESIGNAL_APP_ID = '2bb1f89d-af31-4015-88f3-91d5a00ec693';
 
-var deferredPrompt = null;
-var redirectTimer  = null;
-var cancelled      = false;
+/* ================================================================
+   ตั้งแต่บรรทัดนี้ลงไปไม่ต้องแก้
+   ================================================================ */
 
-/* เปิดจากไอคอนที่ติดตั้งแล้ว = เข้าระบบทันที ไม่ต้องถามอะไร */
-var standalone = window.matchMedia('(display-mode: standalone)').matches
-              || window.navigator.standalone === true;
+/* รหัสสำหรับ Safari บนเครื่อง Mac — OneSignal สร้างให้อัตโนมัติ
+   ส่วน iPhone ไม่ได้ใช้ค่านี้ แต่ใส่ไว้ก็ไม่มีผลเสีย */
+var SAFARI_WEB_ID = 'web.onesignal.auto.1a6e6435-147d-4598-9ef8-2c64afd14980';
 
-/* ?go=1 = ข้ามทุกอย่าง เข้าระบบเลย (ใช้ตอนแจกลิงก์ให้พนักงานที่ไม่อยากติดตั้ง) */
-var forceGo = location.search.indexOf('go=1') !== -1;
+var BADGE_CACHE = 'medlms-badge';
+var BADGE_KEY   = 'unread-count';
+var SW_PATH     = 'Med-LMS/OneSignalSDKWorker.js';   /* นับจาก kung54150.github.io */
+var SW_SCOPE    = '/Med-LMS/';
 
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('sw.js').catch(function () {});
+var $  = function (id) { return document.getElementById(id); };
+var redirectTimer = null;
+var oneSignalStarted = false;
+
+var isStandalone = window.matchMedia('(display-mode: standalone)').matches ||
+                   window.navigator.standalone === true;
+var isIOS        = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+var hasOneSignal = ONESIGNAL_APP_ID.indexOf('PASTE-') === -1;
+var appReady     = APP_URL.indexOf('XXXXXXX') === -1;
+
+
+/* ---------- ล้างตัวเลขบนไอคอนทุกครั้งที่เปิดแอป ---------- */
+function clearBadge() {
+  try { if (navigator.clearAppBadge) navigator.clearAppBadge(); } catch (e) {}
+
+  if (window.caches) {
+    caches.open(BADGE_CACHE)
+      .then(function (c) { return c.put(BADGE_KEY, new Response('0')); })
+      .catch(function () {});
+  }
+
+  if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+    try {
+      navigator.serviceWorker.controller.postMessage({ type: 'MEDLMS_CLEAR_BADGE' });
+    } catch (e) {}
+  }
 }
 
-function goNow() { window.location.replace(APP_URL); }
+
+/* ---------- ลบ Service Worker ตัวเก่า (sw.js) ที่เคยลงไว้ ----------
+   เพราะ Service Worker หนึ่งขอบเขตมีได้ตัวเดียว ถ้าไม่ลบตัวเก่าออก
+   ตัวใหม่ที่รับ push อาจถูกแทนที่ไปมาจนแจ้งเตือนไม่เข้า */
+function removeOldWorker() {
+  if (!navigator.serviceWorker || !navigator.serviceWorker.getRegistrations) return;
+  navigator.serviceWorker.getRegistrations().then(function (regs) {
+    regs.forEach(function (r) {
+      var url = (r.active && r.active.scriptURL) || (r.installing && r.installing.scriptURL) || '';
+      if (url.indexOf('/sw.js') !== -1) { r.unregister(); }
+    });
+  }).catch(function () {});
+}
+
+
+/* ---------- เริ่มการทำงานของ OneSignal ---------- */
+function startOneSignal() {
+  if (!hasOneSignal || oneSignalStarted) return Promise.resolve();
+  oneSignalStarted = true;
+
+  window.OneSignalDeferred = window.OneSignalDeferred || [];
+  return new Promise(function (resolve) {
+    window.OneSignalDeferred.push(function (OneSignal) {
+      OneSignal.init({
+        appId: ONESIGNAL_APP_ID,
+        safari_web_id: SAFARI_WEB_ID,
+        serviceWorkerPath:  SW_PATH,
+        serviceWorkerParam: { scope: SW_SCOPE },
+        autoResubscribe: true
+      }).then(resolve).catch(resolve);
+    });
+    /* กันค้าง: ถ้า SDK โหลดไม่ขึ้นภายใน 4 วินาที ให้ไปต่อ ไม่ขวางการเข้าระบบ */
+    setTimeout(resolve, 4000);
+  });
+}
+
+
+/* ---------- ขอสิทธิ์แจ้งเตือน (ต้องเรียกจากการกดปุ่มเท่านั้น) ---------- */
+function askPermission() {
+  return startOneSignal().then(function () {
+    return new Promise(function (resolve) {
+      window.OneSignalDeferred = window.OneSignalDeferred || [];
+      window.OneSignalDeferred.push(function (OneSignal) {
+        OneSignal.Notifications.requestPermission().then(resolve).catch(resolve);
+      });
+      setTimeout(resolve, 8000);
+    });
+  });
+}
+
+
+/* ---------- เข้าสู่ระบบ Apps Script ---------- */
+function go() {
+  window.location.replace(APP_URL);
+}
+
+function startRedirect() {
+  $('go').href = APP_URL;
+  redirectTimer = setTimeout(go, 1800);
+  setTimeout(function () {
+    if (!redirectTimer) return;
+    $('sp').style.display = 'none';
+    $('go').className = 'btn';
+    $('hint').textContent = 'ถ้าไม่เปลี่ยนหน้าอัตโนมัติ ให้กดปุ่มด้านบน';
+  }, 4200);
+}
 
 function cancelRedirect() {
-  cancelled = true;
-  if (redirectTimer) clearTimeout(redirectTimer);
-  sp.style.display = 'none';
-  btns.className = 'btns show';
+  if (redirectTimer) { clearTimeout(redirectTimer); redirectTimer = null; }
 }
 
-/* Chrome บอกว่าติดตั้งเป็นแอปได้ → หยุดการวิ่งเข้าระบบ แล้วเสนอปุ่มติดตั้ง */
-window.addEventListener('beforeinstallprompt', function (e) {
-  e.preventDefault();
-  deferredPrompt = e;
-  if (standalone || forceGo) return;
+function show(which) {
+  ['viewLoad', 'viewAsk', 'viewSet'].forEach(function (v) {
+    $(v).className = (v === which) ? (v === 'viewLoad' ? '' : 'card') : 'hide';
+  });
+}
+
+
+/* ---------- หน้าจอตั้งค่า ---------- */
+function openSettings() {
   cancelRedirect();
-  bIns.style.display = 'block';
-  sub.innerHTML = 'ระบบสะสมการเรียนรู้พนักงาน<br>ติดตั้งเป็นแอปเพื่อให้ได้ไอคอนสะอาด ไม่มีตราเบราว์เซอร์';
-  hint.textContent = 'ติดตั้งครั้งเดียว ครั้งต่อไปกดไอคอนเข้าได้เลย';
-});
+  show('viewSet');
+  $('gear').className = 'gear hide';
 
-bIns.addEventListener('click', function () {
-  if (!deferredPrompt) return;
-  deferredPrompt.prompt();
-  deferredPrompt.userChoice.then(function () { deferredPrompt = null; });
-});
+  var perm = ('Notification' in window) ? Notification.permission : 'unsupported';
+  var badge = $('setStatus'), hint = $('setHint'), btn = $('btnAllow2');
 
-window.addEventListener('appinstalled', function () {
-  hint.textContent = 'ติดตั้งเรียบร้อย กำลังเข้าระบบ…';
-  bIns.style.display = 'none';
-  setTimeout(goNow, 800);
-});
-
-/* เข้าระบบอัตโนมัติ — เว้นเวลาให้ Chrome ตัดสินใจเรื่องปุ่มติดตั้งก่อน */
-if (standalone || forceGo) {
-  redirectTimer = setTimeout(goNow, 500);
-} else {
-  redirectTimer = setTimeout(function () { if (!cancelled) goNow(); }, 2600);
-  setTimeout(function () {
-    if (!cancelled) { btns.className = 'btns show'; hint.textContent = 'ถ้าไม่เปลี่ยนหน้าอัตโนมัติ ให้กดปุ่มด้านบน'; }
-  }, 5000);
+  if (!hasOneSignal) {
+    badge.className = 'status ask';
+    badge.textContent = 'ยังไม่ได้ตั้งค่าระบบแจ้งเตือน';
+    hint.textContent = 'ผู้ดูแลระบบยังไม่ได้ใส่ OneSignal App ID ในไฟล์ index.html';
+    btn.className = 'btn hide';
+  } else if (isIOS && !isStandalone) {
+    badge.className = 'status ask';
+    badge.textContent = 'ต้องเพิ่มลงหน้าจอโฮมก่อน';
+    hint.innerHTML = 'บน iPhone/iPad ต้องเปิดจากไอคอนบนหน้าจอโฮมเท่านั้น จึงจะรับการแจ้งเตือนได้<br>' +
+                     'กดปุ่มแชร์ <b>&#x2934;</b> ใน Safari แล้วเลือก <b>Add to Home Screen</b>';
+    btn.className = 'btn hide';
+  } else if (perm === 'granted') {
+    badge.className = 'status on';
+    badge.textContent = '✔ เปิดการแจ้งเตือนอยู่';
+    hint.textContent = 'เมื่อมีบทเรียนใหม่ จะมีตัวเลขขึ้นบนไอคอน Med-LMS';
+    btn.className = 'btn hide';
+  } else if (perm === 'denied') {
+    badge.className = 'status off';
+    badge.textContent = '✘ ถูกปิดการแจ้งเตือนไว้';
+    hint.textContent = 'กรุณาเปิดสิทธิ์แจ้งเตือนให้ Med-LMS ในหน้าตั้งค่าของเครื่อง แล้วกลับมาเปิดแอปใหม่';
+    btn.className = 'btn hide';
+  } else {
+    badge.className = 'status ask';
+    badge.textContent = 'ยังไม่ได้เปิดการแจ้งเตือน';
+    hint.textContent = 'กดปุ่มด้านล่างเพื่อรับแจ้งเตือนเมื่อมีบทเรียนใหม่';
+    btn.className = 'btn';
+  }
 }
+
+
+/* ---------- จุดเริ่มต้น ---------- */
+(function init() {
+  clearBadge();
+
+  /* ถ้าตั้งค่า OneSignal แล้ว ให้ใช้ Service Worker ตัวใหม่แทน sw.js เดิม
+     โดยลงทะเบียนเองเลยไม่รอ OneSignal เพื่อให้ตัวเลขบนไอคอนพร้อมทำงาน
+     และเพื่อให้ Android ยังขึ้นปุ่ม "เพิ่มลงหน้าจอโฮม" ได้เหมือนเดิม
+     ถ้ายังไม่ได้ตั้งค่า OneSignal ระบบจะคงพฤติกรรมเดิมไว้ทุกอย่าง */
+  if ('serviceWorker' in navigator) {
+    if (hasOneSignal) {
+      removeOldWorker();
+      navigator.serviceWorker
+        .register('OneSignalSDKWorker.js', { scope: './' })
+        .catch(function () {});
+    } else {
+      navigator.serviceWorker.register('sw.js').catch(function () {});
+    }
+  }
+
+  if (!appReady) {
+    $('sp').style.display = 'none';
+    $('hint').textContent = 'ยังไม่ได้ตั้งค่าลิงก์ — แก้ค่า APP_URL ในไฟล์ index.html';
+    return;
+  }
+
+  $('gear').className = 'gear';
+  $('gear').onclick   = openSettings;
+  $('btnBack').onclick = go;
+
+  $('btnAllow').onclick = function () {
+    this.disabled = true;
+    this.textContent = 'กำลังเปิด…';
+    try { localStorage.setItem('ml_asked', '1'); } catch (e) {}
+    askPermission().then(go);
+  };
+
+  $('btnSkip').onclick = function () {
+    try { localStorage.setItem('ml_asked', '1'); } catch (e) {}
+    go();
+  };
+
+  $('btnAllow2').onclick = function () {
+    this.disabled = true;
+    this.textContent = 'กำลังเปิด…';
+    askPermission().then(openSettings);
+  };
+
+  /* เปิดหน้าตั้งค่าโดยตรงด้วยลิงก์ ...?settings=1 */
+  if (location.search.indexOf('settings=1') !== -1) { openSettings(); return; }
+
+  var asked = false;
+  try { asked = localStorage.getItem('ml_asked') === '1'; } catch (e) {}
+
+  var shouldAsk = hasOneSignal && !asked && isStandalone &&
+                  ('Notification' in window) && Notification.permission === 'default';
+
+  if (shouldAsk) {
+    show('viewAsk');
+    startOneSignal();          /* เตรียม SDK ไว้ล่วงหน้า จะได้กดปุ่มแล้วติดทันที */
+    return;
+  }
+
+  startOneSignal();
+  startRedirect();
+})();
 </script>
 </body>
 </html>
