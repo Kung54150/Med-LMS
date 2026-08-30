@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ตรวจสอบระบบแจ้งเตือน Med-LMS</title>
+<style>
+  body{margin:0;padding:20px 16px;font-family:'Segoe UI','Noto Sans Thai',Tahoma,sans-serif;
+       background:#f4f6fb;color:#1f2937}
+  h1{font-size:17px;margin:0 0 14px;text-align:center}
+  .row{background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:11px 13px;margin-bottom:9px}
+  .k{font-size:11.5px;color:#6b7280;margin-bottom:3px}
+  .v{font-size:13.5px;font-weight:700;word-break:break-all;line-height:1.5}
+  .ok{color:#15803d} .bad{color:#b91c1c} .warn{color:#b45309}
+  pre{font-size:11px;line-height:1.6;white-space:pre-wrap;word-break:break-all;margin:4px 0 0;color:#374151}
+</style>
+</head>
+<body>
+<h1>🔧 ตรวจสอบระบบแจ้งเตือน Med-LMS</h1>
+<div id="out">กำลังตรวจ…</div>
+
+<script>
+function row(k, v, cls) {
+  return '<div class="row"><div class="k">' + k + '</div>' +
+         '<div class="v ' + (cls || '') + '">' + v + '</div></div>';
+}
+
+async function run() {
+  var ua = navigator.userAgent || '';
+  var standalone = window.matchMedia('(display-mode: standalone)').matches ||
+                   window.navigator.standalone === true;
+  var inApp = /\bLine\//i.test(ua) || /FBAN|FBAV|FB_IAB|Instagram|Messenger/i.test(ua);
+  var perm = ('Notification' in window) ? Notification.permission : 'ไม่รองรับ';
+
+  var html = '';
+  html += row('1. เปิดจากไอคอนที่ติดตั้งแล้ว',
+              standalone ? 'ใช่' : 'ไม่ใช่ — ต้องเปิดจากไอคอนบนหน้าจอโฮม',
+              standalone ? 'ok' : 'bad');
+  html += row('2. เบราว์เซอร์ในแอปแชท (LINE ฯลฯ)',
+              inApp ? 'ใช่ — ใช้ไม่ได้' : 'ไม่ใช่',
+              inApp ? 'bad' : 'ok');
+  html += row('3. สิทธิ์แจ้งเตือน', perm,
+              perm === 'granted' ? 'ok' : (perm === 'denied' ? 'bad' : 'warn'));
+
+  /* ข้อ 4 สำคัญที่สุด — เบราว์เซอร์สร้าง push subscription ให้หรือยัง
+     ถ้าไม่มี แปลว่าปัญหาอยู่ที่เครื่อง/service worker
+     ถ้ามี แปลว่าปัญหาอยู่ที่การส่งข้อมูลไปให้ OneSignal */
+  var swText = 'เบราว์เซอร์ไม่รองรับ Service Worker';
+  var pushText = 'ตรวจไม่ได้';
+  var pushCls = 'warn';
+
+  if (navigator.serviceWorker) {
+    try {
+      var regs = await navigator.serviceWorker.getRegistrations();
+      if (!regs.length) {
+        swText = 'ไม่มีเลย';
+      } else {
+        swText = '';
+        for (var i = 0; i < regs.length; i++) {
+          var r = regs[i];
+          var s = (r.active && 'ทำงานอยู่') || (r.waiting && 'รอคิว') ||
+                  (r.installing && 'กำลังติดตั้ง') || 'ไม่ทราบ';
+          var u = (r.active || r.waiting || r.installing || {}).scriptURL || '?';
+          swText += u.replace(location.origin, '') + '\n   สถานะ ' + s +
+                    ' · ขอบเขต ' + r.scope.replace(location.origin, '') + '\n';
+        }
+      }
+
+      var sub = null;
+      for (var j = 0; j < regs.length; j++) {
+        try {
+          var s2 = await regs[j].pushManager.getSubscription();
+          if (s2) { sub = s2; break; }
+        } catch (e) {}
+      }
+      if (sub) {
+        pushText = 'มีแล้ว ✔<pre>' + String(sub.endpoint).slice(0, 90) + '…</pre>';
+        pushCls = 'ok';
+      } else {
+        pushText = 'ยังไม่มี ✘ — เบราว์เซอร์ยังไม่ได้สร้างการเชื่อมต่อรับข้อความ';
+        pushCls = 'bad';
+      }
+    } catch (e) {
+      swText = 'อ่านไม่ได้: ' + e.message;
+    }
+  }
+
+  html += row('4. การเชื่อมต่อรับข้อความ (สำคัญที่สุด)', pushText, pushCls);
+  html += row('5. Service Worker ที่ติดตั้งอยู่', '<pre>' + swText + '</pre>');
+
+  /* ข้อ 6 — ไฟล์ worker บนเซิร์ฟเวอร์เปิดได้จริงหรือไม่ */
+  var fileText = 'ตรวจไม่ได้', fileCls = 'warn';
+  try {
+    var res = await fetch('OneSignalSDKWorker.js?t=' + Date.now());
+    var body = await res.text();
+    if (res.ok && body.indexOf('importScripts') !== -1) {
+      fileText = 'เปิดได้ปกติ ✔'; fileCls = 'ok';
+    } else {
+      fileText = 'ผิดปกติ (สถานะ ' + res.status + ')'; fileCls = 'bad';
+    }
+  } catch (e) { fileText = 'โหลดไม่ได้: ' + e.message; fileCls = 'bad'; }
+  html += row('6. ไฟล์ OneSignalSDKWorker.js บนเซิร์ฟเวอร์', fileText, fileCls);
+
+  html += row('7. ข้อมูลเครื่อง', '<pre>' + ua + '</pre>');
+
+  document.getElementById('out').innerHTML = html;
+}
+
+run();
+</script>
+</body>
+</html>
