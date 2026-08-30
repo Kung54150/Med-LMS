@@ -71,6 +71,14 @@
     <button class="btn ghost" id="btnBack">เข้าสู่ระบบ Med-LMS</button>
   </div>
 
+  <!-- ---------- หน้าตรวจสอบระบบ (เปิดด้วย ?debug=1) ---------- -->
+  <div id="viewDbg" class="card hide" style="max-width:520px;text-align:left">
+    <h2 style="text-align:center">🔧 ตรวจสอบระบบแจ้งเตือน</h2>
+    <pre id="dbgOut" style="font-size:11.5px;line-height:1.65;white-space:pre-wrap;word-break:break-all;
+         background:#f4f6fb;border:1px solid #e5e7eb;border-radius:10px;padding:12px;margin:12px 0 0">กำลังตรวจ…</pre>
+    <div style="text-align:center"><button class="btn ghost" id="btnBack2">เข้าสู่ระบบ Med-LMS</button></div>
+  </div>
+
   <button class="gear hide" id="gear">⚙︎ ตั้งค่าการแจ้งเตือน</button>
 
 
@@ -167,7 +175,11 @@ function startOneSignal() {
         serviceWorkerPath:  SW_PATH,
         serviceWorkerParam: { scope: SW_SCOPE },
         autoResubscribe: true
-      }).then(resolve).catch(resolve);
+      }).then(resolve).catch(function (err) {
+        /* เก็บข้อความผิดพลาดไว้ให้หน้าตรวจสอบระบบอ่าน */
+        window.__osError = (err && err.message) ? err.message : String(err);
+        resolve();
+      });
     });
     /* กันค้าง: ถ้า SDK โหลดไม่ขึ้นภายใน 4 วินาที ให้ไปต่อ ไม่ขวางการเข้าระบบ */
     setTimeout(resolve, 4000);
@@ -233,9 +245,60 @@ function cancelRedirect() {
 }
 
 function show(which) {
-  ['viewLoad', 'viewAsk', 'viewSet'].forEach(function (v) {
+  ['viewLoad', 'viewAsk', 'viewSet', 'viewDbg'].forEach(function (v) {
     $(v).className = (v === which) ? (v === 'viewLoad' ? '' : 'card') : 'hide';
   });
+  if (which === 'viewDbg') $('viewDbg').style.maxWidth = '520px';
+}
+
+
+/* ---------- หน้าตรวจสอบระบบ ----------
+   ใช้หาสาเหตุเวลาแจ้งเตือนไม่เข้า เปิดด้วยการต่อท้าย URL ว่า ?debug=1 */
+function openDebug() {
+  cancelRedirect();
+  show('viewDbg');
+  $('gear').className = 'gear hide';
+  startOneSignal();
+
+  function line(label, value) { return label + ': ' + value + '\n'; }
+
+  function render() {
+    var out = '';
+    out += line('เปิดแบบติดตั้งแล้ว', isStandalone ? 'ใช่' : 'ไม่ใช่ (ต้องเปิดจากไอคอน)');
+    out += line('เบราว์เซอร์ในแอปแชท', isInAppBrowser ? 'ใช่ (ใช้ไม่ได้)' : 'ไม่ใช่');
+    out += line('สิทธิ์แจ้งเตือน', ('Notification' in window) ? Notification.permission : 'ไม่รองรับ');
+    out += line('SDK โหลดแล้ว', (typeof window.OneSignal !== 'undefined') ? 'ใช่' : 'ยัง');
+
+    var subId = '-', optedIn = '-';
+    try {
+      if (window.OneSignal && OneSignal.User && OneSignal.User.PushSubscription) {
+        subId   = OneSignal.User.PushSubscription.id || 'ยังไม่มี';
+        optedIn = String(OneSignal.User.PushSubscription.optedIn);
+      }
+    } catch (e) { subId = 'อ่านไม่ได้'; }
+    out += line('รหัสผู้รับ (สำคัญที่สุด)', subId);
+    out += line('สมัครรับแล้ว', optedIn);
+    out += line('ข้อผิดพลาด SDK', window.__osError || 'ไม่มี');
+
+    if (navigator.serviceWorker && navigator.serviceWorker.getRegistrations) {
+      navigator.serviceWorker.getRegistrations().then(function (regs) {
+        var sw = '';
+        if (!regs.length) sw = '  ไม่มีเลย\n';
+        regs.forEach(function (r) {
+          var u = (r.active && r.active.scriptURL) || (r.installing && r.installing.scriptURL) ||
+                  (r.waiting && r.waiting.scriptURL) || '?';
+          sw += '  - ' + u.replace(location.origin, '') + '  [scope ' +
+                r.scope.replace(location.origin, '') + ']\n';
+        });
+        $('dbgOut').textContent = out + 'Service Worker:\n' + sw;
+      });
+    } else {
+      $('dbgOut').textContent = out + 'Service Worker: เบราว์เซอร์ไม่รองรับ';
+    }
+  }
+
+  render();
+  setInterval(render, 1500);
 }
 
 
@@ -357,6 +420,11 @@ function openSettings() {
     this.textContent = 'กำลังเปิด…';
     askPermission().then(openSettings);   /* openSettings จะรอผลลงทะเบียนและรายงานให้เอง */
   };
+
+  $('btnBack2').onclick = go;
+
+  /* เปิดหน้าตรวจสอบระบบด้วยลิงก์ ...?debug=1 */
+  if (location.search.indexOf('debug=1') !== -1) { openDebug(); return; }
 
   /* เปิดหน้าตั้งค่าโดยตรงด้วยลิงก์ ...?settings=1 */
   if (location.search.indexOf('settings=1') !== -1) { openSettings(); return; }
