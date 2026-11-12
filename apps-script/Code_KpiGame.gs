@@ -184,6 +184,135 @@ const KPI_DATA = [
     tip:'เอาเรื่องที่อยากให้แก้ไปพูดในที่ประชุม เรื่องที่ไม่ถูกพูดถึงคือเรื่องที่ไม่มีวันถูกแก้' }
 ];
 
+/* ================= ข้อมูล KPI จากชีต KPI_Values (อัปโหลดจากหน้าแอดมิน) =================
+   แอดมินอัปโหลดไฟล์ "แบบฟอร์มสรุป KPI" ไฟล์เดิมที่เติมเดือนเพิ่มไปเรื่อย ๆ ระบบเขียนชีต KPI_Values ให้
+   ฟังก์ชันด้านล่างนำค่าจากชีตมาทับ KPI_DATA / KPI_MONTHS (ข้อความ mean / tip ยังใช้จากโค้ดตามรหัส KPI)
+   ถ้ายังไม่มีชีต KPI_Values ระบบใช้ตัวเลขที่ฝังในโค้ดข้างบนเหมือนเดิม
+   รูปแบบชีต: คอลัมน์ A รหัส | B ชนิด (ค่า / หมายเหตุ / เป้ารายเดือน) | C ถึง N = ม.ค. ถึง ธ.ค. */
+const SHEET_KPI_VALUES = 'KPI_Values';
+const KPI_YEAR_PROP = 'KPI_YEAR';
+const KG_MONTH_SHORT = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+const KG_MONTH_FULL  = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+var KG_applied_ = false;
+
+function KG_applySheet_() {
+  if (KG_applied_) return;
+  KG_applied_ = true;
+  try {
+    var sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_KPI_VALUES);
+    if (!sh || sh.getLastRow() < 2) return;
+    var data = sh.getRange(2, 1, sh.getLastRow() - 1, 14).getValues();
+    var year = Number(PropertiesService.getScriptProperties().getProperty(KPI_YEAR_PROP)) || 2569;
+
+    var byCode = {};
+    data.forEach(function (r) {
+      var code = String(r[0] || '').trim(), kind = String(r[1] || '').trim();
+      if (!code) return;
+      if (!byCode[code]) byCode[code] = {};
+      byCode[code][kind] = r.slice(2, 14);
+    });
+
+    // จำนวนเดือน = เดือนล่าสุดที่มีตัวเลขอย่างน้อยครึ่งหนึ่งของตัวชี้วัด (กันเดือนที่กรอกศูนย์ไว้ล่วงหน้าไม่กี่ช่อง)
+    var codes = Object.keys(byCode), last = -1;
+    for (var m = 0; m < 12; m++) {
+      var filled = 0;
+      codes.forEach(function (c) {
+        var x = (byCode[c]['ค่า'] || [])[m];
+        if (x !== '' && x !== null && x !== undefined && !isNaN(Number(x))) filled++;
+      });
+      if (codes.length && filled >= codes.length / 2) last = m;
+    }
+    if (last < 0) return;
+    var n = last + 1;
+
+    KPI_MONTHS.length = 0;
+    for (var i = 0; i < n; i++) {
+      var mm = (i < 9 ? '0' : '') + (i + 1);
+      KPI_MONTHS.push({ key: year + '-' + mm, short: KG_MONTH_SHORT[i], full: KG_MONTH_FULL[i] + ' ' + year });
+    }
+
+    KPI_DATA.forEach(function (k) {
+      var d = byCode[k.code];
+      var v = [], note = [], hasNote = false;
+      for (var m = 0; m < n; m++) {
+        var raw = d && d['ค่า'] ? d['ค่า'][m] : (k.v[m] === undefined ? null : k.v[m]);
+        var num = (raw === '' || raw === null || raw === undefined) ? null : Number(raw);
+        v.push(num === null || isNaN(num) ? null : num);
+        var nt = d && d['หมายเหตุ'] ? String(d['หมายเหตุ'][m] || '').trim() : ((k.note && k.note[m]) || '');
+        note.push(nt || null);
+        if (nt) hasNote = true;
+      }
+      k.v = v;
+      if (hasNote) k.note = note; else delete k.note;
+      if (d && d['เป้ารายเดือน']) {
+        var tm = [], ok = false;
+        for (var j = 0; j < n; j++) {
+          var raw2 = d['เป้ารายเดือน'][j], t = Number(raw2);
+          tm.push(raw2 === '' || isNaN(t) ? null : t);
+          if (tm[j] !== null) ok = true;
+        }
+        if (ok) {
+          for (var q = 0; q < n; q++) if (tm[q] === null) tm[q] = (k.tgm && k.tgm[q] !== undefined) ? k.tgm[q] : k.tg;
+          k.tgm = tm;
+        }
+      } else if (k.tgm) {
+        while (k.tgm.length < n) k.tgm.push(k.tgm[k.tgm.length - 1]);
+      }
+    });
+  } catch (e) {
+    // อ่านชีตไม่ได้ ใช้ข้อมูลในโค้ดต่อไป
+  }
+}
+
+/**
+ * บันทึกข้อมูล KPI ที่อัปโหลดจากหน้าแอดมิน (เขียนทับทั้งชีต KPI_Values)
+ * payload = { year, rows: [ { code, v:[12], note:[12], tm:[12]|null } ] }
+ */
+function saveKpiValues(payload) {
+  requireAdmin_();
+  if (!payload || !Array.isArray(payload.rows) || !payload.rows.length) throw new Error('ไม่พบข้อมูลที่จะบันทึก');
+  var known = {};
+  KPI_DATA.forEach(function (k) { known[k.code] = 1; });
+
+  var out = [], skipped = [], seen = {};
+  payload.rows.forEach(function (r) {
+    var code = String((r && r.code) || '').trim();
+    if (!code || seen[code]) return;
+    if (!known[code]) { skipped.push(code); return; }
+    seen[code] = 1;
+    var v = [], nt = [], tm = [], hasTm = false;
+    for (var m = 0; m < 12; m++) {
+      var x = r.v && r.v[m];
+      var num = (x === '' || x === null || x === undefined) ? null : Number(x);
+      v.push(num === null || isNaN(num) ? '' : num);
+      nt.push(String((r.note && r.note[m]) || '').slice(0, 80));
+      var t = r.tm && r.tm[m];
+      var tn = (t === '' || t === null || t === undefined) ? null : Number(t);
+      if (tn !== null && !isNaN(tn)) { tm.push(tn); hasTm = true; } else tm.push('');
+    }
+    out.push([code, 'ค่า'].concat(v));
+    out.push([code, 'หมายเหตุ'].concat(nt));
+    if (hasTm) out.push([code, 'เป้ารายเดือน'].concat(tm));
+  });
+  if (!out.length) throw new Error('ไม่พบรหัส KPI ที่ระบบรู้จักในไฟล์นี้');
+
+  var lock = LockService.getScriptLock();
+  lock.waitLock(15000);
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sh = ss.getSheetByName(SHEET_KPI_VALUES) || ss.insertSheet(SHEET_KPI_VALUES);
+    sh.clearContents();
+    sh.getRange(1, 1, 1, 14).setValues([['รหัส', 'ชนิด'].concat(KG_MONTH_SHORT)]);
+    sh.getRange(2, 1, out.length, 14).setValues(out);
+    sh.setFrozenRows(1);
+    var y = Number(payload.year);
+    if (y >= 2500 && y <= 2700) PropertiesService.getScriptProperties().setProperty(KPI_YEAR_PROP, String(y));
+  } finally {
+    lock.releaseLock();
+  }
+  return { ok: true, count: Object.keys(seen).length, skipped: skipped };
+}
+
 /* ================= ตัวช่วยภายใน ================= */
 
 function KG_sheet_() {
@@ -195,6 +324,7 @@ function KG_sheet_() {
 function KG_tz_() { return Session.getScriptTimeZone() || 'Asia/Bangkok'; }
 
 function KG_monthIndex_(kpiMonthKey) {
+  KG_applySheet_();
   for (var i = 0; i < KPI_MONTHS.length; i++) if (KPI_MONTHS[i].key === kpiMonthKey) return i;
   return -1;
 }
@@ -226,6 +356,7 @@ function KG_shuffle_(arr) {
 
 function getKpiGameInit() {
   var user = requireLogin_();
+  KG_applySheet_();
   var months = KPI_MONTHS.map(function (m, i) {
     var live = KPI_DATA.filter(function (k) { return k.v[i] !== null && k.v[i] !== undefined; }).length;
     return { key: m.key, short: m.short, full: m.full, kpiCount: live };
@@ -249,6 +380,7 @@ function getKpiGameInit() {
 
 function getKpiBoard(kpiMonthKey) {
   requireLogin_();
+  KG_applySheet_();
   var m = KG_monthIndex_(kpiMonthKey);
   if (m < 0) throw new Error('ไม่พบเดือนข้อมูลที่เลือก');
 
@@ -338,6 +470,7 @@ function KG_meter_(k, m) {
 
 function startKpiGame(kpiMonthKey) {
   var user = requireLogin_();
+  KG_applySheet_();
   var m = KG_monthIndex_(kpiMonthKey);
   if (m < 0) throw new Error('ไม่พบเดือนข้อมูลที่เลือก');
 
