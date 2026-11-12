@@ -231,6 +231,13 @@ function go() {
 
 function startRedirect() {
   $('go').href = APP_URL;
+  /* โหมดติดตั้งไอคอน: เปิดด้วย ?install=1 จะไม่เด้งไป Apps Script เพื่อให้กดแชร์ > เพิ่มไปยังหน้าจอโฮมแล้วได้ไอคอนที่ถูกต้อง */
+  if (location.search.indexOf('install=1') !== -1) {
+    $('sp').style.display = 'none';
+    $('go').className = 'btn';
+    $('hint').textContent = 'โหมดติดตั้ง: กดแชร์ > เพิ่มไปยังหน้าจอโฮม จากนั้นเปิดจากไอคอนบนหน้าโฮม';
+    return;
+  }
   redirectTimer = setTimeout(go, 1800);
   setTimeout(function () {
     if (!redirectTimer) return;
