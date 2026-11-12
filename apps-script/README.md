@@ -3,7 +3,7 @@
 โฟลเดอร์นี้เก็บสำเนาโค้ดของระบบจริงที่ `index.html` เด้งไปหา (`script.google.com/macros/s/.../exec`)
 เพื่อให้มีสำรองและประวัติการแก้ไขใน GitHub
 
-> ไฟล์ที่มี: Code.gs, Code_TopDx.gs, Code_EKG.gs, Code_KpiGame.gs, Push.gs และหน้า HTML (index, AdminShift, ekg_reading, cpr_trainer, KpiGame) · ยังขาด appsscript.json (เปิดดูได้ที่ Project Settings > Show manifest)
+> ไฟล์ที่มี: Code.gs, Code_TopDx.gs, Code_EKG.gs, Code_KpiGame.gs, Push.gs, SkillProgress.gs, ShiftQuotaOverride.gs, ShiftRequestBackend.gs, ShiftScheduleEngine.gs และหน้า HTML (index, AdminShift, ShiftRequest, ekg_reading, cpr_trainer, KpiGame) · ยังขาด appsscript.json (Project Settings > Show manifest)
 > หมายเหตุ: `apps-script/index.html` คือหน้าของ Apps Script ไม่ใช่ `index.html` หน้าตัวกลางที่รากรีโป
 
 ## ดึงโค้ดด้วย clasp (ทำครั้งแรก จากเครื่องของคุณ)
