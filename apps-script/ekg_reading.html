@@ -1,0 +1,2409 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<base target="_top">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>การอ่าน EKG — บทเรียน</title>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#FFF3F5; --grid-minor:#F6CDD6; --grid-major:#E49AAB; --trace:#1F1F24;
+  --c-p:#2E86C1; --c-qrs:#C0305A; --c-t:#1E8449; --c-m:#0E8A5F;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+[hidden]{display:none!important}
+body{background:#FFF5F5;color:#2D2D2D;font-family:'Sarabun',sans-serif;min-height:100vh}
+#app{max-width:720px;margin:0 auto;padding-bottom:40px}
+.topbar{background:linear-gradient(135deg,#E8396B,#FF6B8A);color:#fff;padding:14px 16px;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:5}
+.topbar .back{background:none;border:none;color:#fff;font-size:1.3rem;cursor:pointer;padding:0 6px}
+.topbar h1{font-size:1rem;font-weight:700}.topbar .sub{font-size:.72rem;opacity:.9;margin-top:1px}
+.view{padding:16px;display:none}.view.active{display:block}
+button{font-family:inherit}
+button:focus-visible{outline:2px solid #E8396B;outline-offset:2px}
+
+/* MENU */
+.menu-meta{font-size:.75rem;color:#8A7A80;margin-bottom:10px}
+.lesson-list{display:flex;flex-direction:column;gap:8px}
+.lesson-card{width:100%;text-align:left;background:#fff;border:1px solid #F0D0D8;border-radius:12px;padding:12px 14px;cursor:pointer;display:flex;align-items:center;gap:12px;transition:border-color .15s,box-shadow .15s;box-shadow:0 1px 3px rgba(232,57,107,.08)}
+.lesson-card:hover{border-color:#E8396B;box-shadow:0 2px 8px rgba(232,57,107,.15)}
+.lesson-card > span:nth-child(2){display:flex;flex-direction:column}
+.lnum{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.85rem;font-weight:700;flex:none}
+.lnum.todo{background:#F9DDE4;color:#E8396B}
+.lnum.done{background:#27AE60;color:#fff}
+.ltitle{font-size:.92rem;font-weight:600;color:#2D2D2D}
+.ldesc{font-size:.75rem;color:#8A7A80;margin-top:1px}
+.lstatus{margin-left:auto;font-size:.7rem;color:#1E8449;font-weight:600;white-space:nowrap}
+.progress-bar{background:#F0D0D8;border-radius:6px;height:6px;margin:4px 0 6px;overflow:hidden}
+.progress-fill{background:linear-gradient(90deg,#E8396B,#FF6B8A);height:100%;border-radius:6px;transition:width .5s}
+
+/* LESSON */
+.lesson-header{background:#fff;border-radius:12px;padding:12px 14px;margin-bottom:8px;border:1px solid #F0D0D8}
+.lesson-header h2{font-size:1.05rem;color:#E8396B}
+.lh-sub{font-size:.75rem;color:#8A7A80}
+.content-card{background:#fff;border:1px solid #F0D0D8;border-radius:12px;padding:14px;margin-bottom:10px}
+.content-card h3{font-size:.95rem;color:#E8396B;margin-bottom:6px}
+.content-card p{font-size:.88rem;color:#444;line-height:1.65;margin-bottom:6px}
+.highlight{background:#FFF0F3;border-left:3px solid #E8396B;padding:7px 10px;border-radius:0 6px 6px 0;font-size:.86rem;color:#B82556;margin:6px 0;line-height:1.6}
+.key-point{background:#F0FAF0;border-left:3px solid #27AE60;padding:7px 10px;border-radius:0 6px 6px 0;font-size:.86rem;color:#1A6A34;margin:6px 0;line-height:1.7}
+.tag{display:inline-block;font-size:.65rem;background:#0E8A5F;color:#fff;border-radius:999px;padding:1px 8px;vertical-align:middle;margin-left:4px}
+.svg-area{background:#fff;border:1px solid #F0D0D8;border-radius:10px;padding:6px;margin-bottom:10px}
+.svg-area svg{width:100%;display:block}
+.svg-cap{font-size:.68rem;color:#8A7A80;padding:0 4px 4px}
+.anno{font-family:'IBM Plex Mono','Sarabun',monospace}
+
+/* MONITOR (กราฟจริง) */
+.monitor{background:#fff;border:1px solid #F0D0D8;border-radius:12px;overflow:hidden;margin-bottom:10px}
+.monhead{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 12px;border-bottom:1px solid #F0D0D8;font-size:.72rem;color:#8A7A80}
+.monhead .legend{display:flex;gap:8px;align-items:center}
+.key{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:3px;vertical-align:middle}
+.stripbox{overflow-x:auto;background:var(--paper)}
+.stripbox canvas{display:block}
+.scroll-hint{font-size:.68rem;color:#8A7A80;padding:4px 12px}
+@media (min-width:660px){.scroll-hint{display:none}}
+.small-btn{border:1px solid #F0D0D8;background:#fff;color:#E8396B;border-radius:7px;padding:3px 10px;font-size:.75rem;cursor:pointer}
+
+/* QUIZ */
+.quiz-box{background:#FFF8F0;border:1px solid #FFE0C0;border-radius:12px;padding:12px;margin-bottom:10px}
+.q-label{font-size:.72rem;color:#E8396B;font-family:'IBM Plex Mono','Sarabun',monospace;margin-bottom:4px}
+.q-text{font-size:.95rem;font-weight:600;color:#2D2D2D;margin-bottom:8px}
+.q-btn{display:block;width:100%;text-align:left;background:#fff;border:1.5px solid #E0D0C0;color:#2D2D2D;border-radius:8px;padding:10px 12px;margin-bottom:6px;font-size:.88rem;cursor:pointer;line-height:1.4;transition:background .12s,border-color .12s}
+.q-btn:hover:not(:disabled){background:#FFF5F0;border-color:#E8396B}
+.q-btn:disabled{opacity:.55;cursor:default}
+.q-btn.ok{border-color:#27AE60;background:#F0FAF0;color:#1A6A34;opacity:1}
+.q-btn.bad{border-color:#E8396B;background:#FFF0F3;color:#B82556;opacity:1}
+.q-fb{border-radius:8px;padding:9px 11px;margin-bottom:8px;font-size:.86rem;line-height:1.6}
+.q-fb.ok{background:#F0FAF0;border:1px solid #BFE5C8;color:#1A6A34}
+.q-fb.bad{background:#FFF0F3;border:1px solid #F0C0D0;color:#B82556}
+.q-fb strong{display:block;margin-bottom:2px}
+.pass-note{margin-top:6px;font-weight:700;color:#1A6A34}
+.nav-row{display:flex;gap:8px;margin-top:6px}
+.next-btn{flex:1;width:100%;padding:11px;border:none;border-radius:8px;background:linear-gradient(135deg,#E8396B,#FF6B8A);color:#fff;font-size:.92rem;cursor:pointer;font-weight:600}
+.next-btn:hover{opacity:.92}
+.pass-btn{margin-top:8px;background:linear-gradient(135deg,#1E8449,#27AE60)}
+.ghost-btn{padding:11px 14px;border:1.5px solid #F0D0D8;border-radius:8px;background:#fff;color:#E8396B;font-size:.88rem;cursor:pointer}
+.ghost-btn.wide{width:100%;margin-top:8px}
+.back-btn{background:none;border:none;color:#E8396B;font-size:.85rem;cursor:pointer;padding:0 0 8px}
+.done-card{text-align:center}
+.done-card .next-btn{margin-top:8px}
+/* เลือกบทที่จะพิมพ์ */
+.pk-tools{display:flex;gap:8px;margin-bottom:10px}
+.pk-tools button{padding:7px 12px;border:1.5px solid #F0D0D8;border-radius:8px;background:#fff;color:#E8396B;font-size:.8rem;cursor:pointer}
+.pk-list{max-height:46vh;overflow-y:auto;border:1px solid #F0D0D8;border-radius:8px;padding:4px 2px;margin-bottom:12px}
+.pk-item{display:flex;align-items:center;gap:9px;padding:9px 10px;font-size:.88rem;color:#333;border-bottom:1px solid #F7E3E8;cursor:pointer}
+.pk-item:last-child{border-bottom:none}
+.pk-item input{width:17px;height:17px;accent-color:#E8396B;flex:none}
+.drill-head{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.meter{display:flex;gap:5px}
+.meter i{width:13px;height:13px;border-radius:50%;border:2px solid #27AE60;display:inline-block}
+.meter i.on{background:#27AE60}
+.qdots{display:flex;gap:5px;margin-bottom:8px}
+.qdots b{width:26px;height:6px;border-radius:3px;background:#EEDFD2}
+.qdots b.cur{background:#C9A98E}.qdots b.ok{background:#27AE60}.qdots b.no{background:#E8396B}
+.step-dots{display:flex;gap:5px;justify-content:center;margin:4px 0 12px;flex-wrap:wrap}
+.sdot{width:9px;height:9px;border-radius:50%;background:#F0D0D8}
+.sdot.star{border-radius:2px;transform:rotate(45deg)}
+.sdot.done{background:#27AE60}.sdot.now{background:#E8396B}
+.pq.locked{opacity:.4;pointer-events:none}
+.pq .q-label{font-size:.8rem;font-weight:700}
+.pq-fb .q-fb{margin:4px 0 0}
+.pq-head{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;font-size:.8rem;color:#E8396B;font-weight:600;margin:2px 2px 8px}
+.pq-head .qdots{margin:0}
+.pq-result{font-size:.92rem}
+@media (min-height:640px){.monitor.sticky{position:sticky;top:62px;z-index:4;box-shadow:0 6px 14px -8px rgba(0,0,0,.25)}}
+.sheet{background:#fff;border:1.5px solid #F0D0D8;border-radius:12px;padding:12px;margin-top:12px}
+.sheet-h{font-weight:700;color:#E8396B;font-size:.9rem;margin-bottom:6px}
+.sheet-h span{color:#8A7A80;font-weight:400;font-size:.8rem}
+.sheet-t{width:100%;border-collapse:collapse;font-size:.84rem}
+.sheet-t th{text-align:left;white-space:nowrap;vertical-align:top;padding:7px 10px 7px 4px;color:#555;font-weight:600;width:1%}
+.sheet-t td{padding:7px 4px;line-height:1.45}
+.sheet-t tr+tr th,.sheet-t tr+tr td{border-top:1px dashed #F0D0D8}
+.sheet-t tr.cur{background:#FFF8F0}
+.sv-ok{color:#1A6A34}.sv-no{color:#B82556}.sv-wait{color:#B0A0A6}
+.sv-fix{font-size:.78rem;color:#1A6A34;margin-top:2px}
+.sheet .pq-result{margin:10px 0 0}
+.top-row{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.t-prog{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;font-size:.8rem;color:#E8396B;font-weight:600;margin-top:6px}
+.t-prog .qdots{margin:0;flex-wrap:wrap}
+.t-prog .qdots b{width:16px}
+.lstatus.s-sign{color:#B45309}
+.lstatus.s-doing{color:#2E86C1}
+.final-card{font-size:.95rem}
+.sign-box{background:#fff;border:1.5px solid #F0D0D8;border-radius:12px;padding:12px;margin-bottom:10px}
+.sign-h{font-weight:700;color:#E8396B;font-size:.95rem}
+.sign-sub{font-size:.78rem;color:#8A7A80;margin:4px 0 8px}
+.sig-wrap{border:1.5px dashed #E0B8C4;border-radius:10px;overflow:hidden;background:#fff;touch-action:none}
+.sig-wrap canvas{display:block;width:100%;height:auto;touch-action:none;cursor:crosshair}
+.disclaimer{color:#8A7A80;font-size:.68rem;text-align:center;padding:12px 16px;line-height:1.5}
+.toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:#2D2D2D;color:#fff;padding:8px 16px;border-radius:8px;font-size:.85rem;z-index:9}
+@media (prefers-reduced-motion: reduce){*{transition:none!important}}
+.steps8{margin:.3rem 0 .6rem;padding-left:1.4rem;font-size:.86rem;line-height:1.6}.steps8 li{margin:.1rem 0}
+.norm-t{width:100%;border-collapse:collapse;font-size:.78rem;margin:.3rem 0}.norm-t th,.norm-t td{border:1px solid #F3C6D3;padding:4px 6px;vertical-align:top;text-align:left}.norm-t th{background:#FFE4EC;color:#B0204E}
+
+/* พิมพ์บทเรียน (เนื้อหา + ข้อสอบเปล่า) */
+.pr-loading{position:fixed;inset:0;background:rgba(255,245,245,.96);z-index:30;display:flex;align-items:center;justify-content:center;text-align:center;padding:20px}
+.pr-loading-box{font-size:.95rem;color:#B0204E;font-weight:600;line-height:1.8}
+#printArea{display:none}
+@media print{
+  body *{visibility:hidden}
+  #printArea,#printArea *{visibility:visible}
+  #printArea{display:block;position:absolute;left:0;top:0;width:100%;padding:10px}
+  .pr-title{font-size:1.25rem;color:#B0204E;border-bottom:2px solid #E8396B;padding-bottom:6px;margin:20px 0 10px}
+  .pr-title:first-child{margin-top:0}
+  .pr-block{margin-bottom:16px;page-break-inside:avoid}
+  .pr-block h3{color:#E8396B;font-size:1rem;margin-bottom:4px}
+  .pr-body p{font-size:.9rem;line-height:1.6;margin-bottom:5px;color:#222}
+  .pr-strip{width:100%;max-width:680px;border:1px solid #ccc;display:block;margin:6px 0}
+  .pr-svg{max-width:380px;margin:6px 0}
+  .pr-svg svg{width:100%;display:block}
+  .pr-qtext{font-weight:600;margin:9px 0 4px;font-size:.92rem}
+  .pr-choices,.pr-blank-choices{list-style:none;margin:0 0 6px}
+  .pr-choices li,.pr-blank-choices li{padding:3px 0;font-size:.88rem}
+  .pr-right{color:#1A6A34;font-weight:700}
+  .pr-box{display:inline-block;width:12px;height:12px;border:1.5px solid #888;border-radius:3px;margin-right:8px;vertical-align:middle}
+  .pr-exam-item{margin-bottom:22px;page-break-inside:avoid}
+  .pr-exam-no{font-weight:700;color:#B0204E;margin-bottom:4px}
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="topbar">
+    <a class="back" id="homeLink" href="#" target="_top" onclick="return goBack(event)" aria-label="กลับ" style="text-decoration:none">‹</a>
+    <div><h1>การอ่าน EKG</h1><div class="sub">ภาพประกอบ · กราฟจริง · ฝึกจนคล่อง</div></div>
+  </div>
+  <div class="view active" id="v-menu"></div>
+  <div class="view" id="v-lesson"></div>
+  <div class="disclaimer">บทเรียนฝึกทบทวน กราฟเป็นสัญญาณจำลอง — ไม่ใช่หลักสูตรรับรองและไม่ใช้แทนการวินิจฉัย</div>
+</div>
+
+<div id="park" hidden>
+  <section class="monitor" id="monitor" aria-label="กราฟ EKG">
+    <div class="monhead">
+      <span>Lead II · 25 mm/s · 10 mm/mV · <span id="stripInfo"></span></span>
+      <span class="legend">
+        <span><span class="key" style="background:var(--c-p)"></span>P</span>
+        <span><span class="key" style="background:var(--c-qrs)"></span>QRS</span>
+        <span><span class="key" style="background:var(--c-t)"></span>T</span>
+        <button class="small-btn" id="replay">▶ เล่นใหม่</button>
+      </span>
+    </div>
+    <div class="stripbox" id="stripbox"><canvas id="cv"></canvas></div>
+    <div class="scroll-hint">↔ เลื่อนกราฟซ้าย-ขวาเพื่อดูทั้งหมด</div>
+  </section>
+</div>
+<div class="toast" id="toast" hidden></div>
+<div class="pr-loading" id="prLoading" hidden><div class="pr-loading-box">🖨️ กำลังเตรียมเอกสารพิมพ์…<br><span id="prLoadingN"></span></div></div>
+<div id="printArea"></div>
+
+<script>
+(() => {
+/* ================================================
+   SVG ภาพประกอบ (แบบเรียบง่าย ดูง่าย)
+   ================================================ */
+function genSVG(type){
+var w=460,h=180;
+function grid(w,h,showBig,showSmall){
+var g='';
+if(showSmall){for(var x=0;x<=w;x+=9.2)g+='<line x1="'+x+'" y1="0" x2="'+x+'" y2="'+h+'" stroke="#F5D0D8" stroke-width=".3"/>';
+for(var y=0;y<=h;y+=9.2)g+='<line x1="0" y1="'+y+'" x2="'+w+'" y2="'+y+'" stroke="#F5D0D8" stroke-width=".3"/>';}
+if(showBig){for(var x=0;x<=w;x+=46)g+='<line x1="'+x+'" y1="0" x2="'+x+'" y2="'+h+'" stroke="#E8A0B0" stroke-width=".6"/>';
+for(var y=0;y<=h;y+=46)g+='<line x1="0" y1="'+y+'" x2="'+w+'" y2="'+y+'" stroke="#E8A0B0" stroke-width=".6"/>';}
+return g;}
+function nsrPath(startX,mid,amp,beatW,beats){
+var p='';
+for(var b=0;b<(beats||6);b++){
+var x0=startX+b*beatW;
+p+=' M'+(x0)+','+mid+' Q'+(x0+beatW*.08)+','+(mid-amp*.12)+' '+(x0+beatW*.16)+','+mid;
+p+=' L'+(x0+beatW*.22)+','+mid;
+p+=' L'+(x0+beatW*.24)+','+(mid+amp*.08);
+p+=' L'+(x0+beatW*.28)+','+(mid-amp*.5);
+p+=' L'+(x0+beatW*.32)+','+(mid+amp*.15);
+p+=' L'+(x0+beatW*.42)+','+mid;
+p+=' Q'+(x0+beatW*.52)+','+(mid-amp*.18)+' '+(x0+beatW*.62)+','+mid;
+p+=' L'+(x0+beatW)+','+mid;
+}
+return p;}
+function spike(x,mid){return ' L'+(x-14)+','+mid+' L'+(x-3)+','+mid+' L'+x+','+(mid-34)+' L'+(x+3)+','+(mid+6)+' L'+(x+6)+','+mid+' L'+(x+14)+','+mid;}
+
+var hm=/^hr_n:(\d)(:ans)?$/.exec(type);
+if(hm){var k=+hm[1],ans=!!hm[2],bw=46*k,mid=110,lab='';
+for(var i=1;i<=k;i++)lab+='<rect x="'+(46*i+3)+'" y="30" width="40" height="16" rx="3" fill="#fff" stroke="#E8396B" stroke-width=".8"/><text x="'+(46*i+23)+'" y="42" text-anchor="middle" font-size="11" fill="#E8396B" class="anno">'+i+'</text>';
+return '<svg viewBox="0 0 '+w+' '+h+'">'+grid(w,h,true,true)+
+'<path d="'+nsrPath(-.28*bw+46,mid,100,bw,Math.ceil(460/bw)+1)+'" fill="none" stroke="#333" stroke-width="2" stroke-linejoin="round"/>'+
+'<line x1="46" y1="20" x2="46" y2="'+h+'" stroke="#E8396B" stroke-width="1.5" stroke-dasharray="4 2"/>'+
+'<line x1="'+(46+bw)+'" y1="20" x2="'+(46+bw)+'" y2="'+h+'" stroke="#E8396B" stroke-width="1.5" stroke-dasharray="4 2"/>'+
+(ans?lab:'')+'<text x="'+(46+bw/2)+'" y="16" text-anchor="middle" font-size="10" fill="#E8396B" class="anno">R–R = '+(ans?k:'?')+' ช่องใหญ่</text>'+
+'<rect x="270" y="150" width="180" height="24" rx="4" fill="#fff" stroke="#E8396B"/>'+
+'<text x="360" y="167" text-anchor="middle" font-size="12" fill="#E8396B" font-weight="700" class="anno">'+(ans?'HR = 300 ÷ '+k+' = '+(300/k):'HR = ?')+'</text>'+
+'</svg>';}
+if(type==='paper_small_q'||type==='paper_small_ans'){var a2=type==='paper_small_ans';
+return '<svg viewBox="0 0 '+w+' 120">'+grid(w,120,true,true)+
+'<rect x="92" y="46" width="9.2" height="9.2" fill="#E8396B" opacity=".35" stroke="#E8396B" stroke-width="1.5"/>'+
+'<line x1="92" y1="70" x2="101.2" y2="70" stroke="#0E8A5F" stroke-width="3"/>'+
+'<text x="110" y="74" class="anno" font-size="11" fill="#0E8A5F">1 ช่องเล็กกว้าง '+(a2?'= 0.04 วินาที':'= ? วินาที')+'</text>'+
+'<line x1="92" y1="95" x2="138" y2="95" stroke="#2E86C1" stroke-width="3"/>'+
+'<text x="146" y="99" class="anno" font-size="10" fill="#2E86C1">1 ช่องใหญ่ = 5 ช่องเล็ก'+(a2?' = 0.20 วินาที':'')+'</text>'+
+'<text x="10" y="20" class="anno" font-size="10" fill="#555">ความเร็วกระดาษ 25 mm/sec → 25 ช่องเล็กต่อ 1 วินาที</text>'+
+'</svg>';}
+if(type==='paper_big_q'||type==='paper_big_ans'){var a3=type==='paper_big_ans';
+return '<svg viewBox="0 0 '+w+' 120">'+grid(w,120,true,true)+
+'<rect x="92" y="46" width="46" height="46" fill="#E8396B" opacity=".12" stroke="#E8396B" stroke-width="1.5"/>'+
+'<line x1="80" y1="46" x2="80" y2="92" stroke="#0E8A5F" stroke-width="3"/>'+
+'<line x1="74" y1="46" x2="86" y2="46" stroke="#0E8A5F" stroke-width="2"/><line x1="74" y1="92" x2="86" y2="92" stroke="#0E8A5F" stroke-width="2"/>'+
+'<text x="150" y="66" class="anno" font-size="11" fill="#0E8A5F">สูง 5 ช่องเล็ก '+(a3?'= 5 × 0.1 = 0.5 mV':'= ? mV')+'</text>'+
+'<text x="150" y="84" class="anno" font-size="10" fill="#555">1 ช่องเล็ก (แนวตั้ง) = 0.1 mV</text>'+
+'</svg>';}
+if(type==='rate_cmp'){
+var rows=[['Sinus bradycardia · R–R 6 ช่องใหญ่ → 50','#2E86C1',276],['Normal sinus · R–R 4 ช่องใหญ่ → 75','#1E8449',184],['Sinus tachycardia · R–R 2 ช่องใหญ่ → 150','#C0305A',92]],g2='';
+rows.forEach(function(r,i){var mid=50+i*62,p='M0,'+mid;for(var x=46;x<460;x+=r[2])p+=spike(x,mid);p+=' L460,'+mid;
+g2+='<path d="'+p+'" fill="none" stroke="'+r[1]+'" stroke-width="2"/><text x="8" y="'+(mid-38)+'" font-size="10" font-weight="700" fill="'+r[1]+'" class="anno">'+r[0]+'</text>';});
+return '<svg viewBox="0 0 '+w+' 196">'+grid(w,196,true,true)+g2+'</svg>';}
+if(type==='brady_action'||type==='tachy_action'){var br=type==='brady_action';
+function bx(x,y,ww,hh,fill,stroke,t1,t2){return '<rect x="'+x+'" y="'+y+'" width="'+ww+'" height="'+hh+'" rx="8" fill="'+fill+'" stroke="'+stroke+'" stroke-width="1.5"/><text x="'+(x+ww/2)+'" y="'+(y+hh/2-(t2?3:-4))+'" text-anchor="middle" font-size="11" font-weight="700" fill="'+stroke+'">'+t1+'</text>'+(t2?'<text x="'+(x+ww/2)+'" y="'+(y+hh/2+12)+'" text-anchor="middle" font-size="9.5" fill="#444">'+t2+'</text>':'');}
+function ar(x1,y1,x2,y2){return '<line x1="'+x1+'" y1="'+y1+'" x2="'+x2+'" y2="'+y2+'" stroke="#999" stroke-width="1.5"/><path d="M'+(x2-4)+','+(y2-6)+' L'+x2+','+y2+' L'+(x2+4)+','+(y2-6)+'" fill="none" stroke="#999" stroke-width="1.5"/>';}
+return '<svg viewBox="0 0 460 170">'+
+bx(130,6,200,40,br?'#EAF3FB':'#FDEEF2',br?'#2E86C1':'#C0305A',br?'HR < 60 (sinus bradycardia)':'HR > 100 (sinus tachycardia)','ประเมินผู้ป่วย: มีอาการหรือไม่?')+
+ar(190,46,110,70)+ar(270,46,350,70)+
+bx(10,72,200,90,'#F0FAF0','#1E8449','ไม่มีอาการ / คงที่',br?'วัด V/S ซ้ำ · ทบทวนยา':'หาสาเหตุ: ไข้ ปวด ขาดน้ำ')+
+'<text x="110" y="148" text-anchor="middle" font-size="9.5" fill="#444">'+(br?'รายงานตามแนวทางหน่วยงาน':'SpO₂ ต่ำ ซีด ยา → แก้ที่สาเหตุ')+'</text>'+
+bx(250,72,200,90,'#FFF0F3','#C0305A','🚨 มีอาการ (unstable)','BP ต่ำ · ซึม · หน้ามืด · เจ็บอก')+
+'<text x="350" y="148" text-anchor="middle" font-size="9.5" fill="#444">ตามทีมทันที · monitor · เปิดเส้น</text>'+
+'</svg>';}
+if(type==='p_abn'){
+function pw(x0,kind,col){var y=90;if(kind==='wide')return '<path d="M'+x0+','+y+' Q'+(x0+14)+','+(y-26)+' '+(x0+28)+','+(y-12)+' Q'+(x0+42)+','+(y-26)+' '+(x0+60)+','+y+'" fill="none" stroke="'+col+'" stroke-width="3"/>';
+var h=kind==='tall'?60:28,wd=kind==='tall'?40:44;return '<path d="M'+x0+','+y+' Q'+(x0+wd/2)+','+(y-h)+' '+(x0+wd)+','+y+'" fill="none" stroke="'+col+'" stroke-width="3"/>';}
+function tail(x0){return '<path d="M'+x0+',90 L'+(x0+14)+',90 L'+(x0+17)+',96 L'+(x0+22)+',30 L'+(x0+27)+',100 L'+(x0+30)+',90 L'+(x0+48)+',90" fill="none" stroke="#999" stroke-width="1.5"/>';}
+return '<svg viewBox="0 0 460 150">'+grid(460,150,true,true)+
+'<path d="M4,90 L14,90" stroke="#999" stroke-width="1.5"/>'+pw(14,'n','#1E8449')+tail(58)+
+'<text x="10" y="125" font-size="10" fill="#1E8449" font-weight="700" class="anno">ปกติ</text><text x="10" y="139" font-size="9" fill="#444" class="anno">กว้าง&lt;0.12 สูง&lt;2.5มม.</text>'+
+'<path d="M158,90 L168,90" stroke="#999" stroke-width="1.5"/>'+pw(168,'tall','#C0305A')+tail(208)+
+'<line x1="160" y1="30" x2="160" y2="90" stroke="#0E8A5F" stroke-width="1.5"/><text x="163" y="26" font-size="9" fill="#0E8A5F" class="anno">3 มม.</text>'+
+'<text x="160" y="125" font-size="10" fill="#C0305A" font-weight="700" class="anno">P สูงแหลม</text><text x="160" y="139" font-size="9" fill="#444" class="anno">&gt;2.5 มม. (P pulmonale)</text>'+
+'<path d="M304,90 L314,90" stroke="#999" stroke-width="1.5"/>'+pw(314,'wide','#C0305A')+tail(374)+
+'<line x1="314" y1="104" x2="374" y2="104" stroke="#0E8A5F" stroke-width="1.5"/><text x="318" y="116" font-size="9" fill="#0E8A5F" class="anno">0.14 s</text>'+
+'<text x="310" y="130" font-size="10" fill="#C0305A" font-weight="700" class="anno">P กว้าง 2 ยอด</text><text x="310" y="143" font-size="9" fill="#444" class="anno">&gt;0.12 s (P mitrale)</text>'+
+'</svg>';}
+if(type==='hr_1500'){
+var bw=17*9.2,mid=112,ticks='';
+for(var i=0;i<17;i++){ticks+='<rect x="'+(46+i*9.2)+'" y="28" width="9.2" height="9.2" fill="#0E8A5F" opacity="'+(i%2?'.12':'.3')+'"/>';if((i+1)%5===0||i===16)ticks+='<text x="'+(46+i*9.2+4.6)+'" y="'+(i===16?66:52)+'" text-anchor="middle" font-size="10" fill="#0E8A5F" font-weight="700" class="anno">'+(i+1)+'</text>';}
+return '<svg viewBox="0 0 '+w+' '+h+'">'+grid(w,h,true,true)+
+'<path d="'+nsrPath(-.28*bw+46,mid,100,bw,4)+'" fill="none" stroke="#333" stroke-width="2" stroke-linejoin="round"/>'+
+'<line x1="46" y1="20" x2="46" y2="'+h+'" stroke="#E8396B" stroke-width="1.5" stroke-dasharray="4 2"/>'+
+'<line x1="'+(46+bw)+'" y1="20" x2="'+(46+bw)+'" y2="'+h+'" stroke="#E8396B" stroke-width="1.5" stroke-dasharray="4 2"/>'+ticks+
+'<text x="'+(46+bw/2)+'" y="18" text-anchor="middle" font-size="10" fill="#E8396B" class="anno">R–R = 17 ช่องเล็ก (ไม่ตกเส้นหนา)</text>'+
+'<rect x="250" y="150" width="200" height="24" rx="4" fill="#fff" stroke="#0E8A5F"/>'+
+'<text x="350" y="167" text-anchor="middle" font-size="12" fill="#0E8A5F" font-weight="700" class="anno">HR = 1500 ÷ 17 ≈ 88</text>'+
+'</svg>';}
+if(type==='t_cmp'){
+function tp(x0,kind,col,lab1,lab2){var y=100,s='M'+x0+','+y+' L'+(x0+10)+','+y+' L'+(x0+13)+','+(y+5)+' L'+(x0+18)+','+(y-50)+' L'+(x0+23)+','+(y+8)+' L'+(x0+26)+','+y+' L'+(x0+38)+','+y;
+var t={normal:' Q'+(x0+55)+','+(y-46)+' '+(x0+72)+','+y,peaked:' Q'+(x0+55)+','+(y-110)+' '+(x0+66)+','+y,inverted:' Q'+(x0+55)+','+(y+40)+' '+(x0+72)+','+y,flat:' Q'+(x0+55)+','+(y-8)+' '+(x0+72)+','+y+' Q'+(x0+82)+','+(y-18)+' '+(x0+92)+','+y}[kind];
+return '<path d="'+s+t+' L'+(x0+105)+','+y+'" fill="none" stroke="#333" stroke-width="2"/><path d="M'+(x0+38)+','+y+t+'" fill="none" stroke="'+col+'" stroke-width="3"/>'+
+'<text x="'+(x0+2)+'" y="140" font-size="10" font-weight="700" fill="'+col+'" class="anno">'+lab1+'</text><text x="'+(x0+2)+'" y="154" font-size="8.5" fill="#444" class="anno">'+lab2+'</text>';}
+return '<svg viewBox="0 0 460 160">'+grid(460,160,true,false)+tp(2,'normal','#1E8449','ปกติ','สูง ≤ 5 ช่องเล็ก')+tp(117,'peaked','#C0305A','สูงแหลม','≈ 7–8 ช่องเล็ก · K สูง')+tp(232,'inverted','#C0305A','กลับหัว','ขาดเลือด ⚠️')+tp(347,'flat','#D68910','แบน + U','< 1 ช่องเล็ก · K ต่ำ')+'</svg>';}
+if(type==='qt_measure'){
+var y=110,p1=function(x){return ' L'+(x)+','+y+' Q'+(x+12)+','+(y-14)+' '+(x+24)+','+y+' L'+(x+34)+','+y+' L'+(x+37)+','+(y+6)+' L'+(x+42)+','+(y-70)+' L'+(x+47)+','+(y+12)+' L'+(x+50)+','+y+' L'+(x+66)+','+y+' Q'+(x+88)+','+(y-40)+' '+(x+110)+','+y;};
+return '<svg viewBox="0 0 460 180">'+grid(460,180,true,true)+
+'<path d="M0,'+y+p1(10)+' L230,'+y+p1(230)+' L460,'+y+'" fill="none" stroke="#333" stroke-width="2"/>'+
+'<rect x="44" y="20" width="76" height="118" fill="#8E44AD" opacity=".1"/>'+
+'<line x1="44" y1="150" x2="120" y2="150" stroke="#8E44AD" stroke-width="3"/><text x="44" y="166" font-size="10" fill="#8E44AD" font-weight="700" class="anno">QT: ต้น QRS → จบ T</text>'+
+'<line x1="54" y1="30" x2="274" y2="30" stroke="#0E8A5F" stroke-width="1.5"/><text x="130" y="24" font-size="10" fill="#0E8A5F" class="anno">R–R</text>'+
+'<line x1="54" y1="44" x2="164" y2="44" stroke="#0E8A5F" stroke-width="2.5" stroke-dasharray="5 3"/><text x="170" y="48" font-size="10" fill="#0E8A5F" font-weight="700" class="anno">ครึ่ง R–R</text>'+
+'<text x="250" y="160" font-size="10" fill="#333" class="anno">จบ T ก่อนเส้นครึ่ง R–R = ปกติ</text>'+
+'<text x="250" y="174" font-size="10" fill="#C0305A" class="anno">จบ T เลยครึ่ง R–R = QT ยาว</text>'+
+'</svg>';}
+if(type==='u_wave'){
+function uu(x0,uh,th,col,lab1,lab2){var y=100;return '<path d="M'+x0+','+y+' L'+(x0+10)+','+y+' L'+(x0+13)+','+(y+5)+' L'+(x0+18)+','+(y-50)+' L'+(x0+23)+','+(y+8)+' L'+(x0+26)+','+y+' L'+(x0+36)+','+y+' Q'+(x0+52)+','+(y-th)+' '+(x0+68)+','+y+' Q'+(x0+80)+','+(y-uh)+' '+(x0+92)+','+y+' L'+(x0+140)+','+y+'" fill="none" stroke="#333" stroke-width="2"/>'+
+(uh?'<path d="M'+(x0+68)+','+y+' Q'+(x0+80)+','+(y-uh)+' '+(x0+92)+','+y+'" fill="none" stroke="'+col+'" stroke-width="3"/><text x="'+(x0+76)+'" y="'+(y-uh/2-10)+'" font-size="10" fill="'+col+'" font-weight="700" class="anno">U</text>':'')+
+'<text x="'+(x0+2)+'" y="135" font-size="10" font-weight="700" fill="'+col+'" class="anno">'+lab1+'</text><text x="'+(x0+2)+'" y="149" font-size="8.5" fill="#444" class="anno">'+lab2+'</text>';}
+return '<svg viewBox="0 0 460 160">'+grid(460,160,true,false)+uu(5,0,40,'#1E8449','ไม่มี U','ปกติ')+uu(160,10,40,'#1E8449','U เล็ก','พบได้ปกติ')+uu(315,34,8,'#D68910','T แบน + U เด่น','นึกถึง K ต่ำ')+'</svg>';}
+if(type==='paper_grid'){
+return '<svg viewBox="0 0 '+w+' '+h+'">'+grid(w,h,true,true)+
+'<rect x="0" y="0" width="46" height="46" fill="#E8396B" opacity=".08" stroke="#E8396B" stroke-width="1.5" stroke-dasharray="3 2"/>'+
+'<rect x="0" y="0" width="9.2" height="9.2" fill="#E8396B" opacity=".25" stroke="#E8396B" stroke-width="1"/>'+
+'<line x1="12" y1="5" x2="120" y2="5" stroke="#E8396B" stroke-width="1"/>'+
+'<text x="124" y="9" class="anno" font-size="11" fill="#E8396B">1 ช่องเล็ก = 1 mm</text>'+
+'<line x1="46" y1="46" x2="100" y2="70" stroke="#E8396B" stroke-width="1"/>'+
+'<text x="104" y="74" class="anno" font-size="11" fill="#E8396B">1 ช่องใหญ่ = 5 ช่องเล็ก = 5 mm</text>'+
+'</svg>';}
+
+if(type==='paper_time'){
+return '<svg viewBox="0 0 '+w+' 140">'+grid(w,140,true,true)+
+'<line x1="0" y1="92" x2="46" y2="92" stroke="#E8396B" stroke-width="2.5"/>'+
+'<text x="50" y="96" class="anno" font-size="9" fill="#E8396B">0.20 sec</text>'+
+'<line x1="0" y1="102" x2="9.2" y2="102" stroke="#2E86C1" stroke-width="2.5"/>'+
+'<text x="12" y="106" class="anno" font-size="8" fill="#2E86C1">0.04 sec</text>'+
+'<line x1="0" y1="115" x2="230" y2="115" stroke="#27AE60" stroke-width="2.5"/>'+
+'<text x="234" y="119" class="anno" font-size="9" fill="#27AE60">1.00 sec (5 ช่องใหญ่)</text>'+
+'<text x="10" y="20" class="anno" font-size="11" fill="#333">แกนนอน = เวลา →</text>'+
+'<text x="200" y="20" class="anno" font-size="9" fill="#777">ความเร็ว 25 mm/sec</text>'+
+'</svg>';}
+
+if(type==='paper_voltage'){
+return '<svg viewBox="0 0 '+w+' 140">'+grid(w,140,true,true)+
+'<line x1="20" y1="0" x2="20" y2="46" stroke="#E8396B" stroke-width="2.5"/>'+
+'<text x="24" y="28" class="anno" font-size="9" fill="#E8396B">0.5 mV</text>'+
+'<line x1="70" y1="0" x2="70" y2="9.2" stroke="#2E86C1" stroke-width="2.5"/>'+
+'<text x="74" y="8" class="anno" font-size="8" fill="#2E86C1">0.1 mV</text>'+
+'<line x1="120" y1="0" x2="120" y2="92" stroke="#27AE60" stroke-width="2.5"/>'+
+'<text x="124" y="50" class="anno" font-size="9" fill="#27AE60">1.0 mV</text>'+
+'<text x="200" y="20" class="anno" font-size="11" fill="#333">↑ แกนตั้ง = แรงดันไฟฟ้า</text>'+
+'<text x="200" y="36" class="anno" font-size="9" fill="#777">มาตรฐาน 10 mm/mV</text>'+
+'</svg>';}
+
+if(type==='waves_overview'){
+var mid=110,bw=200,x0=40;
+return '<svg viewBox="0 0 '+w+' '+h+'">'+grid(w,h,true,false)+
+'<rect x="'+(x0)+'" y="'+(mid-24)+'" width="'+(bw*.16)+'" height="30" rx="3" fill="#2E86C1" opacity=".15"/>'+
+'<rect x="'+(x0+bw*.22)+'" y="'+(mid-80)+'" width="'+(bw*.1)+'" height="110" rx="3" fill="#E8396B" opacity=".12"/>'+
+'<rect x="'+(x0+bw*.42)+'" y="'+(mid-34)+'" width="'+(bw*.2)+'" height="40" rx="3" fill="#27AE60" opacity=".15"/>'+
+'<path d="'+nsrPath(x0,mid,140,bw,2)+'" fill="none" stroke="#333" stroke-width="2" stroke-linejoin="round"/>'+
+'<text x="'+(x0+bw*.08)+'" y="'+(mid-30)+'" text-anchor="middle" font-size="13" fill="#2E86C1" font-weight="700" class="anno">P</text>'+
+'<text x="'+(x0+bw*.28)+'" y="'+(mid-84)+'" text-anchor="middle" font-size="13" fill="#E8396B" font-weight="700" class="anno">R</text>'+
+'<text x="'+(x0+bw*.235)+'" y="'+(mid+26)+'" text-anchor="middle" font-size="10" fill="#E8396B" class="anno">Q</text>'+
+'<text x="'+(x0+bw*.33)+'" y="'+(mid+42)+'" text-anchor="middle" font-size="10" fill="#E8396B" class="anno">S</text>'+
+'<text x="'+(x0+bw*.52)+'" y="'+(mid-40)+'" text-anchor="middle" font-size="13" fill="#27AE60" font-weight="700" class="anno">T</text>'+
+'<text x="'+(x0+bw*.27)+'" y="'+(h-6)+'" text-anchor="middle" font-size="9" fill="#E8396B" class="anno">QRS</text>'+
+'</svg>';}
+
+if(type==='wave_p'){
+return '<svg viewBox="0 0 '+w+' 130">'+grid(w,130,true,false)+
+'<path d="M30,80 Q55,50 80,80" fill="none" stroke="#2E86C1" stroke-width="3" stroke-linejoin="round"/>'+
+'<line x1="30" y1="80" x2="80" y2="80" stroke="#2E86C1" stroke-width="1" stroke-dasharray="3 2"/>'+
+'<text x="36" y="45" font-size="14" fill="#2E86C1" font-weight="700" class="anno">P wave</text>'+
+'<line x1="30" y1="95" x2="80" y2="95" stroke="#E8396B" stroke-width="2"/><line x1="30" y1="90" x2="30" y2="100" stroke="#E8396B" stroke-width="2"/><line x1="80" y1="90" x2="80" y2="100" stroke="#E8396B" stroke-width="2"/>'+
+'<text x="33" y="112" font-size="9" fill="#E8396B" class="anno">&lt; 0.12 sec</text>'+
+'<line x1="88" y1="65" x2="88" y2="80" stroke="#27AE60" stroke-width="2"/>'+
+'<text x="93" y="75" font-size="9" fill="#27AE60" class="anno">&lt; 2.5 mm</text>'+
+'<path d="M160,80 Q175,70 190,80 L205,80 L208,85 L213,25 L218,90 L222,80 L250,80 Q268,60 286,80 L330,80" fill="none" stroke="#999" stroke-width="1.5"/>'+
+'<path d="M160,80 Q175,70 190,80" fill="none" stroke="#2E86C1" stroke-width="3"/>'+
+'<text x="168" y="100" font-size="9" fill="#2E86C1" class="anno">P มาก่อน QRS เสมอ</text>'+
+'</svg>';}
+
+if(type==='wave_qrs'){
+return '<svg viewBox="0 0 '+w+' 140">'+grid(w,140,true,false)+
+'<path d="M30,90 Q45,76 60,90 L85,90 L90,98 L98,20 L106,106 L110,90 L150,90" fill="none" stroke="#E8396B" stroke-width="3"/>'+
+'<text x="84" y="116" font-size="11" fill="#E8396B" font-weight="700" class="anno">Q</text>'+
+'<text x="94" y="14" font-size="13" fill="#E8396B" font-weight="700" class="anno">R</text>'+
+'<text x="106" y="120" font-size="11" fill="#E8396B" font-weight="700" class="anno">S</text>'+
+'<line x1="88" y1="130" x2="110" y2="130" stroke="#27AE60" stroke-width="2"/>'+
+'<text x="116" y="133" font-size="8" fill="#27AE60" class="anno">0.06–0.10s</text>'+
+'<path d="M200,90 L230,90 L234,95 L240,35 L246,100 L250,90 L280,90" fill="none" stroke="#1A7A3A" stroke-width="2.5"/>'+
+'<text x="240" y="122" text-anchor="middle" font-size="9" fill="#1A7A3A" class="anno">แคบ &lt; 3 ช่องเล็ก ✓</text>'+
+'<path d="M330,90 L350,90 L356,98 L368,25 L384,110 L394,90 L430,90" fill="none" stroke="#C0305A" stroke-width="2.5"/>'+
+'<text x="380" y="130" text-anchor="middle" font-size="9" fill="#C0305A" class="anno">กว้าง ≥ 3 ช่องเล็ก ✕</text>'+
+'</svg>';}
+
+if(type==='wave_t'){
+return '<svg viewBox="0 0 '+w+' 130">'+grid(w,130,true,false)+
+'<path d="M30,80 Q60,45 90,80" fill="none" stroke="#27AE60" stroke-width="3"/>'+
+'<text x="36" y="40" font-size="13" fill="#27AE60" font-weight="700" class="anno">T ปกติ</text>'+
+'<text x="30" y="100" font-size="9" fill="#27AE60" class="anno">โค้งมน หัวขึ้น</text>'+
+'<path d="M180,70 Q210,105 240,70" fill="none" stroke="#C0305A" stroke-width="2.5"/>'+
+'<text x="170" y="120" font-size="9" fill="#C0305A" class="anno">T กลับหัว = อาจผิดปกติ</text>'+
+'<path d="M330,90 Q355,15 380,90" fill="none" stroke="#D68910" stroke-width="2.5"/>'+
+'<text x="310" y="112" font-size="9" fill="#D68910" class="anno">สูงแหลม = Hyperkalemia?</text>'+
+'</svg>';}
+
+if(type==='intervals'){
+var mid=100,bw=210,x0=30;
+return '<svg viewBox="0 0 '+w+' '+h+'">'+grid(w,h,true,false)+
+'<path d="'+nsrPath(x0,mid,120,bw,2)+'" fill="none" stroke="#333" stroke-width="2" stroke-linejoin="round"/>'+
+'<line x1="'+x0+'" y1="130" x2="'+(x0+bw*.22)+'" y2="130" stroke="#2E86C1" stroke-width="3"/>'+
+'<text x="'+x0+'" y="146" font-size="9" fill="#2E86C1" class="anno">PR: ต้น P → ต้น QRS (0.12–0.20s)</text>'+
+'<line x1="'+(x0+bw*.22)+'" y1="158" x2="'+(x0+bw*.62)+'" y2="158" stroke="#8E44AD" stroke-width="3"/>'+
+'<text x="'+(x0+bw*.22)+'" y="174" font-size="9" fill="#8E44AD" class="anno">QT: ต้น QRS → จบ T (0.36–0.44s)</text>'+
+'</svg>';}
+
+if(type==='hr_300'){
+var mid=110,beatW=184;
+return '<svg viewBox="0 0 '+w+' '+h+'">'+grid(w,h,true,true)+
+'<path d="'+nsrPath(-.28*beatW+46,mid,100,beatW,3)+'" fill="none" stroke="#333" stroke-width="2" stroke-linejoin="round"/>'+
+'<line x1="46" y1="20" x2="46" y2="'+h+'" stroke="#E8396B" stroke-width="1.5" stroke-dasharray="4 2"/>'+
+'<line x1="230" y1="20" x2="230" y2="'+h+'" stroke="#E8396B" stroke-width="1.5" stroke-dasharray="4 2"/>'+
+'<text x="69" y="40" text-anchor="middle" font-size="11" fill="#E8396B" class="anno">1</text><text x="115" y="40" text-anchor="middle" font-size="11" fill="#E8396B" class="anno">2</text><text x="161" y="40" text-anchor="middle" font-size="11" fill="#E8396B" class="anno">3</text><text x="207" y="40" text-anchor="middle" font-size="11" fill="#E8396B" class="anno">4</text>'+
+'<text x="138" y="16" text-anchor="middle" font-size="10" fill="#E8396B" class="anno">R–R = 4 ช่องใหญ่</text>'+
+'<text x="340" y="172" text-anchor="middle" font-size="13" fill="#E8396B" font-weight="700" class="anno">HR = 300 ÷ 4 = 75</text>'+
+'</svg>';}
+
+if(type==='hr_sequence'){
+var cols=['#E8396B','#E67E22','#D4AC0D','#27AE60','#2E86C1','#8E44AD'],nums=[300,150,100,75,60,50],g='';
+for(var i=0;i<6;i++){var x=46*(i+2);g+='<line x1="'+x+'" y1="30" x2="'+x+'" y2="90" stroke="#E8A0B0" stroke-width="1"/><text x="'+x+'" y="25" text-anchor="middle" font-size="14" fill="'+cols[i]+'" font-weight="700" class="anno">'+nums[i]+'</text>';}
+return '<svg viewBox="0 0 '+w+' 110">'+
+'<rect x="0" y="0" width="'+w+'" height="110" fill="#FFF8F0" rx="6"/>'+
+'<line x1="46" y1="30" x2="46" y2="90" stroke="#E8A0B0" stroke-width="1"/>'+g+
+'<path d="M32,70'+spike(46,70)+' M216,70'+spike(230,70)+'" fill="none" stroke="#E8396B" stroke-width="2"/>'+
+'<text x="46" y="104" text-anchor="middle" font-size="9" fill="#E8396B" class="anno">R₁ ตรงเส้น</text>'+
+'<text x="230" y="104" text-anchor="middle" font-size="9" fill="#27AE60" class="anno">R₂ ตกที่ 75 → HR 75</text>'+
+'<text x="360" y="60" font-size="9" fill="#555" class="anno">ดู R₂ ตกที่เลขไหน</text>'+
+'<text x="360" y="75" font-size="9" fill="#555" class="anno">→ นั่นคือ HR</text>'+
+'</svg>';}
+
+if(type==='hr_6sec'){
+var xs=[30,62,110,138,190,222,262],p='',t='';
+xs.forEach(function(x,i){p+=spike(x+14,75);t+='<text x="'+(x+14)+'" y="30" text-anchor="middle" font-size="10" fill="#E8396B" class="anno">'+(i+1)+'</text>';});
+return '<svg viewBox="0 0 '+w+' 130">'+grid(w,130,true,false)+
+'<rect x="0" y="0" width="300" height="130" fill="#2E86C1" opacity=".06"/>'+
+'<text x="150" y="14" text-anchor="middle" font-size="10" fill="#2E86C1" class="anno">← 30 ช่องใหญ่ = 6 วินาที →</text>'+
+'<path d="M0,75'+p+' L460,75" fill="none" stroke="#333" stroke-width="2"/>'+t+
+'<text x="380" y="70" text-anchor="middle" font-size="12" fill="#E8396B" font-weight="700" class="anno">7 × 10</text>'+
+'<text x="380" y="88" text-anchor="middle" font-size="12" fill="#E8396B" font-weight="700" class="anno">≈ 70 /นาที</text>'+
+'</svg>';}
+
+if(type==='rhythm_cmp'){
+var r1='',r2='',xs2=[30,70,150,180,260,330,370];
+for(var i=0;i<8;i++)r1+=spike(30+i*58,50);
+xs2.forEach(function(x){r2+=spike(x,125);});
+return '<svg viewBox="0 0 '+w+' 160">'+grid(w,160,true,false)+
+'<path d="M0,50'+r1+' L460,50" fill="none" stroke="#1A7A3A" stroke-width="2"/>'+
+'<text x="8" y="14" font-size="10" fill="#1A7A3A" font-weight="700" class="anno">Regular: R–R เท่ากันทุกช่วง</text>'+
+'<path d="M0,125'+r2+' L460,125" fill="none" stroke="#C0305A" stroke-width="2"/>'+
+'<text x="8" y="88" font-size="10" fill="#C0305A" font-weight="700" class="anno">Irregular: R–R ยาวสั้นไม่เท่ากัน</text>'+
+'</svg>';}
+
+if(type==='p_cmp'){
+return '<svg viewBox="0 0 '+w+' 120">'+grid(w,120,true,false)+
+'<path d="M10,80 Q25,64 40,80 L55,80 L58,84 L63,30 L68,88 L72,80 L130,80" fill="none" stroke="#333" stroke-width="2"/><path d="M10,80 Q25,64 40,80" fill="none" stroke="#2E86C1" stroke-width="3"/>'+
+'<text x="10" y="108" font-size="9" fill="#1A7A3A" class="anno">P ตั้งขึ้น = sinus ✓</text>'+
+'<path d="M165,80 Q180,96 195,80 L210,80 L213,84 L218,30 L223,88 L227,80 L285,80" fill="none" stroke="#333" stroke-width="2"/><path d="M165,80 Q180,96 195,80" fill="none" stroke="#C0305A" stroke-width="3"/>'+
+'<text x="165" y="112" font-size="9" fill="#C0305A" class="anno">P กลับหัว ✕</text>'+
+'<path d="M320,80 L365,80 L368,84 L373,30 L378,88 L382,80 L450,80" fill="none" stroke="#333" stroke-width="2"/>'+
+'<text x="320" y="108" font-size="9" fill="#C0305A" class="anno">ไม่มี P ✕</text>'+
+'</svg>';}
+
+if(type==='full_steps'){
+var y=120,bt=function(x){return ' L'+x+','+y+' Q'+(x+12)+','+(y-14)+' '+(x+24)+','+y+' L'+(x+34)+','+y+' L'+(x+37)+','+(y+6)+' L'+(x+42)+','+(y-70)+' L'+(x+47)+','+(y+12)+' L'+(x+50)+','+y+' L'+(x+66)+','+y+' Q'+(x+88)+','+(y-40)+' '+(x+110)+','+y+' L'+(x+116)+','+y+' Q'+(x+125)+','+(y-10)+' '+(x+134)+','+y;};
+var bd=function(cx,cy,n,col,txt,anc){return '<circle cx="'+cx+'" cy="'+cy+'" r="8" fill="'+col+'"/><text x="'+cx+'" y="'+(cy+3.5)+'" text-anchor="middle" font-size="10" font-weight="700" fill="#fff">'+n+'</text>'+(txt?'<text x="'+(cx+(anc==='end'?-12:12))+'" y="'+(cy+4)+'" text-anchor="'+(anc||'start')+'" font-size="10.5" font-weight="700" fill="'+col+'" class="anno">'+txt+'</text>':'');};
+var br=function(x1,x2,yy,col){return '<path d="M'+x1+','+(yy-4)+' L'+x1+','+yy+' L'+x2+','+yy+' L'+x2+','+(yy-4)+'" fill="none" stroke="'+col+'" stroke-width="2"/>';};
+var x=20,g='#0E8A5F',pc='#2E86C1',qc='#C0305A',tc='#1E8449',qt='#8E44AD',uc='#D68910';
+return '<svg viewBox="0 0 460 230">'+grid(460,230,true,false)+
+'<path d="M0,'+y+bt(x)+' L250,'+y+bt(250)+' L460,'+y+'" fill="none" stroke="#333" stroke-width="2"/>'+
+'<line x1="'+(x+42)+'" y1="30" x2="292" y2="30" stroke="'+g+'" stroke-width="2"/><line x1="'+(x+42)+'" y1="24" x2="'+(x+42)+'" y2="48" stroke="'+g+'" stroke-width="1.5"/><line x1="292" y1="24" x2="292" y2="48" stroke="'+g+'" stroke-width="1.5"/>'+
+bd(150,18,1,g,'จังหวะ + HR (R–R)')+
+bd(x+12,y-28,2,pc,'')+'<text x="'+(x+2)+'" y="'+(y-40)+'" font-size="10.5" font-weight="700" fill="'+pc+'" class="anno">P</text>'+
+br(x,x+34,y+16,pc)+bd(x+17,y+28,3,pc,'PR')+
+br(x+34,x+50,y+16,qc)+bd(x+64,y+28,4,qc,'QRS')+
+bd(x+88,y-54,5,tc,'T')+
+br(x+34,x+110,y+48,qt)+bd(x+72,y+60,6,qt,'QT')+
+bd(x+125,y-26,7,uc,'U')+
+'<rect x="250" y="160" width="200" height="56" rx="8" fill="#FFF0F4" stroke="#E8396B"/>'+
+bd(266,178,8,'#E8396B','สรุป')+
+'<text x="258" y="200" font-size="9.5" fill="#333" class="anno">ชื่อจังหวะ + สิ่งที่ผิดปกติ</text>'+
+'<text x="258" y="211" font-size="9.5" fill="#333" class="anno">+ สิ่งที่ต้องทำ/รายงาน</text>'+
+'</svg>';}
+
+if(type==='st_what'){
+var y=110,bl='#2E86C1',oc='#B9770E';
+var beat=function(x){return ' L'+x+','+y+' Q'+(x+12)+','+(y-14)+' '+(x+24)+','+y+' L'+(x+40)+','+y+' L'+(x+43)+','+(y+6)+' L'+(x+48)+','+(y-70)+' L'+(x+53)+','+(y+12)+' L'+(x+56)+','+y+' L'+(x+78)+','+y+' Q'+(x+100)+','+(y-40)+' '+(x+122)+','+y;};
+return '<svg viewBox="0 0 460 200">'+grid(460,200,true,false)+
+'<rect x="86" y="30" width="22" height="120" fill="'+oc+'" opacity=".15"/>'+
+'<rect x="54" y="30" width="16" height="120" fill="'+bl+'" opacity=".10"/><rect x="152" y="30" width="108" height="120" fill="'+bl+'" opacity=".10"/>'+
+'<line x1="0" y1="'+y+'" x2="460" y2="'+y+'" stroke="'+bl+'" stroke-width="1.2" stroke-dasharray="6 4"/>'+
+'<path d="M0,'+y+beat(30)+' L260,'+y+beat(260)+' L460,'+y+'" fill="none" stroke="#333" stroke-width="2"/>'+
+'<path d="M86,'+y+' L108,'+y+'" stroke="'+oc+'" stroke-width="4"/>'+
+'<circle cx="86" cy="'+y+'" r="4.5" fill="'+oc+'"/>'+
+'<text x="97" y="170" text-anchor="middle" font-size="11" font-weight="700" fill="'+oc+'" class="anno">ST segment</text>'+
+'<text x="97" y="184" text-anchor="middle" font-size="9.5" fill="'+oc+'" class="anno">จบ QRS (J point) → ต้น T</text>'+
+'<line x1="86" y1="'+(y+6)+'" x2="86" y2="158" stroke="'+oc+'" stroke-width="1"/>'+
+'<text x="62" y="24" text-anchor="middle" font-size="9.5" fill="'+bl+'" class="anno">PR segment</text>'+
+'<text x="206" y="24" text-anchor="middle" font-size="9.5" fill="'+bl+'" class="anno">TP segment</text>'+
+'<text x="290" y="160" font-size="10" fill="'+bl+'" font-weight="700" class="anno">- - - เส้นฐาน (baseline)</text>'+
+'<text x="290" y="174" font-size="9.5" fill="#444" class="anno">= ระดับ PR / TP segment</text>'+
+'</svg>';}
+if(type==='st_cmp'){
+var y=100;
+function sb(x0,st,kind,col,lab1,lab2){var e=y-st,t;
+if(kind==='elev')t=' L'+(x0+30)+','+e+' Q'+(x0+48)+','+(e-40)+' '+(x0+68)+','+y;
+else if(kind==='depr')t=' L'+(x0+30)+','+e+' L'+(x0+44)+','+e+' Q'+(x0+56)+','+(y-26)+' '+(x0+72)+','+y;
+else if(kind==='down')t=' L'+(x0+46)+','+(y+16)+' Q'+(x0+58)+','+(y+14)+' '+(x0+72)+','+y;
+else t=' L'+(x0+34)+','+y+' Q'+(x0+52)+','+(y-38)+' '+(x0+70)+','+y;
+var q=' L'+(x0+12)+','+y+' L'+(x0+15)+','+(y+5)+' L'+(x0+20)+','+(y-50)+' L'+(x0+25)+','+(y+10);
+var jy=kind==='normal'?y:kind==='down'?y+4:e,j=' L'+(x0+27)+','+jy;
+return '<path d="M'+x0+','+y+q+j+t+' L'+(x0+105)+','+y+'" fill="none" stroke="#333" stroke-width="2"/>'+
+'<path d="M'+(x0+27)+','+jy+t+'" fill="none" stroke="'+col+'" stroke-width="3"/>'+
+'<line x1="'+x0+'" y1="'+y+'" x2="'+(x0+105)+'" y2="'+y+'" stroke="#2E86C1" stroke-width="1" stroke-dasharray="4 3"/>'+
+'<text x="'+(x0+2)+'" y="140" font-size="10" font-weight="700" fill="'+col+'" class="anno">'+lab1+'</text><text x="'+(x0+2)+'" y="154" font-size="8.5" fill="#444" class="anno">'+lab2+'</text>';}
+return '<svg viewBox="0 0 460 160">'+grid(460,160,true,false)+sb(2,0,'normal','#1E8449','ST ปกติ','อยู่บนเส้นฐาน')+sb(117,20,'elev','#C0305A','ST ยก','≥ 1 ช่องเล็ก 🚨')+sb(232,-15,'depr','#D68910','ST กดแนวราบ','≥ 0.5 ช่องเล็ก ⚠️')+sb(347,-12,'down','#D68910','ST กดลาดลง','ขาดเลือด ⚠️')+'</svg>';}
+
+return '';
+}
+
+/* ---- ตัวสุ่มที่กำหนดค่าเริ่มได้ (ใช้สร้างโจทย์เดิมซ้ำเมื่อกลับมาทำต่อ) ---- */
+let _seed = (Date.now() % 2147483646) + 1;
+function RNG() { _seed = (_seed * 48271) % 2147483647; return (_seed - 1) / 2147483646; }
+function seedRNG(s) { _seed = (Math.abs(Math.floor(s)) % 2147483646) + 1; for (let i = 0; i < 5; i++) RNG(); }
+function newSeed() { return Math.floor(RNG() * 2e9); }
+const MMW = 150, MMH = 36, BASE = 24;            // strip: 6 s wide, baseline at 24 mm
+const DUR = MMW / 25;
+const cv = document.getElementById('cv'), box = document.getElementById('stripbox');
+const ctx = cv.getContext('2d');
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+let W = 640, H = 154, PX = W / MMW;
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+
+// ---------- waveform ----------
+const g = (x, c, s) => Math.exp(-((x - c) ** 2) / (2 * s * s));
+function makeStrip(o) {
+  const S = Object.assign({ n: 20, pr: 0.16, qrs: 0.08, r0: 0.6, kind: 'nsr', pAmp: 0.15, irregular: false, pShape: 'normal' }, o);
+  S.pWidth = S.pShape === 'wide' ? 0.14 : 0.10;
+  // ---- T / QT / U ----
+  S.tShape = S.tShape || 'normal';
+  const qtb = Math.sqrt(S.n * 0.04 / 0.8);
+  S.tSig = (S.tShape === 'peaked' ? 0.028 : 0.05) * qtb;
+  S.tAmp = { normal: 0.3, peaked: 0.75, inverted: -0.28, flat: 0.06 }[S.tShape];
+  S.tc = S.qt ? S.qt - 2.2 * S.tSig : S.qrs + 0.225 * qtb;     // ระยะจากต้น QRS ถึงยอด T
+  S.qt = +(S.tc + 2.2 * S.tSig).toFixed(2);                      // ต้น QRS → จบ T
+  S.uAmp = S.uAmp || 0;
+  S.st = S.st || 0;                                              // ST ยก (+) / กด (−) หน่วย mV (0.1 mV = 1 มม.)
+  S.uc = S.qt + 0.07;                                            // ยอด U หลังจบ T
+  S.rr = S.n * 0.04; S.rate = Math.round(1500 / S.n);
+  // ให้มีเส้นฐานคั่นระหว่าง "จบ T" กับ "ต้น P" อย่างน้อย 1.5 ช่องเล็ก จะได้วัด PR ได้ชัด
+  {
+    const shortRR = S.irregular ? S.rr * 0.65 : S.rr;          // จังหวะไม่สม่ำเสมอใช้ช่วงที่สั้นที่สุด
+    const maxQt = +(shortRR - S.pr - 0.06).toFixed(2);
+    if (S.qt > maxQt && maxQt >= 0.24) { S.qt = maxQt; S.tc = S.qt - 2.2 * S.tSig; }
+  }
+  S.R = [];
+  if (S.irregular) {
+    const f = [0.65, 1.3, 0.9, 1.2, 0.7, 1.05], k0 = Math.floor(RNG() * f.length);
+    for (let t = S.r0, i = k0; t < DUR + 0.8; t += S.rr * f[i++ % f.length]) S.R.push(+t.toFixed(3));
+  } else for (let t = S.r0; t < DUR + 0.8; t += S.rr) S.R.push(+t.toFixed(3));
+  S.seed = RNG() * 1000;
+  return S;
+}
+const sgm = z => 1 / (1 + Math.exp(-z));
+function volt(S, t) {
+  let v = 0; const q = S.qrs, wide = q >= 0.12, qt = Math.sqrt(S.rr / 0.8);
+  for (const R of S.R) {
+    const x = t - R; if (x < -0.6 || x > 0.7) continue;
+    const on = -0.45 * q;
+    if (S.pShape === 'wide') v += 0.13 * g(x, on - S.pr + 0.045, 0.017) + 0.13 * g(x, on - S.pr + 0.095, 0.017);
+    else v += S.pAmp * g(x, on - S.pr + 0.05, 0.02);
+    v += -0.08 * g(x, on + 0.12 * q, 0.07 * q);
+    v += (wide ? 0.95 : 1.1) * g(x, 0, (wide ? 0.13 : 0.11) * q);
+    v += -0.25 * g(x, on + 0.78 * q, 0.08 * q);
+    v += S.tAmp * g(x, on + S.tc, S.tSig);
+    if (S.uAmp) v += S.uAmp * g(x, on + S.uc, 0.03);
+    if (S.st) v += S.st * sgm((x - on - q) / 0.006) * sgm((on + S.tc + 1.2 * S.tSig - x) / 0.025);
+  }
+  return v + 0.008 * Math.sin(t * 47 + S.seed) + 0.006 * Math.sin(t * 131 + S.seed * 2);
+}
+const X = t => t * 25 * PX, Y = mv => (BASE - mv * 10) * PX, Ymm = mm => mm * PX;
+const on = (S, R) => R - 0.45 * S.qrs;           // QRS onset for beat R
+
+// ---------- drawing ----------
+let S = makeStrip({}), pts = [];
+function buildPts() { pts = []; for (let x = 0; x <= W; x += 0.5) pts.push(Y(volt(S, x / PX / 25))); }
+function resize() {
+  W = Math.max(box.clientWidth, 640); PX = W / MMW; H = Math.round(MMH * PX);
+  const d = devicePixelRatio || 1;
+  cv.width = W * d; cv.height = H * d; cv.style.width = W + 'px'; cv.style.height = H + 'px';
+  ctx.setTransform(d, 0, 0, d, 0, 0); buildPts(); kick();
+}
+function grid() {
+  ctx.fillStyle = css('--paper'); ctx.fillRect(0, 0, W, H);
+  for (const [step, col, lw] of [[1, '--grid-minor', 0.6], [5, '--grid-major', 1.1]]) {
+    ctx.strokeStyle = css(col); ctx.lineWidth = lw; ctx.beginPath();
+    for (let m = 0; m <= MMW; m += step) { ctx.moveTo(m * PX, 0); ctx.lineTo(m * PX, H); }
+    for (let m = 0; m <= MMH; m += step) { ctx.moveTo(0, m * PX); ctx.lineTo(W, m * PX); }
+    ctx.stroke();
+  }
+}
+function trace(upto) {
+  const n = Math.min(pts.length, Math.floor(upto * 2));
+  ctx.strokeStyle = css('--trace'); ctx.lineWidth = 1.8; ctx.lineJoin = 'round'; ctx.beginPath();
+  for (let i = 0; i < n; i++) i ? ctx.lineTo(i / 2, pts[i]) : ctx.moveTo(0, pts[0]);
+  ctx.stroke();
+  if (n < pts.length && n > 0) {
+    ctx.fillStyle = css('--c-m'); ctx.beginPath(); ctx.arc((n - 1) / 2, pts[n - 1], 4, 0, 7); ctx.fill();
+  }
+}
+function label(txt, x, y, col, align = 'center') {
+  ctx.font = '600 12px Sarabun, sans-serif';
+  const w = ctx.measureText(txt).width + 10;
+  let lx = align === 'center' ? x - w / 2 : align === 'left' ? x : x - w;
+  lx = Math.max(2, Math.min(W - w - 2, lx));
+  ctx.fillStyle = css('--paper'); ctx.globalAlpha *= 0.92;
+  ctx.beginPath(); ctx.roundRect(lx, y - 10, w, 20, 4); ctx.fill(); ctx.globalAlpha /= 0.92;
+  ctx.strokeStyle = col; ctx.lineWidth = 1; ctx.stroke();
+  ctx.fillStyle = col; ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.fillText(txt, lx + 5, y + 1);
+}
+function band(t0, t1, col, a = 0.18) {
+  ctx.save(); ctx.globalAlpha *= a; ctx.fillStyle = col; ctx.fillRect(X(t0), 0, X(t1) - X(t0), H); ctx.restore();
+}
+function bracket(t0, t1, mm, col, txt) {
+  const y = Ymm(mm), x0 = X(t0), x1 = X(t1);
+  ctx.strokeStyle = col; ctx.lineWidth = 2; ctx.beginPath();
+  ctx.moveTo(x0, y - 5); ctx.lineTo(x0, y + 5); ctx.moveTo(x1, y - 5); ctx.lineTo(x1, y + 5);
+  ctx.moveTo(x0, y); ctx.lineTo(x1, y); ctx.stroke();
+  if (txt) label(txt, (x0 + x1) / 2, y - 13, col);
+}
+function vbracket(t, mm0, mm1, col, txt) {
+  const x = X(t), y0 = Ymm(mm0), y1 = Ymm(mm1);
+  ctx.strokeStyle = col; ctx.lineWidth = 2; ctx.beginPath();
+  ctx.moveTo(x - 5, y0); ctx.lineTo(x + 5, y0); ctx.moveTo(x - 5, y1); ctx.lineTo(x + 5, y1);
+  ctx.moveTo(x, y0); ctx.lineTo(x, y1); ctx.stroke();
+  if (txt) label(txt, x + 10, (y0 + y1) / 2, col, 'left');
+}
+function arrowAt(t, txt, col) {
+  const x = X(t), y = Ymm(9);
+  ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(x, y + 12); ctx.lineTo(x - 6, y + 3); ctx.lineTo(x + 6, y + 3); ctx.fill();
+  label(txt, x, y - 8, col);
+}
+function waveRange(S, R, type) {
+  const o = on(S, R), q = S.qrs, qt = Math.sqrt(S.rr / .8);
+  if (type === 'P') return [o - S.pr, o - S.pr + S.pWidth];
+  if (type === 'QRS') return [o, o + q];
+  if (type === 'U') return [o + S.uc - 0.07, o + S.uc + 0.07];
+  return [o + S.tc - 2.2 * S.tSig, o + S.qt];
+}
+function vline(t, col) { ctx.save(); ctx.setLineDash([4, 3]); ctx.strokeStyle = col; ctx.lineWidth = 1.3; ctx.beginPath(); ctx.moveTo(X(t), 0); ctx.lineTo(X(t), H); ctx.stroke(); ctx.restore(); }
+function dot(t, mv, col, r = 5) { ctx.fillStyle = col; ctx.beginPath(); ctx.arc(X(t), Y(mv), r, 0, 7); ctx.fill(); }
+const seg = (p, i, n) => Math.max(0, Math.min(1, p * n - i));   // sequential sub-progress
+const visibleR = () => S.R.filter(r => r < DUR - 0.1);
+
+// overlays: (p 0..1) animated progress
+const OV = {
+  paper(p) {
+    const m = css('--c-m');
+    ctx.globalAlpha = seg(p, 0, 3);
+    ctx.fillStyle = m; ctx.globalAlpha *= .35; ctx.fillRect(20 * PX, 3 * PX, PX, PX); ctx.globalAlpha = seg(p, 0, 3);
+    ctx.strokeStyle = m; ctx.lineWidth = 2; ctx.strokeRect(20 * PX, 3 * PX, PX, PX);
+    label('ช่องเล็ก = 0.04 วินาที · 0.1 mV', 22 * PX, 3.5 * PX, m, 'left');
+    ctx.globalAlpha = seg(p, 1, 3);
+    ctx.fillStyle = m; ctx.globalAlpha *= .15; ctx.fillRect(75 * PX, 1 * PX, 5 * PX, 5 * PX); ctx.globalAlpha = seg(p, 1, 3);
+    ctx.strokeRect(75 * PX, 1 * PX, 5 * PX, 5 * PX);
+    label('ช่องใหญ่ = 0.20 วินาที · 0.5 mV', 82 * PX, 3.5 * PX, m, 'left');
+    ctx.globalAlpha = seg(p, 2, 3);
+    bracket(0, 1, 32, m, '5 ช่องใหญ่ = 1 วินาที');
+    ctx.globalAlpha = 1;
+  },
+  waves(p) {
+    const R = S.R[1];
+    const items = [
+      [...waveRange(S, R, 'P'), '--c-p', 'P · หัวใจห้องบนบีบ'],
+      [...waveRange(S, R, 'QRS'), '--c-qrs', 'QRS · ห้องล่างบีบ'],
+      [...waveRange(S, R, 'T'), '--c-t', 'T · ห้องล่างคลายตัว']];
+    items.forEach(([a, b, c, t], i) => {
+      ctx.globalAlpha = seg(p, i, 3); band(a, b, css(c), .22);
+      label(t, X((a + b) / 2), Ymm(3 + i * 5), css(c));
+    });
+    ctx.globalAlpha = 1;
+  },
+  rate(p) {
+    const m = css('--c-m'), qc = css('--c-qrs'), R1 = S.R[1], R2 = S.R[2];
+    visibleR().forEach(r => dot(r, volt(S, r), qc, 4));
+    vline(R1, qc); vline(R2, qc);
+    const L = S.rr / 0.2, whole = Math.floor(L + 1e-6), shown = Math.floor(seg(p, 0, 1.3) * whole + 1e-6);
+    ctx.strokeStyle = m; ctx.lineWidth = 2;
+    for (let k = 1; k <= shown; k++) {
+      const a = R1 + (k - 1) * .2, b = R1 + k * .2;
+      ctx.fillStyle = m; ctx.globalAlpha = .14; ctx.fillRect(X(a), Ymm(5), X(b) - X(a), Ymm(5)); ctx.globalAlpha = 1;
+      label(String(k), X((a + b) / 2), Ymm(7.5), m);
+    }
+    if (p > .8) {
+      ctx.globalAlpha = seg(p, 4, 5);
+      const txt = S.n % 5 === 0
+        ? `${whole} ช่องใหญ่ → 300 ÷ ${whole} = ${S.rate} ครั้ง/นาที`
+        : `${S.n} ช่องเล็ก → 1500 ÷ ${S.n} ≈ ${S.rate} ครั้ง/นาที`;
+      label(txt, X(R2) + 8, Ymm(31), m, 'left'); ctx.globalAlpha = 1;
+    }
+  },
+  rhythm(p) {
+    const m = css('--c-m'), qc = css('--c-qrs'), rs = visibleR();
+    rs.forEach(r => dot(r, volt(S, r), qc, 4));
+    for (let i = 0; i < rs.length - 1; i++) {
+      ctx.globalAlpha = seg(p, i, rs.length - 1);
+      bracket(rs[i], rs[i + 1], 8, m, `${(rs[i + 1] - rs[i]).toFixed(2)} s`);
+    }
+    ctx.globalAlpha = 1;
+  },
+  pwave(p) {
+    const c = css('--c-p');
+    visibleR().forEach((R, i, a) => {
+      ctx.globalAlpha = seg(p, i, a.length);
+      const [x0, x1] = waveRange(S, R, 'P');       // ขอบเขตจริงของ P (ต้น–ปลาย)
+      const pc = (x0 + x1) / 2;
+      bracket(x0, x1, 29, c);                       // ขีดต้น–ปลาย P ใต้เส้นฐาน ไม่ทับคลื่นอื่น
+      const ph = S.pShape === 'wide' ? 0.13 : S.pAmp;
+      label(S.pShape === 'wide' ? 'P กว้าง' : S.pAmp > 0.2 ? 'P สูง' : S.pAmp > 0 ? 'P' : S.pAmp < 0 ? 'P กลับหัว' : 'ไม่มี P', X(pc), Y(Math.max(ph, .08)) - 3.8 * PX, c);
+    });
+    ctx.globalAlpha = 1;
+  },
+  pr(p) {
+    const c = css('--c-p'), R = S.R[1], o = on(S, R), a = o - S.pr;
+    ctx.globalAlpha = seg(p, 0, 3); band(a, o, c, .2); vline(a, c); vline(o, c);
+    ctx.globalAlpha = seg(p, 1, 3);
+    const pc = a + (S.pShape === 'wide' ? 0.07 : 0.05);          // ยอด P
+    dot(pc, volt(S, pc), c, 4);
+    label('ต้น P', X(a), Ymm(6), c);
+    label('ต้น QRS', X(o), Ymm(33), c);
+    ctx.globalAlpha = seg(p, 2, 3);
+    bracket(a, o, 30, c, `PR = ${S.pr.toFixed(2)} s (${fmt(S.pr / .04)} ช่องเล็ก)`);
+    ctx.globalAlpha = 1;
+  },
+  qrs(p) {
+    const c = css('--c-qrs'), R = S.R[1], o = on(S, R);
+    ctx.globalAlpha = seg(p, 0, 2); band(o, o + S.qrs, c, .22); vline(o, c); vline(o + S.qrs, c);
+    ctx.globalAlpha = seg(p, 1, 2);
+    bracket(o, o + S.qrs, 30, c, `QRS = ${S.qrs.toFixed(2)} s (${fmt(S.qrs / .04)} ช่องเล็ก)`);
+    ctx.globalAlpha = 1;
+  },
+  twave(p) {
+    const c = css('--c-t'), txt = { normal: 'T ปกติ: โค้งมน หัวขึ้น สูง ≈ 3 ช่องเล็ก', peaked: 'T สูงแหลม ฐานแคบ', inverted: 'T กลับหัว', flat: 'T แบน สูงไม่ถึง 1 ช่องเล็ก' }[S.tShape];
+    visibleR().forEach((R, i, a) => {
+      if (R + 0.5 > DUR) return;
+      ctx.globalAlpha = seg(p, i, a.length);
+      const [x0, x1] = waveRange(S, R, 'T');
+      band(x0, x1, c, .22);
+    });
+    ctx.globalAlpha = seg(p, 0, 1);
+    const [a0, a1] = waveRange(S, S.R[1], 'T');
+    label(txt, X((a0 + a1) / 2), Ymm(4), c);
+    if (S.tShape !== 'flat') {
+      const hmm = Math.round(Math.abs(S.tAmp) * 10), y1 = BASE - S.tAmp * 10;
+      const tx = S.R[1] - 0.45 * S.qrs + S.tc + 0.07;
+      vbracket(tx, Math.min(y1, BASE), Math.max(y1, BASE), c, '');
+      label(`${S.tAmp < 0 ? 'ลึก' : 'สูง'} ≈ ${hmm} มม. (${hmm} ช่องเล็ก)`, X(tx) + 8,
+        Ymm(S.tAmp < 0 ? Math.max(y1, BASE) + 4 : Math.min(y1, BASE) - 4), c, 'left');
+    }
+    ctx.globalAlpha = 1;
+  },
+  qt(p) {
+    const c = '#8E44AD', R1 = S.R[1], o = on(S, R1), e = o + S.qt;
+    ctx.globalAlpha = seg(p, 0, 3); band(o, e, c, .15); vline(o, c); vline(e, c);
+    ctx.globalAlpha = seg(p, 1, 3);
+    bracket(o, e, 30, c, `QT = ${S.qt.toFixed(2)} s (${fmt(S.qt / .04)} ช่องเล็ก)`);
+    ctx.globalAlpha = seg(p, 2, 3);
+    const rr = S.R[2] - S.R[1];
+    bracket(R1, R1 + rr / 2, 6, cM2(), `ครึ่ง R–R = ${(rr / 2).toFixed(2)} s`);
+    ctx.globalAlpha = 1;
+  },
+  uwave(p) {
+    const c = '#D68910';
+    visibleR().forEach((R, i, a) => {
+      if (R + 0.7 > DUR) return;
+      ctx.globalAlpha = seg(p, i, a.length);
+      const [u0, u1] = waveRange(S, R, 'U'), uc = (u0 + u1) / 2;
+      ctx.strokeStyle = c; ctx.lineWidth = 2; ctx.beginPath();
+      ctx.ellipse(X(uc), Y(Math.max(S.uAmp, 0.04) / 2), 2.6 * PX, 2 * PX, 0, 0, 7); ctx.stroke();
+      if (i === 1) label(S.uAmp ? (S.uAmp >= 0.1 ? 'U เด่น' : 'U เล็ก') : 'ไม่มี U', X(uc), Ymm(12), c);
+    });
+    ctx.globalAlpha = 1;
+  },
+  st(p) {
+    const c = '#B9770E', R1 = S.R[1], o = on(S, R1), j = o + S.qrs, m = j + 0.04;
+    const base = volt(S, o - 0.02), lv = volt(S, m) - base, mm = Math.round(Math.abs(lv) * 20) / 2;
+    ctx.globalAlpha = seg(p, 0, 3);
+    ctx.save(); ctx.setLineDash([6, 4]); ctx.strokeStyle = css('--c-p'); ctx.lineWidth = 1.5; ctx.beginPath();
+    ctx.moveTo(0, Y(base)); ctx.lineTo(W, Y(base)); ctx.stroke(); ctx.restore();
+    label('เส้นฐาน (ระดับ PR segment)', X(o - S.pr) - 4, Y(base) + 22, css('--c-p'), 'right');
+    ctx.globalAlpha = seg(p, 1, 3);
+    visibleR().forEach(R => { if (R + 0.4 > DUR) return; const a = on(S, R) + S.qrs; band(a, on(S, R) + S.tc - S.tSig, c, .22); });
+    dot(j, volt(S, j), c, 4.5);
+    label('J point', X(j), Ymm(BASE - volt(S, j) * 10 + (lv < 0 ? -9 : 9)), c);
+    ctx.globalAlpha = seg(p, 2, 3);
+    if (mm >= 0.5) vbracket(m, BASE - base * 10, BASE - (base + lv) * 10, c, '');
+    label(mm < 0.5 ? 'ST อยู่ระดับเส้นฐาน — ปกติ' : `ST ${lv > 0 ? 'ยก' : 'กด'} ≈ ${fmt(mm)} มม. (${fmt(mm)} ช่องเล็ก)`,
+      X(m) + 10, Ymm(lv > 0 ? BASE - (base + lv) * 10 - 8 : 30), c, 'left');
+    ctx.globalAlpha = 1;
+  },
+  summary(p) {
+    ctx.globalAlpha = seg(p, 0, 3); OV.pwave(1);
+    ctx.globalAlpha = seg(p, 1, 3); OV.pr(1);
+    ctx.globalAlpha = seg(p, 2, 3); OV.rhythm(1);
+    ctx.globalAlpha = 1;
+  },
+  none() {}
+};
+const cM2 = () => css('--c-m');
+const fmt = n => (Math.round(n * 10) / 10).toString();
+
+// ---------- animation loop ----------
+let sweepStart = 0, sweeping = false, overlay = 'none', ovStart = 0, raf = 0;
+const SPEED = 2, OVMS = 1700;
+function play() { sweepStart = performance.now(); sweeping = !reduce; ovStart = 0; kick(); }
+function setOverlay(name) { overlay = name; ovStart = sweeping ? 0 : performance.now(); kick(); }
+function kick() { if (!raf) raf = requestAnimationFrame(frame); }
+function frame(now) {
+  raf = 0; grid();
+  let upto = W;
+  if (sweeping) {
+    upto = X((now - sweepStart) / 1000 * SPEED);
+    if (upto >= W) { sweeping = false; upto = W; ovStart = now; }
+  }
+  trace(upto);
+  let more = sweeping;
+  if (!sweeping && overlay !== 'none') {
+    const p = reduce ? 1 : Math.min(1, (now - ovStart) / OVMS);
+    ctx.save(); (typeof overlay === 'function' ? overlay : OV[overlay])(p); ctx.restore();
+    if (p < 1) more = true;
+  }
+  if (more) raf = requestAnimationFrame(frame);
+}
+document.getElementById('replay').onclick = play;
+new ResizeObserver(resize).observe(box);
+
+
+const pick = a => a[Math.floor(RNG() * a.length)];
+const rint = (a, b) => a + Math.floor(RNG() * (b - a + 1));
+const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(RNG() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+
+/* ===== อ่านกราฟเต็ม: ชนิดกราฟที่สุ่ม ===== */
+const DX = {
+  nsr: 'Normal sinus rhythm',
+  brady: 'Sinus bradycardia',
+  tachy: 'Sinus tachycardia',
+  sa: 'Sinus arrhythmia',
+  pr: 'Sinus rhythm + 1st degree AV block (PR ยาว)',
+  qrs: 'Sinus rhythm + QRS กว้าง (เช่น bundle branch block)',
+  junc: 'Junctional rhythm'
+};
+function genStrip(kinds) {
+  const r = RNG();
+  let kind = r < .30 ? 'nsr' : r < .42 ? 'brady' : r < .54 ? 'tachy' : r < .66 ? 'sa' : r < .77 ? 'pr' : r < .88 ? 'qrs' : 'junc';
+  if (kinds) kind = pick(kinds);
+  const o = { kind, pr: pick([0.14, 0.16, 0.18]), qrs: pick([0.06, 0.08, 0.10]), n: rint(16, 24) };
+  if (kind === 'brady') o.n = rint(28, 38);
+  if (kind === 'tachy') { o.n = rint(12, 13); o.pr = pick([0.12, 0.14]); o.qt = +(0.40 * Math.sqrt(o.n * 0.04)).toFixed(2); o.pAmp = 0.22; }
+  if (kind === 'sa') { o.n = rint(21, 25); o.irregular = true; }
+  if (kind === 'pr') { o.n = rint(17, 24); o.pr = pick([0.24, 0.28, 0.32]); }
+  if (kind === 'qrs') { o.n = rint(17, 24); o.qrs = pick([0.12, 0.14, 0.16]); }
+  if (kind === 'junc') { o.n = rint(27, 32); o.pAmp = pick([0, -0.12]); o.pr = 0.08; o.qrs = pick([0.06, 0.08]); }
+  const S = makeStrip(o);
+  S.count6 = S.R.filter(x => x < DUR - 0.05).length;
+  S.hr = S.irregular ? S.count6 * 10 : S.rate;
+  return S;
+}
+
+const f2s = v => v.toFixed(2);
+const boxes = v => fmt(v / 0.04);
+const qrsLabel = q => `${f2s(q)} วินาที (${boxes(q)} ช่องเล็ก) — ${q >= 0.12 ? 'กว้าง ผิดปกติ' : 'แคบ ปกติ'}`;
+const prLabel = p => `${f2s(p)} วินาที (${boxes(p)} ช่องเล็ก) — ${p < 0.12 ? 'สั้นกว่าปกติ' : p <= 0.2 ? 'ปกติ' : 'ยาวกว่าปกติ'}`;
+const hrLabel = v => `${v} ครั้ง/นาที — ${v < 60 ? 'ช้า (< 60)' : v > 100 ? 'เร็ว (> 100)' : 'ปกติ (60–100)'}`;
+const NO_P = 'วัดไม่ได้ — ไม่มี P นำหน้า QRS';
+
+// ตัวเลือกแบบตัวเลข: ค่าจริง 1 ข้อ + ค่าหลอก (แต่ละข้อมีคำแปลผลของตัวเอง)
+function valueOpts(correct, pool, labelFn, k, minGap) {
+  const out = correct == null ? [] : [correct];
+  for (const v of shuffle(pool.slice())) {
+    if (out.length >= k) break;
+    if (v > 0 && out.every(o => Math.abs(o - v) >= minGap - 1e-9)) out.push(+v.toFixed(2));
+  }
+  return out.map(v => [labelFn(v), v === correct]);
+}
+
+function buildQs(S, kinds) {
+  const noP = S.pAmp === 0, invP = S.pAmp < 0;
+
+  // 1) Rhythm
+  const q1 = { tag: 'จังหวะ (Rhythm)', q: 'ระยะ R–R สม่ำเสมอหรือไม่?', ov: 'rhythm',
+    opts: shuffle([
+      ['สม่ำเสมอ (Regular) — R–R ห่างเท่ากันทุกช่วง', !S.irregular],
+      ['ไม่สม่ำเสมอ (Irregular) — R–R ยาวสั้นไม่เท่ากัน', !!S.irregular],
+      ['สม่ำเสมอ แต่มีช่วงหยุดยาว (pause) 1 ครั้ง', false]]),
+    ex: S.irregular ? 'ระยะ R–R แต่ละช่วงยาวไม่เท่ากัน (ดูตัวเลขบนขีดเขียว) → Irregular'
+                    : `ระยะ R–R เท่ากันทุกช่วง = ${f2s(S.rr)} วินาที → Regular` };
+
+  // 2) P wave
+  const q2 = { tag: 'P wave', q: 'P wave มีลักษณะอย่างไร?', ov: 'pwave',
+    opts: shuffle([
+      ['ตั้งขึ้น หน้าตาเหมือนกัน นำหน้า QRS ทุกตัว · กว้าง ≈ 0.10 วินาที สูง ≈ 1.5 มม. (1.5 ช่องเล็ก) — ปกติ (sinus)', !noP && !invP],
+      ['กลับหัว (ลงใต้เส้นฐาน) นำหน้า QRS — ไม่ใช่ sinus', invP],
+      ['มองไม่เห็น P หน้า QRS — ไม่ใช่ sinus', noP],
+      ['ตั้งขึ้น แต่สูงแหลม > 2.5 มม. (2.5 ช่องเล็ก) — ผิดปกติ', false]]),
+    ex: noP ? 'ช่วงก่อน QRS เป็นเส้นเรียบ ไม่มี P → ไฟฟ้าไม่ได้เริ่มจาก SA node'
+      : invP ? 'P กลับหัวใน lead II → ไฟฟ้าเริ่มจากบริเวณ AV junction ไม่ใช่ SA node'
+      : 'P ตั้งขึ้น กว้างราว 2.5 ช่องเล็ก (0.10 วินาที) สูง 1.5 ช่องเล็ก (1.5 มม.) มีทุกบีต → sinus' };
+
+  // 3) QRS
+  const q3 = { tag: 'QRS', q: 'QRS กว้างเท่าไร แคบหรือกว้าง?', ov: 'qrs',
+    opts: shuffle(valueOpts(S.qrs, [0.04, 0.06, 0.08, 0.10, 0.12, 0.14, 0.16, 0.20], qrsLabel, 4, 0.04)),
+    ex: `QRS กว้าง ${boxes(S.qrs)} ช่องเล็ก × 0.04 = ${f2s(S.qrs)} วินาที → ${S.qrs >= 0.12 ? 'กว้าง (≥ 0.12)' : 'แคบ ปกติ (< 0.12)'}` };
+
+  // 4) PR
+  const prPool = [0.08, 0.12, 0.16, 0.20, 0.24, 0.28, 0.32];
+  const prGap = 0.06;      // ตัวเลือก PR ห่างกันอย่างน้อย 1.5 ช่องเล็ก
+  const prOpts = noP
+    ? valueOpts(null, prPool, prLabel, 3, prGap).concat([[NO_P, true]])
+    : valueOpts(S.pr, prPool.concat([0.14, 0.18]), prLabel, 3, prGap).concat([[NO_P, false]]);
+  const q4 = { tag: 'PR interval', q: 'PR interval เท่าไร?', ov: noP ? 'pwave' : 'pr',
+    opts: shuffle(prOpts),
+    ex: noP ? 'ไม่มี P จึงวัด PR ไม่ได้'
+      : `ต้น P ถึงต้น QRS = ${boxes(S.pr)} ช่องเล็ก × 0.04 = ${f2s(S.pr)} วินาที → ${S.pr < 0.12 ? 'สั้น (< 0.12)' : S.pr <= 0.2 ? 'ปกติ (0.12–0.20)' : 'ยาว (> 0.20)'}` };
+
+  // 5) HR
+  const c = S.hr;
+  const hrPool = S.irregular
+    ? [c + 10, c - 10, c + 20, c - 20, S.count6 * 6, c + 30]
+    : [c + 15, c - 15, c + 25, c - 25, Math.round(1500 / (S.n + 5)), Math.round(1500 / Math.max(8, S.n - 5)), Math.round(300 / Math.max(1, Math.round(S.n / 5)))];
+  const q5 = { tag: 'อัตราการเต้น (HR)', q: S.irregular ? 'HR ประมาณเท่าไร? (จังหวะไม่สม่ำเสมอ ใช้วิธี 6 วินาที)' : 'HR เท่าไร?',
+    ov: S.irregular ? 'rate6' : 'rate',
+    opts: shuffle(valueOpts(c, hrPool.map(Math.round), hrLabel, 4, 10)),
+    ex: S.irregular ? `กราฟยาว 6 วินาที นับ QRS ได้ ${S.count6} ตัว → ${S.count6} × 10 ≈ ${c} ครั้ง/นาที`
+      : `R–R ห่าง ${S.n} ช่องเล็ก${S.n % 5 === 0 ? ` (${S.n / 5} ช่องใหญ่ → 300 ÷ ${S.n / 5})` : ` (${fmt(S.n / 5)} ช่องใหญ่)`} → 1500 ÷ ${S.n} ≈ ${c} ครั้ง/นาที` };
+
+  // 6) Summary
+  let others = shuffle(Object.keys(DX).filter(k => k !== S.kind));
+  if (kinds) others = kinds.filter(k => k !== S.kind).concat(others.filter(k => !kinds.includes(k)));
+  else if (S.kind !== 'nsr') { others.splice(others.indexOf('nsr'), 1); others.unshift('nsr'); }
+  const keys = shuffle([S.kind, ...others.slice(0, 3)]);
+  const q6 = { tag: 'สรุปกราฟ', q: 'รวมทุกข้อแล้ว กราฟนี้คืออะไร?', ov: S.pAmp === 0 ? 'rhythm' : 'summary',
+    opts: keys.map(k => [DX[k], k === S.kind]),
+    ex: summaryEx(S) };
+
+  // รวม Rhythm + HR เป็นข้อเดียว (กราฟละ 5 ข้อ)
+  const rTxt = r => r ? 'ไม่สม่ำเสมอ (Irregular)' : 'สม่ำเสมอ (Regular)';
+  const hrVals = q5.opts.map(o => +o[0].split(' ')[0]).filter(v => v !== c);
+  const irr = !!S.irregular;
+  const combo = [[irr, c, true], [!irr, c, false]];
+  hrVals.slice(0, 2).forEach((v, i) => combo.push([i ? !irr : irr, v, false]));
+  const q15 = { tag: 'จังหวะ + HR', q: S.irregular ? 'จังหวะเป็นอย่างไร และ HR เท่าไร? (ถ้าไม่สม่ำเสมอ ใช้วิธี 6 วินาที)' : 'จังหวะเป็นอย่างไร และ HR เท่าไร?',
+    ov: S.irregular ? 'rate6' : 'rhythmRate',
+    opts: shuffle(combo.map(([r, v, ok]) => [`${rTxt(r)} · ${hrLabel(v)}`, ok])),
+    ex: `${q1.ex} · ${q5.ex}` };
+  return [q15, q2, q3, q4, q6];
+}
+function summaryEx(S) {
+  const base = `${S.irregular ? 'ไม่สม่ำเสมอ' : 'สม่ำเสมอ'} · HR ${S.hr} · QRS ${f2s(S.qrs)} s`;
+  return {
+    nsr: `${base} · P ปกติ · PR ${f2s(S.pr)} s → ทุกข้อปกติ = Normal sinus rhythm`,
+    brady: `${base} · P ปกติ · PR ${f2s(S.pr)} s → sinus แต่ HR < 60 = Sinus bradycardia`,
+    tachy: `${base} · P ปกติ · PR ${f2s(S.pr)} s → sinus แต่ HR > 100 = Sinus tachycardia`,
+    sa: `${base} · P ปกติทุกบีต แต่ R–R ไม่เท่ากัน → Sinus arrhythmia`,
+    pr: `${base} · P ปกติ · PR ${f2s(S.pr)} s ยาวเกิน 0.20 → Sinus rhythm + 1st degree AV block`,
+    qrs: `${base} · P ปกติ · PR ${f2s(S.pr)} s แต่ QRS ≥ 0.12 → Sinus rhythm + QRS กว้าง`,
+    junc: `${base} · ${S.pAmp === 0 ? 'ไม่มี P' : 'P กลับหัว PR สั้น'} · HR 40–60 · QRS แคบ → Junctional rhythm`
+  }[S.kind];
+}
+
+/* ===== บททดสอบ: NSR / brady / tachy + ความผิดปกติของ P, PR, QRS ===== */
+const ABN = { pTall: 'P สูงแหลม', pWide: 'P กว้าง', prLong: 'PR ยาว (1st degree AV block)', prShort: 'PR สั้น', qrsWide: 'QRS กว้าง' };
+const RBASE = { nsr: 'Normal sinus rhythm', nsrAbn: 'Sinus rhythm (HR ปกติ)', brady: 'Sinus bradycardia', tachy: 'Sinus tachycardia' };
+function examLabel(base, abn) {
+  if (!abn.length) return RBASE[base] + (base === 'nsr' ? '' : ' · P, PR, QRS ปกติ');
+  return RBASE[base === 'nsr' ? 'nsrAbn' : base] + ' + ' + abn.map(k => ABN[k]).join(' + ');
+}
+function genExamStrip() {
+  const base = pick(['nsr', 'brady', 'tachy']);
+  let abn = [];
+  if (RNG() < 0.6) {
+    const pool = shuffle(Object.keys(ABN));
+    abn = [pool[0]];
+    if (RNG() < 0.35) abn.push(pool[1]);
+    if (abn.includes('pTall') && abn.includes('pWide')) abn = [abn[0]];
+    if (abn.includes('prLong') && abn.includes('prShort')) abn = [abn[0]];
+    if (abn.includes('pWide') && abn.includes('prShort')) abn = [abn[0]];  // P กว้าง 0.14s ยาวกว่า PR สั้น 0.08s ทำให้ P ทับ QRS
+    if (base === 'tachy') abn = abn.filter(k => k !== 'prLong');
+    abn.sort((a, b) => Object.keys(ABN).indexOf(a) - Object.keys(ABN).indexOf(b));
+  }
+  const o = { kind: base, n: base === 'brady' ? rint(28, 38) : base === 'tachy' ? rint(12, 13) : rint(15, 25),
+    pr: base === 'tachy' ? pick([0.12, 0.14]) : pick([0.14, 0.16, 0.18]), qrs: pick([0.06, 0.08, 0.10]) };
+  if (base === 'tachy') { o.qt = +(0.40 * Math.sqrt(o.n * 0.04)).toFixed(2); o.pAmp = 0.22; }
+  if (abn.includes('pTall')) o.pAmp = 0.3;
+  if (abn.includes('pWide')) { o.pShape = 'wide'; if (o.pr < 0.16) o.pr = 0.16; }  // กันไม่ให้ PR สั้นกว่าความกว้างของ P
+  if (abn.includes('prLong')) { o.pr = pick([0.24, 0.28, 0.32]); if (base === 'nsr') o.n = rint(18, 25); }
+  if (abn.includes('prShort')) o.pr = 0.08;
+  if (abn.includes('qrsWide')) o.qrs = pick([0.12, 0.14, 0.16]);
+  // sinus tachycardia + PR ยาว ทำให้ P ไปชนหาง T จนอ่านไม่ได้ จึงไม่ใช้คู่นี้
+  const S = makeStrip(o);
+  S.abn = abn; S.count6 = S.R.filter(x => x < DUR - 0.05).length; S.hr = S.rate;
+  return S;
+}
+function buildExamQs(S) {
+  const qs = buildQs(S);
+  const tall = S.abn.includes('pTall'), wide = S.abn.includes('pWide');
+  qs[1] = { tag: 'P wave', q: 'P wave ปกติหรือไม่ อย่างไร?', ov: 'pwave',
+    opts: shuffle([
+      ['ตั้งขึ้น นำหน้า QRS ทุกตัว · กว้าง ≈ 0.10 วินาที สูง ≈ 1.5 มม. (1.5 ช่องเล็ก) — ปกติ', !tall && !wide],
+      ['สูงแหลม ≈ 3 มม. (เกิน 2.5 มม.) — ผิดปกติ (P pulmonale: ห้องบนขวาโต)', tall],
+      ['กว้าง ≈ 0.14 วินาที (เกิน 0.12) หยัก 2 ยอด — ผิดปกติ (P mitrale: ห้องบนซ้ายโต)', wide],
+      ['กลับหัว หรือมองไม่เห็น P — ไม่ใช่ sinus', false]]),
+    ex: tall ? 'P สูง 3 ช่องเล็ก (3 มม.) เกินเกณฑ์ 2.5 มม. (2.5 ช่องเล็ก) → P สูงแหลม (P pulmonale)'
+      : wide ? 'P กว้าง 3.5 ช่องเล็ก (0.14 วินาที) เกินเกณฑ์ 0.12 และมี 2 ยอด → P กว้าง (P mitrale)'
+      : 'P ตั้งขึ้น กว้าง 2.5 ช่องเล็ก (0.10 วินาที) สูง 1.5 มม. (1.5 ช่องเล็ก) มีทุกบีต → ปกติ' };
+  if (S.pr < 0.12) qs[3].ex += ' · PR สั้นและ P ปกติ → นึกถึง pre-excitation (เช่น WPW) รายงานแพทย์';
+  // summary
+  const right = examLabel(S.kind, S.abn);
+  const cand = new Set();
+  const bases = ['nsr', 'brady', 'tachy'];
+  bases.filter(b => b !== S.kind).forEach(b => cand.add(examLabel(b, S.abn)));
+  if (S.abn.length) cand.add(examLabel(S.kind, []));
+  if (S.abn.length > 1) cand.add(examLabel(S.kind, S.abn.slice(0, 1)));
+  const extra = Object.keys(ABN).filter(k => !S.abn.includes(k));
+  cand.add(examLabel(S.kind, S.abn.concat([pick(extra)]).slice(-2)));
+  cand.add(examLabel(S.kind, [pick(extra)]));
+  cand.delete(right);
+  const opts = shuffle([...cand]).slice(0, 3).map(t => [t, false]).concat([[right, true]]);
+  const found = [];
+  if (tall || wide) found.push(tall ? 'P สูงแหลม' : 'P กว้าง');
+  if (S.pr > 0.2) found.push(`PR ${f2s(S.pr)} s ยาว`);
+  if (S.pr < 0.12) found.push(`PR ${f2s(S.pr)} s สั้น`);
+  if (S.qrs >= 0.12) found.push(`QRS ${f2s(S.qrs)} s กว้าง`);
+  qs[4] = { tag: 'สรุปกราฟ', q: 'รวมทุกข้อแล้ว กราฟนี้คืออะไร?', ov: 'summary', opts: shuffle(opts),
+    ex: `HR ${S.hr} (${S.hr < 60 ? 'ช้า' : S.hr > 100 ? 'เร็ว' : 'ปกติ'}) · สม่ำเสมอ · P นำหน้า QRS ทุกตัว → ${RBASE[S.kind === 'nsr' ? (S.abn.length ? 'nsrAbn' : 'nsr') : S.kind]}`
+      + (found.length ? ` · ผิดปกติ: ${found.join(', ')}` : ' · P, PR, QRS ปกติทั้งหมด') };
+  return qs;
+}
+function examSummary(S) { return examLabel(S.kind, S.abn); }
+
+/* ===== บททดสอบรวม T wave · QT · U wave ===== */
+const TQU = {
+  normal: 'T, QT, U ปกติ — ไม่พบความผิดปกติ',
+  peaked: 'T สูงแหลม — นึกถึงโพแทสเซียมสูง แจ้งแพทย์ด่วน',
+  inverted: 'T กลับหัว — นึกถึงกล้ามเนื้อหัวใจขาดเลือด รายงานแพทย์',
+  hypok: 'T แบน + U เด่น — นึกถึงโพแทสเซียมต่ำ รายงานแพทย์',
+  longqt: 'QT ยาว — เสี่ยง Torsades ทบทวนยา/เกลือแร่ รายงานแพทย์'
+};
+function genTquStrip() {
+  const kind = pick(['normal', 'normal', 'peaked', 'inverted', 'hypok', 'longqt']);
+  const o = { kind, n: rint(20, 26), pr: pick([0.14, 0.16, 0.18]), qrs: pick([0.06, 0.08]), qt: pick([0.36, 0.40]) };
+  if (kind === 'peaked') o.tShape = 'peaked';
+  if (kind === 'inverted') o.tShape = 'inverted';
+  if (kind === 'hypok') { o.tShape = 'flat'; o.uAmp = 0.2; o.n = rint(24, 28); }
+  if (kind === 'longqt') { o.qt = pick([0.52, 0.56]); o.n = rint(21, 24); }
+  if (kind === 'normal') { o.qt = pick([0.36, 0.40]); o.uAmp = RNG() < 0.4 ? 0.06 : 0; o.n = rint(22, 26); }
+  const S = makeStrip(o);
+  S.count6 = S.R.filter(x => x < DUR - 0.05).length; S.hr = S.rate;
+  return S;
+}
+function buildTquQs(S) {
+  const base = buildQs(S, ['nsr', 'brady', 'tachy']);
+  const half = S.rr / 2;
+  const tL = {
+    normal: 'โค้งมน หัวขึ้น — ปกติ', peaked: 'สูงแหลม ฐานแคบ — ผิดปกติ',
+    inverted: 'กลับหัว — ผิดปกติ', flat: 'แบนเตี้ยมาก — ผิดปกติ'
+  };
+  const qT = { tag: 'T wave', q: 'T wave มีลักษณะอย่างไร?', ov: 'twave',
+    opts: shuffle(Object.keys(tL).map(k => [tL[k], k === S.tShape])),
+    ex: { normal: 'T โค้งมน หัวขึ้น สูงราว 3 มม. (3 ช่องเล็ก) → ปกติ', peaked: 'T สูงราว 7–8 มม. (7–8 ช่องเล็ก) ยอดแหลม ฐานแคบ → T สูงแหลม',
+          inverted: 'T อยู่ใต้เส้นฐาน → T กลับหัว', flat: 'T สูงไม่ถึง 1 มม. (1 ช่องเล็ก) → T แบน' }[S.tShape] };
+  const lab = v => `${v.toFixed(2)} วินาที (${fmt(v / .04)} ช่องเล็ก) — ${v > half ? 'ยาว' : 'ปกติ'}`;
+  const pool = [S.qt - 0.08, S.qt + 0.08, S.qt - 0.12, S.qt + 0.12, S.qt + 0.16, S.qt - 0.16].filter(v => v >= 0.24 && v <= 0.68);
+  const vals = [S.qt];
+  for (const v of shuffle(pool)) if (vals.length < 4 && vals.every(u => Math.abs(u - v) > 0.055)) vals.push(+v.toFixed(2));
+  const qQT = { tag: 'QT interval', q: `QT เท่าไร ปกติหรือยาว? (ครึ่ง R–R = ${half.toFixed(2)} วินาที)`, ov: 'qt',
+    opts: shuffle(vals.map(v => [lab(v), v === S.qt])),
+    ex: `QT = ${fmt(S.qt / .04)} ช่องเล็ก = ${S.qt.toFixed(2)} วินาที · ครึ่ง R–R = ${half.toFixed(2)} → ${S.qt > half ? 'ยาว' : 'ปกติ'}` };
+  const uK = S.uAmp >= 0.1 ? 'big' : S.uAmp > 0 ? 'small' : 'none';
+  const uL = { none: 'ไม่มี U wave', small: 'มี U เล็ก ๆ (พบได้ปกติ)', big: 'มี U เด่น สูงกว่า T — ผิดปกติ' };
+  const qU = { tag: 'U wave', q: 'หลัง T wave มี U wave หรือไม่?', ov: 'uwave',
+    opts: shuffle(Object.keys(uL).map(k => [uL[k], k === uK])),
+    ex: { none: 'หลัง T กลับสู่เส้นฐานเลย → ไม่มี U', small: 'มีคลื่นเล็กหลัง T สูงไม่ถึง 1 มม. (1 ช่องเล็ก) → U ปกติ', big: 'U สูงเด่นกว่า T ที่แบน → ผิดปกติ' }[uK] };
+  const others = shuffle(Object.keys(TQU).filter(k => k !== S.kind)).slice(0, 3);
+  const qS = { tag: 'สรุป', q: 'รวมทุกข้อแล้ว กราฟนี้บอกอะไร และควรทำอย่างไร?', ov: p => { OV.twave(p); OV.qt(p); },
+    opts: shuffle([S.kind, ...others]).map(k => [TQU[k], k === S.kind]),
+    ex: `T: ${tL[S.tShape]} · QT ${S.qt.toFixed(2)} s (${S.qt > half ? 'ยาว' : 'ปกติ'}) · U: ${uL[uK]} → ${TQU[S.kind]}` };
+  return [base[0], qT, qQT, qU, qS];
+}
+
+/* ===== บทอ่านกราฟครบทุกขั้น (รวมทุกเรื่องที่เรียนมา) : 8 ขั้นต่อกราฟ ===== */
+const ALLB = { nsr: 'Normal sinus rhythm', nsrAbn: 'Sinus rhythm (HR ปกติ)', brady: 'Sinus bradycardia', tachy: 'Sinus tachycardia', sa: 'Sinus arrhythmia', junc: 'Junctional rhythm' };
+const ALLF = { pTall: 'P สูงแหลม', pWide: 'P กว้าง', prLong: 'PR ยาว (1st degree AV block)', prShort: 'PR สั้น',
+  qrsWide: 'QRS กว้าง', tPeak: 'T สูงแหลม', tInv: 'T กลับหัว', hypoK: 'T แบน + U เด่น', longQT: 'QT ยาว' };
+const ALLK = Object.keys(ALLF);
+const ALLG = { pTall: 'P', pWide: 'P', prLong: 'PR', prShort: 'PR', qrsWide: 'QRS', tPeak: 'T', tInv: 'T', hypoK: 'T', longQT: 'T' };
+// ความผิดปกติที่ใช้ร่วมกับจังหวะแต่ละแบบได้ (ให้กราฟสมจริงและวัดได้ชัด)
+const ALLOK = {
+  nsr: ALLK, brady: ALLK,
+  tachy: ['pTall', 'pWide', 'prShort', 'tPeak', 'tInv'],
+  sa: ['pTall', 'pWide', 'qrsWide', 'tPeak', 'tInv'],
+  junc: ['tPeak', 'tInv']
+};
+function allLabel(base, abn) {
+  if (!abn.length) return base === 'nsr' ? 'Normal sinus rhythm — ไม่พบความผิดปกติ' : ALLB[base] + ' — P, PR, QRS, T, QT, U ปกติ';
+  return ALLB[base === 'nsr' ? 'nsrAbn' : base] + ' + ' + abn.map(k => ALLF[k]).join(' + ');
+}
+function allAdvice(S) {
+  const a = S.abn, out = [];
+  if (a.includes('tPeak')) out.push('🚨 T สูงแหลม → นึกถึง K สูง แจ้งแพทย์ทันที ต่อ monitor');
+  if (a.includes('longQT')) out.push('⚠️ QT ยาว → เสี่ยง Torsades ทบทวนยา/เกลือแร่ รายงานแพทย์');
+  if (a.includes('hypoK')) out.push('⚠️ T แบน + U เด่น → นึกถึง K ต่ำ รายงานแพทย์ ตรวจเกลือแร่');
+  if (a.includes('tInv')) out.push('⚠️ T กลับหัว → นึกถึงขาดเลือด ถามอาการเจ็บหน้าอก ทำ EKG 12 lead');
+  if (a.includes('qrsWide')) out.push('QRS กว้าง → รายงานแพทย์ เทียบกับ EKG เดิม');
+  if (a.includes('prLong')) out.push('PR ยาว → ทบทวนยาที่ทำให้ช้า (เช่น beta-blocker, digoxin) เฝ้าระวัง');
+  if (a.includes('prShort')) out.push('PR สั้น → นึกถึง pre-excitation (เช่น WPW) รายงานแพทย์');
+  if (a.includes('pTall') || a.includes('pWide')) out.push('P ผิดปกติ → บันทึกและรายงานว่าห้องบนอาจโต');
+  if (S.kind === 'brady') out.push('HR ช้า → ประเมินอาการ (หน้ามืด ความดันต่ำ)');
+  if (S.kind === 'tachy') out.push('HR เร็ว → หาสาเหตุ เช่น ไข้ ปวด ขาดน้ำ ซีด');
+  if (S.kind === 'junc') out.push('ไม่ใช่ sinus → รายงานแพทย์ ประเมินอาการ');
+  return out.length ? out.join('<br>') : '✅ กราฟปกติ ไม่ต้องทำอะไรเพิ่ม';
+}
+function genAllStrip() {
+  const r = RNG();
+  const kind = r < .30 ? 'nsr' : r < .50 ? 'brady' : r < .68 ? 'tachy' : r < .84 ? 'sa' : 'junc';
+  // สุ่มความผิดปกติ 0–2 อย่าง (กลุ่มเดียวกันมีได้อย่างเดียว)
+  const nAbn = (() => { const x = RNG(); return x < .28 ? 0 : x < .72 ? 1 : 2; })();
+  let abn = [];
+  for (const k of shuffle(ALLOK[kind].slice())) {
+    if (abn.length >= nAbn) break;
+    if (abn.some(a => ALLG[a] === ALLG[k])) continue;
+    const bad = [['pWide', 'prShort'], ['prLong', 'longQT']];
+    if (bad.some(([x, y]) => (k === x && abn.includes(y)) || (k === y && abn.includes(x)))) continue;
+    abn.push(k);
+  }
+  abn.sort((a, b) => ALLK.indexOf(a) - ALLK.indexOf(b));
+  const has = k => abn.includes(k);
+  const o = { kind, pr: pick([0.14, 0.16, 0.18]), qrs: pick([0.06, 0.08, 0.10]) };
+  if (kind === 'nsr') { o.n = rint(18, 25); o.qt = pick([0.32, 0.36].filter(v => v <= o.n * 0.02 - 0.04 + 1e-9)); }
+  if (kind === 'brady') { o.n = rint(28, 36); o.qt = pick([0.40, 0.44]); }
+  if (kind === 'tachy') { o.n = rint(13, 14); o.pr = pick([0.12, 0.14]); o.qt = o.n === 13 ? 0.24 : 0.26; o.qrs = pick([0.06, 0.08]); o.pAmp = 0.22; }
+  if (kind === 'sa') { o.n = rint(22, 23); o.irregular = true; o.qt = 0.36; }
+  if (kind === 'junc') { o.n = rint(27, 32); o.pAmp = pick([0, -0.12]); o.pr = 0.08; o.qrs = pick([0.06, 0.08]); o.qt = pick([0.40, 0.44]); }
+  if (has('pTall')) o.pAmp = 0.3;
+  if (has('pWide')) { o.pShape = 'wide'; if (o.pr < 0.16) o.pr = 0.16; }  // กันไม่ให้ PR สั้นกว่าความกว้างของ P
+  if (has('prLong')) o.pr = pick([0.24, 0.28, 0.32]);
+  if (has('prShort')) o.pr = 0.08;
+  if (has('qrsWide')) o.qrs = pick([0.12, 0.14]);
+  if (has('tPeak')) o.tShape = 'peaked';
+  if (has('tInv')) o.tShape = 'inverted';
+  if (has('hypoK')) { o.tShape = 'flat'; o.uAmp = 0.2; if (kind === 'nsr') o.n = rint(22, 25); }
+  if (has('longQT')) {
+    if (kind === 'nsr') { o.n = rint(20, 23); o.qt = pick([0.52, 0.56]); }
+    else { o.n = rint(28, 30); o.qt = pick([0.68, 0.72]); }
+  }
+  if (!has('hypoK') && !has('longQT') && !has('prLong') && (kind === 'nsr' || kind === 'brady') && o.n >= 22 && RNG() < 0.3) o.uAmp = 0.06;
+  const S = makeStrip(o);
+  S.abn = abn; S.count6 = S.R.filter(x => x < DUR - 0.05).length;
+  S.hr = S.irregular ? S.count6 * 10 : S.rate;
+  return S;
+}
+function buildAllQs(S) {
+  const base = buildQs(S, ['nsr', 'brady', 'tachy', 'sa', 'junc']);
+  const tq = buildTquQs(S);
+  const noP = S.pAmp === 0, invP = S.pAmp < 0, tall = S.abn.includes('pTall'), wide = S.abn.includes('pWide');
+  const half = S.rr / 2, longQ = S.qt > half + 0.005;
+
+  // P wave (รวมแบบปกติ / สูง / กว้าง / ไม่ใช่ sinus)
+  const qP = { tag: 'P wave', q: 'P wave ปกติหรือไม่ อย่างไร?', ov: 'pwave',
+    opts: shuffle([
+      ['ตั้งขึ้น นำหน้า QRS ทุกตัว · กว้าง ≈ 0.10 วินาที สูง ≈ 1.5 มม. (1.5 ช่องเล็ก) — ปกติ (sinus)', !noP && !invP && !tall && !wide],
+      ['สูงแหลม ≈ 3 มม. (3 ช่องเล็ก) เกิน 2.5 มม. — ผิดปกติ (P pulmonale)', tall],
+      ['กว้าง ≈ 0.14 วินาที (3.5 ช่องเล็ก) หยัก 2 ยอด — ผิดปกติ (P mitrale)', wide],
+      ['กลับหัว หรือมองไม่เห็น P นำหน้า QRS — ไม่ใช่ sinus', noP || invP]]),
+    ex: noP ? 'ช่วงก่อน QRS เป็นเส้นเรียบ ไม่มี P → ไม่ใช่ sinus'
+      : invP ? 'P กลับหัว (ลงใต้เส้นฐาน) PR สั้น → ไฟฟ้าเริ่มจาก AV junction ไม่ใช่ sinus'
+      : tall ? 'P สูง 3 ช่องเล็ก (3 มม.) เกินเกณฑ์ 2.5 มม. → P สูงแหลม'
+      : wide ? 'P กว้าง 3.5 ช่องเล็ก (0.14 วินาที) เกิน 0.12 และมี 2 ยอด → P กว้าง'
+      : 'P ตั้งขึ้น กว้าง 2.5 ช่องเล็ก (0.10 วินาที) สูง 1.5 มม. (1.5 ช่องเล็ก) มีทุกบีต → ปกติ' };
+
+  // QT (เทียบครึ่ง R–R)
+  const qc = tq[2];
+  const lab = v => `${v.toFixed(2)} วินาที (${fmt(v / .04)} ช่องเล็ก) — ${v > half + 0.005 ? 'ยาว' : 'ปกติ'}`;
+  qc.opts = qc.opts.map(([t, ok]) => [lab(+t.split(' ')[0]), ok]);
+  qc.q = `QT เท่าไร ปกติหรือยาว? (ครึ่ง R–R${S.irregular ? ' เฉลี่ย' : ''} = ${half.toFixed(2)} วินาที)`;
+  qc.ex = `QT = ${fmt(S.qt / .04)} ช่องเล็ก = ${S.qt.toFixed(2)} วินาที · ครึ่ง R–R = ${half.toFixed(2)} → ${longQ ? 'จบ T เลยครึ่งทาง = QT ยาว' : 'ไม่เกินครึ่งทาง = ปกติ'}`
+    + (S.kind === 'tachy' ? ' (HR เร็ว QT จะสั้นลงตาม)' : '');
+
+  // สรุป
+  const right = allLabel(S.kind, S.abn);
+  const cand = new Set();
+  const alt = { nsr: ['brady', 'tachy', 'sa'], brady: ['nsr', 'junc'], tachy: ['nsr', 'sa'], sa: ['nsr', 'brady'], junc: ['brady', 'nsr'] }[S.kind];
+  alt.forEach(b => cand.add(allLabel(b, S.abn)));
+  if (S.abn.length) cand.add(allLabel(S.kind, []));
+  if (S.abn.length > 1) { cand.add(allLabel(S.kind, S.abn.slice(0, 1))); cand.add(allLabel(S.kind, S.abn.slice(1))); }
+  const extra = ALLOK[S.kind].filter(k => !S.abn.includes(k) && !S.abn.some(a => ALLG[a] === ALLG[k]));
+  if (extra.length) cand.add(allLabel(S.kind, S.abn.concat([pick(extra)]).sort((a, b) => ALLK.indexOf(a) - ALLK.indexOf(b))));
+  // สลับความผิดปกติเป็นตัวที่หน้าตาคล้ายกัน
+  const swap = { pTall: 'pWide', pWide: 'pTall', prLong: 'prShort', prShort: 'prLong', tPeak: 'hypoK', hypoK: 'tPeak', tInv: 'tPeak', longQT: 'prLong', qrsWide: 'prLong' };
+  if (S.abn.length) { const a = S.abn.slice(); const w = a.length - 1; if (!a.includes(swap[a[w]])) { a[w] = swap[a[w]]; cand.add(allLabel(S.kind, a)); } }
+  cand.delete(right);
+  const opts = shuffle([...cand]).slice(0, 3).map(t => [t, false]).concat([[right, true]]);
+  const found = S.abn.map(k => ALLF[k]);
+  const qS = { tag: 'สรุปและสิ่งที่ต้องทำ', q: 'รวมทั้ง 7 ขั้นแล้ว กราฟนี้คืออะไร?', ov: 'allA',
+    opts: shuffle(opts),
+    ex: `${S.irregular ? 'ไม่สม่ำเสมอ' : 'สม่ำเสมอ'} · HR ${S.hr} · ${noP ? 'ไม่มี P' : invP ? 'P กลับหัว' : 'P นำหน้า QRS ทุกตัว'} → <b>${ALLB[S.kind === 'nsr' ? (S.abn.length ? 'nsrAbn' : 'nsr') : S.kind]}</b>`
+      + (found.length ? ` · ผิดปกติ: <b>${found.join(', ')}</b>` : ' · ทุกขั้นปกติ')
+      + `<div style="margin-top:4px">${allAdvice(S)}</div>` };
+
+  return [base[0], qP, base[3], base[2], tq[1], qc, tq[3], qS];
+}
+function allSummary(S) { return allLabel(S.kind, S.abn); }
+
+const f2 = v => v.toFixed(2);
+function numOpts(c, pool, fm) {
+  const out = [fm(c)];
+  for (const v of shuffle(pool.slice())) { const t = fm(v); if (v > 0 && !out.includes(t) && out.length < 4) out.push(t); }
+  return shuffle(out).map(t => [t, t === fm(c)]);
+}
+const cM = () => css('--c-m');
+const EX = [
+  () => { // paper
+    const S = makeStrip({ n: rint(18, 24) });
+    if (RNG() < .6) {
+      const k = rint(2, 25), t0 = rint(2, Math.floor((DUR - .3 - k * .04) / .04)) * .04, val = k * .04;
+      return { S, q: 'เส้นวัดสีเขียวด้านล่างยาวกี่วินาที? (นับช่องเล็ก)',
+        opts: numOpts(val, [k * .02, k * .2, val + .04, val - .04, val + .2, val * 2], v => f2(v) + ' วินาที'),
+        draw: () => bracket(t0, t0 + k * .04, 32, cM(), '?'),
+        reveal: () => bracket(t0, t0 + k * .04, 32, cM(), `${k} ช่อง × 0.04 = ${f2(val)} s`),
+        ex: `นับได้ ${k} ช่องเล็ก${k >= 5 ? ` (${Math.floor(k / 5)} ช่องใหญ่${k % 5 ? ` + ${k % 5} ช่องเล็ก` : ''})` : ''} → ${k} × 0.04 = ${f2(val)} วินาที` };
+    }
+    const k = rint(2, 12), t = rint(3, 28) * .2 + .1, val = k / 10;
+    return { S, q: 'เส้นวัดแนวตั้งสีเขียวสูงกี่ mV? (นับช่องเล็ก)',
+      opts: numOpts(val, [k * .04, k * .2, val + .1, val - .1, val + .5, k], v => (Math.round(v * 100) / 100) + ' mV'),
+      draw: () => vbracket(t, 33 - k, 33, cM(), '?'),
+      reveal: () => vbracket(t, 33 - k, 33, cM(), `${k} ช่อง × 0.1 = ${val.toFixed(1)} mV`),
+      ex: `สูง ${k} ช่องเล็ก × 0.1 mV = ${val.toFixed(1)} mV (10 ช่องเล็ก = 1 mV)` };
+  },
+  () => { // waves
+    const S = makeStrip({ n: rint(18, 25) }), R = S.R[rint(1, 3)], type = pick(['P', 'QRS', 'T']);
+    const [a, b] = waveRange(S, R, type), col = { P: '--c-p', QRS: '--c-qrs', T: '--c-t' }[type];
+    const why = { P: 'คลื่นเล็กมนที่มาก่อน QRS — หัวใจห้องบน depolarize', QRS: 'คลื่นแหลมสูงที่สุด — หัวใจห้องล่าง depolarize', T: 'คลื่นมนใหญ่ที่ตามหลัง QRS — หัวใจห้องล่าง repolarize' }[type];
+    return { S, q: 'คลื่นในแถบที่ไฮไลต์คือคลื่นอะไร?',
+      opts: ['P', 'QRS', 'T'].map(x => [x, x === type]),
+      draw: () => { band(a, b, cM(), .2); label('?', X((a + b) / 2), Ymm(4), cM()); },
+      reveal: () => { band(a, b, css(col), .25); label(type, X((a + b) / 2), Ymm(4), css(col)); },
+      ex: `${type}: ${why}` };
+  },
+  () => { // rate
+    if (RNG() < .35) {
+      const S = makeStrip({ n: rint(15, 21), irregular: true }), rs = S.R.filter(r => r < DUR - 0.05), c = rs.length * 10;
+      return { S, q: 'จังหวะไม่สม่ำเสมอ กราฟยาว 6 วินาที นับ QRS แล้ว HR ประมาณเท่าไร?',
+        opts: numOpts(c, [c + 10, c - 10, c + 20, rs.length * 6, c - 20], v => `${v} ครั้ง/นาที`),
+        draw: () => bracket(0.02, DUR - 0.02, 33, cM(), '6 วินาที'),
+        reveal: p => {
+          bracket(0.02, DUR - 0.02, 33, cM(), '6 วินาที');
+          rs.forEach((r, i) => { ctx.globalAlpha = seg(p, i, rs.length); dot(r, volt(S, r), css('--c-qrs'), 4); label(String(i + 1), X(r), Ymm(7), cM()); });
+          ctx.globalAlpha = 1;
+        },
+        ex: `จังหวะไม่สม่ำเสมอ ใช้วิธี 6 วินาที: นับได้ ${rs.length} QRS → ${rs.length} × 10 ≈ ${c} ครั้ง/นาที` };
+    }
+    if (RNG() < .55) {
+      let n = rint(11, 34); if (n % 5 === 0) n += 1 + Math.floor(RNG() * 3);
+      const S = makeStrip({ n }), c = S.rate;
+      return { S, q: 'R ตัวถัดไปไม่ตกเส้นหนา นับช่องเล็กระหว่างเส้นประ แล้ว HR เท่าไร? (วิธี 1500)',
+        opts: numOpts(c, [Math.round(1500 / (n + 2)), Math.round(1500 / (n - 2)), Math.round(1500 / (n + 5)), Math.round(1500 / Math.max(6, n - 5)), Math.round(300 / Math.max(1, Math.round(n / 5)))], v => `${v} ครั้ง/นาที`),
+        draw: () => { const qc = css('--c-qrs'); visibleR().forEach(r => dot(r, volt(S, r), qc, 4)); vline(S.R[1], qc); vline(S.R[2], qc); },
+        reveal: 'rate1500',
+        ex: `R–R ห่าง ${Math.floor(n / 5)} ช่องใหญ่ + ${n % 5} ช่องเล็ก = ${n} ช่องเล็ก → 1500 ÷ ${n} ≈ ${c} ครั้ง/นาที` };
+    }
+    const n = pick([10, 15, 20, 25, 30]), S = makeStrip({ n }), L = n / 5;
+    const seq = [300, 150, 100, 75, 60, 50], c = 300 / L;
+    const others = shuffle(seq.filter(v => v !== c)).slice(0, 3);
+    return { S, q: 'จังหวะสม่ำเสมอ นับช่องใหญ่ระหว่างเส้นประสองเส้น แล้ว HR เท่าไร? (วิธี 300)',
+      opts: shuffle([c, ...others]).map(v => [`${v} ครั้ง/นาที`, v === c]),
+      draw: () => { const qc = css('--c-qrs'); visibleR().forEach(r => dot(r, volt(S, r), qc, 4)); vline(S.R[1], qc); vline(S.R[2], qc); },
+      reveal: 'rate',
+      ex: `R–R ห่าง ${L} ช่องใหญ่ → 300 ÷ ${L} = ${c} ครั้ง/นาที` };
+  },
+  () => { // rhythm
+    const irr = RNG() < .5, S = makeStrip({ n: rint(17, 23), irregular: irr });
+    return { S, q: 'จังหวะของกราฟนี้สม่ำเสมอไหม? (ดูระยะ R–R)',
+      opts: [['สม่ำเสมอ (regular)', !irr], ['ไม่สม่ำเสมอ (irregular)', irr]],
+      draw: () => { const qc = css('--c-qrs'); visibleR().forEach(r => dot(r, volt(S, r), qc, 4)); },
+      reveal: 'rhythm',
+      ex: irr ? 'ระยะ R–R แต่ละช่วงยาวไม่เท่ากัน ต่างกันเกิน 0.12 วินาที' : `ระยะ R–R ทุกช่วงเท่ากัน = ${f2(S.rr)} วินาที` };
+  },
+  () => { // P wave
+    const kind = pick(['up', 'inv', 'none']), pAmp = { up: .15, inv: -.12, none: 0 }[kind];
+    const S = makeStrip({ n: rint(17, 24), pAmp, pr: kind === 'up' ? .16 : .1 });
+    const ex = { up: 'P ตั้งขึ้น หน้าตาเหมือนกัน นำหน้า QRS ทุกตัว → มาจาก SA node (sinus)',
+      inv: 'P กลับหัวใน lead II → ไฟฟ้าไม่ได้เริ่มจาก SA node (เช่น จังหวะจาก junction) จึงไม่ใช่ sinus',
+      none: 'หน้า QRS เป็นเส้นเรียบ ไม่เห็น P → ไม่ใช่ sinus (เช่น junctional rhythm)' }[kind];
+    return { S, q: 'P wave ในกราฟนี้เป็นแบบไหน?',
+      opts: [['ตั้งขึ้น นำหน้า QRS ทุกตัว', kind === 'up'], ['กลับหัว (ลงล่าง)', kind === 'inv'], ['มองไม่เห็น P', kind === 'none']],
+      draw: () => {}, reveal: 'pwave', ex };
+  },
+  () => { // PR
+    const pr = pick([.08, .12, .16, .20, .24, .28]), S = makeStrip({ n: rint(19, 25), pr });
+    const cls = pr < .12 ? 'สั้นกว่าปกติ' : pr <= .2 ? 'ปกติ' : 'ยาว → 1st degree AV block';
+    return { S, q: 'วัด PR interval ที่ตัวลูกศรชี้ ได้กี่วินาที?',
+      opts: numOpts(pr, [pr + .04, pr - .04, pr + .08, pr - .08, pr * 2], v => f2(v) + ' วินาที'),
+      draw: () => arrowAt(on(S, S.R[1]) - pr / 2, 'วัดตัวนี้', css('--c-p')),
+      reveal: 'pr', ex: `ต้น P ถึงต้น QRS = ${Math.round(pr / .04)} ช่องเล็ก × 0.04 = ${f2(pr)} วินาที (${cls})` };
+  },
+  () => { // QRS
+    const q = pick([.06, .08, .10, .12, .14, .16]), S = makeStrip({ n: rint(19, 25), qrs: q });
+    return { S, q: 'QRS ที่ลูกศรชี้กว้างกี่วินาที?',
+      opts: numOpts(q, [q + .04, q - .04, q + .02, q - .02, q * 2], v => f2(v) + ' วินาที'),
+      draw: () => arrowAt(S.R[1], 'วัดตัวนี้', css('--c-qrs')),
+      reveal: 'qrs', ex: `QRS กว้าง ${fmt(q / .04)} ช่องเล็ก = ${f2(q)} วินาที → ${q >= .12 ? 'กว้าง (≥ 0.12)' : 'แคบ ปกติ'}` };
+  },
+  null,
+  () => { // ช้า/ปกติ/เร็ว
+    const kind = pick(['brady', 'nsr', 'tachy']);
+    const n = kind === 'brady' ? rint(28, 38) : kind === 'tachy' ? rint(10, 13) : rint(15, 25);
+    const S = makeStrip({ n, pr: kind === 'tachy' ? 0.12 : 0.16 }), hr = S.rate;
+    const lab = { brady: 'Sinus bradycardia', nsr: 'Normal sinus rhythm', tachy: 'Sinus tachycardia' };
+    const cls = v => v < 60 ? 'brady' : v > 100 ? 'tachy' : 'nsr';
+    const pool = [hr + 20, hr - 20, hr + 40, hr - 30, hr + 60, Math.round(300 / Math.max(1, Math.round(n / 5)))].filter(v => v > 25);
+    const vals = [hr];
+    for (const v of shuffle(pool)) if (vals.length < 4 && vals.every(x => Math.abs(x - v) >= 10)) vals.push(v);
+    return { S, q: 'นับ R–R ระหว่างเส้นประ แล้ว HR และจังหวะนี้คืออะไร? (ทุกอย่างอื่นเป็น sinus ปกติ)',
+      opts: shuffle(vals.map(v => [`HR ≈ ${v} → ${lab[cls(v)]}`, v === hr])),
+      draw: () => { const qc = css('--c-qrs'); visibleR().forEach(r => dot(r, volt(S, r), qc, 4)); vline(S.R[1], qc); vline(S.R[2], qc); },
+      reveal: 'rate',
+      ex: `R–R ห่าง ${n} ช่องเล็ก → 1500 ÷ ${n} ≈ ${hr} ครั้ง/นาที → ${hr < 60 ? '< 60 = ช้า' : hr > 100 ? '> 100 = เร็ว' : '60–100 = ปกติ'} → ${lab[cls(hr)]}` };
+  },
+  () => { // 9: T wave
+    const kind = pick(['normal', 'peaked', 'inverted', 'flat']);
+    const S = makeStrip({ n: rint(19, 25), tShape: kind, uAmp: kind === 'flat' ? 0.18 : 0 });
+    const L = {
+      normal: 'โค้งมน หัวขึ้น สูงไม่เกิน 5 มม. (5 ช่องเล็ก) — T ปกติ',
+      peaked: 'สูงแหลม ฐานแคบ (≈ 7–8 มม.) — นึกถึงโพแทสเซียมสูง รายงานด่วน',
+      inverted: 'กลับหัว (ลงใต้เส้นฐาน) — นึกถึงกล้ามเนื้อหัวใจขาดเลือด รายงานแพทย์',
+      flat: 'แบนเตี้ยมาก มีคลื่นเล็กตามหลัง — นึกถึงโพแทสเซียมต่ำ'
+    };
+    return { S, q: 'T wave ในแถบที่ไฮไลต์เป็นแบบไหน?',
+      opts: shuffle(Object.keys(L).map(k => [L[k], k === kind])),
+      draw: () => { visibleR().forEach(R => { if (R + 0.5 > DUR) return; const [a, b] = waveRange(S, R, 'T'); band(a, b, cM(), .15); }); },
+      reveal: 'twave',
+      ex: { normal: 'T โค้งมน หัวขึ้น สูงราว 3 มม. (3 ช่องเล็ก) → ปกติ',
+            peaked: 'T สูงราว 7–8 มม. (7–8 ช่องเล็ก) ยอดแหลม ฐานแคบ → T สูงแหลม นึกถึงโพแทสเซียมในเลือดสูง (เช่น ไตวาย) เสี่ยงหัวใจหยุดเต้น',
+            inverted: 'T อยู่ใต้เส้นฐาน → T กลับหัวใน lead II นึกถึงกล้ามเนื้อหัวใจขาดเลือด',
+            flat: 'T สูงไม่ถึง 1 มม. (1 ช่องเล็ก) และมี U wave ตามหลัง → นึกถึงโพแทสเซียมในเลือดต่ำ' }[kind] };
+  },
+  () => { // 10: QT
+    const long = RNG() < 0.5;
+    const n = long ? rint(21, 24) : rint(18, 24);
+    const qt = long ? pick([0.52, 0.56]) : pick([0.36, 0.40]);
+    const S = makeStrip({ n, qt }), half = S.rr / 2, isLong = S.qt > half;
+    const lab = v => `${v.toFixed(2)} วินาที (${fmt(v / .04)} ช่องเล็ก) — ${v > half ? 'ยาว (เกินครึ่ง R–R)' : 'ปกติ (ไม่เกินครึ่ง R–R)'}`;
+    const pool = [S.qt - 0.08, S.qt + 0.08, S.qt - 0.12, S.qt + 0.12, S.qt + 0.16, S.qt - 0.16].filter(v => v >= 0.24 && v <= 0.68);
+    const vals = [S.qt];
+    for (const v of shuffle(pool)) if (vals.length < 4 && vals.every(u => Math.abs(u - v) > 0.03)) vals.push(+v.toFixed(2));
+    return { S, q: 'วัด QT ของบีตที่ลูกศรชี้ (ต้น QRS → จบ T) ได้เท่าไร ปกติหรือยาว?',
+      opts: shuffle(vals.map(v => [lab(v), v === S.qt])),
+      draw: () => { arrowAt(S.R[1], 'วัดตัวนี้', '#8E44AD'); const rr = S.R[2] - S.R[1]; bracket(S.R[1], S.R[2], 33, cM(), `R–R = ${rr.toFixed(2)} s`); },
+      reveal: 'qt',
+      ex: `QT = ${fmt(S.qt / .04)} ช่องเล็ก × 0.04 = ${S.qt.toFixed(2)} วินาที · ครึ่งหนึ่งของ R–R = ${half.toFixed(2)} วินาที → ${isLong ? 'QT ยาวเกินครึ่ง R–R = QT ยาว เสี่ยง Torsades ทบทวนยาและเกลือแร่ รายงานแพทย์' : 'ไม่เกินครึ่ง R–R = ปกติ'}` };
+  },
+  () => { // 11: U wave
+    const kind = pick(['none', 'small', 'hypok', 'none2']);
+    const k = kind === 'none2' ? 'none' : kind;
+    const S = makeStrip({ n: rint(24, 28), tShape: k === 'hypok' ? 'flat' : 'normal', uAmp: k === 'small' ? 0.06 : k === 'hypok' ? 0.2 : 0 });
+    const L = {
+      none: 'ไม่มี U wave — หลัง T เป็นเส้นเรียบ',
+      small: 'มี U เล็ก ๆ หลัง T ปกติ — พบได้ในคนปกติ',
+      hypok: 'T แบน + U เด่น (สูงกว่า T) — นึกถึงโพแทสเซียมต่ำ',
+      tall: 'มี U สูงกว่า T และ T สูงแหลม — นึกถึงโพแทสเซียมสูง'
+    };
+    return { S, q: 'ช่วงหลัง T wave (แถบที่ไฮไลต์) เห็นอะไร?',
+      opts: shuffle(Object.keys(L).map(key => [L[key], key === k])),
+      draw: () => { visibleR().forEach(R => { if (R + 0.7 > DUR) return; const [a, b] = waveRange(S, R, 'U'); band(a, b, cM(), .15); }); },
+      reveal: 'uwave',
+      ex: { none: 'หลัง T กลับสู่เส้นฐานเลย ไม่มีคลื่นเพิ่ม → ไม่มี U wave',
+            small: 'มีคลื่นเล็ก ๆ ทิศเดียวกับ T สูงไม่ถึง 1 มม. (1 ช่องเล็ก) → U wave ปกติ (พบบ่อยเมื่อ HR ช้า)',
+            hypok: 'T เตี้ยแบน แต่ U สูงเด่นกว่า T → รูปแบบของโพแทสเซียมต่ำ รายงานแพทย์ ตรวจเกลือแร่',
+            tall: '' }[k] };
+  },
+  // 12: ST segment
+  () => {
+    const kind = pick(['normal', 'elev', 'elev', 'depr', 'depr']);
+    const st = kind === 'normal' ? 0 : kind === 'elev' ? pick([0.1, 0.2, 0.3]) : pick([-0.1, -0.15, -0.2]);
+    const S = makeStrip({ n: rint(18, 26), qrs: pick([0.06, 0.08]), qt: 0.36, st });
+    const mm = Math.round(Math.abs(st) * 100) / 10;
+    const mode = pick(['type', 'type', 'mm', 'act']);
+    const draw = 'stQ', reveal = 'st';
+    if (mode === 'mm' && kind !== 'normal') {
+      const pool = [0.5, 1, 1.5, 2, 3, 4].filter(v => v !== mm);
+      const vals = [mm, ...shuffle(pool).slice(0, 3)];
+      const L = v => `${kind === 'elev' ? 'ยก' : 'กด'} ≈ ${fmt(v)} มม. (${fmt(v)} ช่องเล็ก)`;
+      return { S, q: `ST ${kind === 'elev' ? 'ยกขึ้น' : 'กดลง'}จากเส้นฐานประมาณเท่าไร? (วัดหลัง J point 1 ช่องเล็ก)`,
+        opts: shuffle(vals.map(v => [L(v), v === mm])), draw, reveal,
+        ex: `นับจากเส้นฐาน (ระดับ PR segment) ถึงระดับ ST ได้ ${fmt(mm)} ช่องเล็ก = ${fmt(mm)} มม. (${fmt(Math.abs(st))} mV) → ${kind === 'elev' ? (mm >= 1 ? 'ST ยก ≥ 1 มม.' : 'ST ยกเล็กน้อย') : (mm >= 0.5 ? 'ST กด ≥ 0.5 มม.' : 'ST กดเล็กน้อย')}` };
+    }
+    if (mode === 'act') {
+      const A = {
+        normal: 'ST ปกติ — บันทึกผล ดูแลตามปกติ',
+        elev: 'ST ยก — แจ้งแพทย์/ทีมทันที ทำ EKG 12 lead ภายใน 10 นาที',
+        depr: 'ST กด — รายงานแพทย์ ทำ EKG 12 lead ประเมินอาการเจ็บหน้าอก',
+        wait: 'ST ยก — รอดูกราฟอีก 1 ชั่วโมงค่อยรายงาน'
+      };
+      return { S, q: 'ผู้ป่วยบ่นแน่นหน้าอก ดู ST ในกราฟนี้แล้ว ควรทำอย่างไร?',
+        opts: shuffle(Object.keys(A).map(k => [A[k], k === kind])), draw, reveal,
+        ex: { normal: 'ST อยู่ระดับเส้นฐาน แต่ถ้ายังเจ็บหน้าอกก็ต้องทำ EKG 12 lead และรายงานตามอาการ',
+              elev: `ST ยก ${fmt(mm)} มม. (${fmt(mm)} ช่องเล็ก) + เจ็บหน้าอก → สงสัย STEMI ห้ามรอ แจ้งทันทีตามแนวทาง STEMI fast track`,
+              depr: `ST กด ${fmt(mm)} มม. (${fmt(mm)} ช่องเล็ก) + เจ็บหน้าอก → สงสัยกล้ามเนื้อหัวใจขาดเลือด รายงานแพทย์` }[kind] };
+    }
+    const L = { normal: 'ST อยู่ระดับเส้นฐาน — ปกติ', elev: 'ST ยกขึ้นเหนือเส้นฐาน — ผิดปกติ', depr: 'ST กดลงใต้เส้นฐาน — ผิดปกติ', t: 'T กลับหัว (ST ปกติ)' };
+    return { S, q: 'ST segment (แถบสีส้ม) อยู่ระดับไหนเมื่อเทียบกับเส้นฐาน?',
+      opts: shuffle(Object.keys(L).map(k => [L[k], k === kind])), draw, reveal,
+      ex: { normal: 'ช่วงหลัง QRS ถึงต้น T อยู่ระดับเดียวกับ PR segment → ST ปกติ',
+            elev: `ช่วงหลัง J point สูงกว่าเส้นฐาน ${fmt(mm)} ช่องเล็ก (${fmt(mm)} มม.) → ST ยก`,
+            depr: `ช่วงหลัง J point ต่ำกว่าเส้นฐาน ${fmt(mm)} ช่องเล็ก (${fmt(mm)} มม.) → ST กด` }[kind] };
+  }
+];
+
+/* ================================================
+   บทเรียน
+   page types: content (svg และ/หรือ strip = กราฟจริง), quiz (ข้อสอบความรู้), drill (ฝึกอ่านกราฟจริง), practice (อ่านเต็ม)
+   ================================================ */
+const K = (s) => '<div class="key-point">' + s + '</div>', HL = (s) => '<div class="highlight">' + s + '</div>';
+const LESSONS = [
+{ id: 'paper', title: 'รู้จักกระดาษ EKG', desc: 'ช่อง กริด ความเร็ว แรงดัน', pages: [
+  { type: 'content', title: 'กระดาษ EKG คืออะไร?', svg: 'paper_grid',
+    body: '<p>กระดาษ EKG เป็นกระดาษกริดพิเศษที่บันทึกไฟฟ้าของหัวใจ มี <strong>ช่องเล็ก</strong> (1 มม.) และ <strong>ช่องใหญ่</strong> (5 มม. = 5 ช่องเล็ก)</p>' + HL('📏 1 ช่องเล็ก = 1 มม. | 1 ช่องใหญ่ = 5 ช่องเล็ก = 5 มม.') },
+  { type: 'content', title: 'แกนนอน = เวลา', svg: 'paper_time',
+    body: '<p>ที่ความเร็วมาตรฐาน <strong>25 mm/sec</strong>:</p>' + K('⏱ 1 ช่องเล็ก = <strong>0.04 วินาที</strong><br>⏱ 1 ช่องใหญ่ = <strong>0.20 วินาที</strong><br>⏱ 5 ช่องใหญ่ = <strong>1.00 วินาที</strong>') },
+  { type: 'content', title: 'แกนตั้ง = แรงดันไฟฟ้า', svg: 'paper_voltage',
+    body: '<p>ที่ค่ามาตรฐาน <strong>10 mm/mV</strong>:</p>' + K('📊 1 ช่องเล็ก = <strong>0.1 mV</strong><br>📊 1 ช่องใหญ่ = <strong>0.5 mV</strong><br>📊 2 ช่องใหญ่ (10 มม.) = <strong>1.0 mV</strong>') },
+  { type: 'content', title: 'ดูบนกราฟจริง', strip: 'paper',
+    body: '<p>นี่คือกราฟ EKG จริง (lead II) 6 วินาที สังเกตกรอบช่องเล็ก ช่องใหญ่ และเส้นวัด 1 วินาทีด้านล่าง</p>' + HL('💡 เวลาอ่านกราฟจริง ให้นับช่องแบบนี้เสมอ แล้วคูณ 0.04 วินาทีต่อช่องเล็ก') },
+  { type: 'quiz', svg: 'paper_small_q', svgAns: 'paper_small_ans', strip: { opts: { n: 20 }, q: 'smallQ', a: 'smallA' }, question: 'ที่ความเร็ว 25 mm/sec 1 ช่องเล็กแทนเวลาเท่าไร?', choices: [
+    { t: '0.04 วินาที (40 ms)', ok: true, fb: '1 mm ÷ 25 mm/sec = 0.04 sec' },
+    { t: '0.02 วินาที', ok: false, fb: '0.02 วินาทีคือที่ความเร็ว 50 mm/sec' },
+    { t: '0.20 วินาที', ok: false, fb: '0.20 วินาทีคือ 1 ช่องใหญ่ ไม่ใช่ช่องเล็ก' }] },
+  { type: 'quiz', svg: 'paper_big_q', svgAns: 'paper_big_ans', strip: { opts: { n: 20 }, q: 'bigQ', a: 'bigA' }, question: '1 ช่องใหญ่ในแนวตั้ง (5 mm) แทนแรงดันเท่าไร?', choices: [
+    { t: '0.1 mV', ok: false, fb: '0.1 mV คือ 1 ช่องเล็ก' },
+    { t: '1.0 mV', ok: false, fb: '1.0 mV คือ 2 ช่องใหญ่ (10 mm)' },
+    { t: '0.5 mV', ok: true, fb: '5 mm × 0.1 mV = 0.5 mV' }] },
+  { type: 'drill', ex: 0, n: 5, title: 'แบบทดสอบท้ายบท: ฝึกนับช่องบนกราฟจริง', hint: 'นับช่องเล็กตามขีดสีเขียว แล้วแปลงเป็นวินาทีหรือ mV' }
+]},
+{ id: 'waves', title: 'ทำความรู้จักคลื่นแต่ละตัว', desc: 'P wave, QRS, T wave, intervals', pages: [
+  { type: 'content', title: 'ภาพรวมคลื่น EKG ปกติ', svg: 'waves_overview',
+    body: '<p>หัวใจเต้น 1 ครั้ง มีคลื่นหลัก 3 ส่วน เรียงกันเสมอ</p>' + HL('🔵 <strong>P</strong> = ห้องบนบีบตัว (atrial depolarization)<br>🔴 <strong>QRS</strong> = ห้องล่างบีบตัว (ventricular depolarization)<br>🟢 <strong>T</strong> = ห้องล่างคลายตัว (ventricular repolarization)') },
+  { type: 'content', title: 'P wave — คลื่นจากห้องบน', svg: 'wave_p',
+    body: '<p>ไฟฟ้าเริ่มจาก SA node วิ่งผ่านห้องบน ทำให้ห้องบนบีบตัว</p>' + K('📌 โค้งมน เล็ก<br>📌 กว้าง &lt; 0.12 วินาที (&lt; 3 ช่องเล็ก)<br>📌 สูง &lt; 2.5 mm<br>📌 มาก่อน QRS เสมอ (ใน NSR)') },
+  { type: 'content', title: 'QRS complex — คลื่นจากห้องล่าง', svg: 'wave_qrs',
+    body: '<p>คลื่นที่ใหญ่ที่สุด เกิดจากไฟฟ้าวิ่งผ่านห้องล่าง</p>' + K('📌 Q = คลื่นลงตัวแรก (อาจไม่มี)<br>📌 R = คลื่นขึ้นตัวแรก<br>📌 S = คลื่นลงหลัง R<br>📌 ปกติกว้าง 0.06–0.10 วินาที<br>📌 ≥ 0.12 วินาที = กว้างผิดปกติ') },
+  { type: 'content', title: 'T wave — คลื่นคลายตัว', svg: 'wave_t',
+    body: '<p>ห้องล่างคืนประจุ เตรียมรับไฟฟ้ารอบถัดไป</p>' + K('📌 ปกติโค้งมน หัวขึ้นใน lead I, II, V4–V6<br>📌 T กลับหัวในลีดที่ควรหัวขึ้น → อาจผิดปกติ<br>📌 T สูงแหลม → นึกถึง hyperkalemia') },
+  { type: 'content', title: 'Intervals สำคัญ', svg: 'intervals',
+    body: K('📌 <strong>PR interval</strong> ต้น P → ต้น QRS ปกติ 0.12–0.20 วินาที<br>📌 <strong>QT interval</strong> ต้น QRS → จบ T ปกติประมาณ 0.36–0.44 วินาที (ยาว = เสี่ยง arrhythmia)') },
+  { type: 'content', title: 'ดูบนกราฟจริง', strip: 'waves',
+    body: '<p>กราฟจริงจะไม่มีป้ายบอก ให้หาคลื่นตามลำดับ <strong style="color:#2E86C1">P</strong> → <strong style="color:#C0305A">QRS</strong> → <strong style="color:#1E8449">T</strong> ทีละบีต</p>' },
+  { type: 'quiz', svg: 'waves_overview', strip: { opts: { n: 20 }, q: 'pQ', a: 'waves' }, question: 'P wave (สีฟ้า ในภาพ และแถบที่ไฮไลต์บนกราฟจริง) เกิดจากอะไร?', choices: [
+    { t: 'ห้องล่างบีบตัว', ok: false, fb: 'ห้องล่างบีบตัวคือ QRS' },
+    { t: 'ห้องบนบีบตัว (atrial depolarization)', ok: true, fb: 'P wave = atrial depolarization' },
+    { t: 'ห้องล่างคลายตัว', ok: false, fb: 'ห้องล่างคลายตัวคือ T wave' }] },
+  { type: 'quiz', svg: 'wave_qrs', strip: { opts: { n: 20, qrs: 0.08 }, q: 'qrsQ', a: 'qrs' }, question: 'QRS ปกติกว้างไม่เกินเท่าไร? (เทียบกับภาพและกราฟจริง)', choices: [
+    { t: '0.20 วินาที', ok: false, fb: '0.20 คือขีดบนของ PR interval' },
+    { t: '0.04 วินาที', ok: false, fb: '0.04 คือแค่ 1 ช่องเล็ก' },
+    { t: 'น้อยกว่า 0.12 วินาที (3 ช่องเล็ก)', ok: true, fb: 'ถ้ากว้างกว่านี้ = ผิดปกติ เช่น bundle branch block' }] },
+  { type: 'drill', ex: 1, n: 5, title: 'แบบทดสอบท้ายบท: ฝึกแยกคลื่นบนกราฟจริง', hint: 'ดูแถบที่ไฮไลต์ แล้วบอกว่าเป็นคลื่นอะไร' }
+]},
+{ id: 'hr', title: 'การนับ Heart Rate', desc: 'วิธี 300, วิธี 1500, วิธีนับลำดับ, วิธี 6 วินาที', pages: [
+  { type: 'content', title: 'วิธีที่ 1: วิธี 300 (จังหวะสม่ำเสมอ)', svg: 'hr_300',
+    body: HL('💡 HR = <strong>300 ÷ จำนวนช่องใหญ่ระหว่าง R–R</strong>') + '<p>R–R ห่าง 4 ช่องใหญ่ → 300 ÷ 4 = <strong>75 ครั้ง/นาที</strong></p>' },
+  { type: 'content', title: 'วิธีที่ 2: วิธี 1500 (ละเอียดกว่า)', svg: 'hr_1500',
+    body: HL('💡 HR = <strong>1500 ÷ จำนวนช่องเล็กระหว่าง R–R</strong>')
+      + '<p>ที่มา: 1 นาที = 60 วินาที = <strong>1500 ช่องเล็ก</strong> (25 ช่องเล็กต่อวินาที × 60)</p>'
+      + K('📌 ใช้เมื่อ R ตัวถัดไป <strong>ไม่ตกบนเส้นหนาพอดี</strong> — วิธี 300 จะได้แค่ค่าประมาณ<br>📌 ตัวอย่าง: R–R ห่าง 17 ช่องเล็ก → 1500 ÷ 17 ≈ <strong>88 ครั้ง/นาที</strong><br>📌 ถ้าห่าง 20 ช่องเล็ก (= 4 ช่องใหญ่) → 1500 ÷ 20 = 75 ตรงกับวิธี 300 พอดี')
+      + '<p style="font-size:.78rem;color:#8A7A80">เคล็ดลับนับเร็ว: นับช่องใหญ่ก่อน (×5) แล้วบวกช่องเล็กที่เหลือ เช่น 3 ช่องใหญ่ + 2 ช่องเล็ก = 17 ช่องเล็ก</p>' },
+  { type: 'content', title: 'วิธี 1500 บนกราฟจริง', strip: 'rate1500', stripOpts: { n: 17 },
+    body: '<p>R ตัวถัดไปไม่ตกบนเส้นหนา → นับช่องเล็ก: 3 ช่องใหญ่ (15) + 2 = <strong>17 ช่องเล็ก</strong> → 1500 ÷ 17 ≈ <strong>88 ครั้ง/นาที</strong></p>' },
+  { type: 'content', title: 'วิธีที่ 3: วิธีนับลำดับ', svg: 'hr_sequence',
+    body: HL('300 — 150 — 100 — 75 — 60 — 50') + '<p>1. หา R ที่ตรงเส้นหนาพอดี<br>2. นับเส้นหนาถัดไปทีละเส้นตามลำดับนี้<br>3. R ตัวถัดไปตกที่เลขไหน = HR</p>' },
+  { type: 'content', title: 'วิธีที่ 4: วิธี 6 วินาที (จังหวะไม่สม่ำเสมอ)', svg: 'hr_6sec',
+    body: HL('💡 HR ≈ <strong>จำนวน QRS ใน 6 วินาที (30 ช่องใหญ่) × 10</strong>') + K('นับได้ 7 QRS ใน 6 วินาที → 7 × 10 ≈ <strong>70 ครั้ง/นาที</strong>') },
+  { type: 'content', title: 'ดูบนกราฟจริง', strip: 'rate',
+    body: '<p>หา R ที่ตกบนเส้นหนา นับช่องใหญ่ไปถึง R ตัวถัดไป ดูตัวเลขเพิ่มทีละช่องบนกราฟ</p>' + K('ปกติในผู้ใหญ่ 60–100 ครั้ง/นาที') },
+  { type: 'quiz', svg: 'hr_1500', strip: { opts: { n: 12 }, q: 'rate1500Q', a: 'rate1500' }, question: 'กราฟจริงด้านล่าง R–R ห่างกัน 12 ช่องเล็ก HR เท่าไร? (วิธี 1500)', choices: [
+    { t: '125 ครั้ง/นาที', ok: true, fb: '1500 ÷ 12 = 125 ครั้ง/นาที' },
+    { t: '150 ครั้ง/นาที', ok: false, fb: '150 คือ 1500 ÷ 10 (2 ช่องใหญ่พอดี)' },
+    { t: '100 ครั้ง/นาที', ok: false, fb: '100 คือ 1500 ÷ 15 (3 ช่องใหญ่พอดี)' }] },
+  { type: 'quiz', svg: 'hr_n:3', svgAns: 'hr_n:3:ans', strip: { opts: { n: 15 }, q: 'rateQ', a: 'rate' }, question: 'R–R ห่างกัน 3 ช่องใหญ่ HR เท่าไร?', choices: [
+    { t: '75 ครั้ง/นาที', ok: false, fb: '75 คือ 300 ÷ 4' },
+    { t: '100 ครั้ง/นาที', ok: true, fb: '300 ÷ 3 = 100' },
+    { t: '150 ครั้ง/นาที', ok: false, fb: '150 คือ 300 ÷ 2' }] },
+  { type: 'quiz', svg: 'rhythm_cmp', strip: { opts: { n: 20, irregular: true }, q: 'irrQ', a: 'rhythm' }, question: 'วิธี 300 เหมาะกับจังหวะแบบใด? (ดูภาพเทียบ และกราฟจริงที่ R–R ไม่เท่ากัน)', choices: [
+    { t: 'จังหวะไม่สม่ำเสมอ', ok: false, fb: 'จังหวะไม่สม่ำเสมอใช้วิธี 6 วินาที' },
+    { t: 'จังหวะสม่ำเสมอ', ok: true, fb: 'ต้องใช้ R–R ที่คงที่ จึงใช้กับ regular rhythm' },
+    { t: 'ใช้ได้ทุกจังหวะ', ok: false, fb: 'ถ้า R–R ไม่คงที่ วิธี 300 จะไม่แม่น' }] },
+  { type: 'drill', ex: 2, n: 5, title: 'แบบทดสอบท้ายบท: ฝึกนับ HR บนกราฟจริง', hint: 'มีทั้งวิธี 300 (R ตกเส้นหนา), วิธี 1500 (นับช่องเล็ก) และวิธี 6 วินาที (จังหวะไม่สม่ำเสมอ)' }
+]},
+{ id: 'rhythm', title: 'จังหวะสม่ำเสมอไหม (Rhythm)', desc: 'วัดระยะ R–R', pages: [
+  { type: 'content', title: 'Regular vs Irregular', svg: 'rhythm_cmp',
+    body: '<p>วัดระยะ R–R ทุกคู่ ถ้าเท่ากัน (ต่างกันไม่เกินราว 0.12 วินาที = 3 ช่องเล็ก) คือ <strong>สม่ำเสมอ</strong></p>' + HL('💡 เคล็ดลับ: ใช้ขอบกระดาษจุดตำแหน่ง R สองตัว แล้วเลื่อนเทียบคู่อื่น') },
+  { type: 'content', title: 'ดูบนกราฟจริง', strip: 'rhythm', body: '<p>ขีดสีเขียวแต่ละช่วงคือระยะ R–R ของกราฟนี้เท่ากันหมด = <strong>regular</strong></p>' },
+  { type: 'drill', ex: 3, n: 5, title: 'แบบทดสอบท้ายบท: ฝึกดูจังหวะบนกราฟจริง', hint: 'ดูจุด R แล้วเทียบระยะห่างแต่ละช่วง' }
+]},
+{ id: 'pwave', title: 'ดู P wave', desc: 'sinus หรือไม่', pages: [
+  { type: 'content', title: 'P แบบไหนคือ sinus?', svg: 'p_cmp',
+    body: K('ถามตัวเอง 3 ข้อ:<br>📌 มี P นำหน้า QRS ทุกตัวไหม<br>📌 P 1 ตัว : QRS 1 ตัว เสมอไหม<br>📌 P หน้าตาเหมือนกัน และตั้งขึ้นใน lead II ไหม') + '<p>ใช่ทั้งหมด → ไฟฟ้าเริ่มจาก SA node = <strong>sinus rhythm</strong></p>' },
+  { type: 'content', title: 'ดูบนกราฟจริง', strip: 'pwave', body: '<p>วงกลมสีฟ้าคือ P ทุกตัว ตั้งขึ้น หน้าตาเหมือนกัน นำหน้า QRS ทุกตัว</p>' },
+  { type: 'drill', ex: 4, n: 5, title: 'แบบทดสอบท้ายบท: ฝึกดู P wave บนกราฟจริง', hint: 'ดูช่วงก่อน QRS แต่ละตัว' }
+]},
+{ id: 'pr', title: 'วัด PR interval', desc: 'ปกติ 0.12–0.20 วินาที', pages: [
+  { type: 'content', title: 'วัดจากไหนถึงไหน?', svg: 'intervals',
+    body: '<p>วัดจาก <strong>จุดเริ่ม P</strong> ถึง <strong>จุดเริ่ม QRS</strong> (ไม่ใช่ยอด R)</p>' + K('📌 ปกติ 0.12–0.20 วินาที = 3–5 ช่องเล็ก<br>📌 &gt; 0.20 → 1st degree AV block<br>📌 &lt; 0.12 → นึกถึง pre-excitation (เช่น WPW) หรือจังหวะจาก junction') },
+  { type: 'content', title: 'ดูบนกราฟจริง', strip: 'pr', body: '<p>PR ของกราฟนี้ = 4 ช่องเล็ก × 0.04 = <strong>0.16 วินาที</strong> → ปกติ</p>' },
+  { type: 'drill', ex: 5, n: 5, title: 'แบบทดสอบท้ายบท: ฝึกวัด PR บนกราฟจริง', hint: 'วัดที่บีตซึ่งลูกศรชี้ นับช่องเล็กจากต้น P ถึงต้น QRS' }
+]},
+{ id: 'qrs', title: 'วัดความกว้าง QRS', desc: 'แคบหรือกว้าง', pages: [
+  { type: 'content', title: 'แคบหรือกว้าง?', svg: 'wave_qrs',
+    body: '<p>วัดจากจุดที่ Q เริ่มออกจากเส้นฐาน ถึงจุดที่ S กลับเส้นฐาน (J point)</p>' + K('📌 &lt; 0.12 วินาที (ไม่ถึง 3 ช่องเล็ก) = แคบ ปกติ<br>📌 ≥ 0.12 วินาที = กว้าง → bundle branch block หรือจังหวะจาก ventricle') },
+  { type: 'content', title: 'ดูบนกราฟจริง', strip: 'qrs', body: '<p>QRS ของกราฟนี้ = 2 ช่องเล็ก = <strong>0.08 วินาที</strong> → แคบ ปกติ</p>' },
+  { type: 'drill', ex: 6, n: 5, title: 'แบบทดสอบท้ายบท: ฝึกวัด QRS บนกราฟจริง', hint: 'วัดบีตที่ลูกศรชี้' }
+]},
+{ id: 'nsr', title: 'อ่านกราฟเต็ม: Normal Sinus Rhythm', desc: 'รวมทุกขั้น ฝึกจนคล่อง', pages: [
+  { type: 'content', title: 'อ่าน EKG 5 ขั้น', svg: 'waves_overview',
+    body: HL('1️⃣ Rate 2️⃣ Rhythm 3️⃣ P wave 4️⃣ PR 5️⃣ QRS') + K('Normal sinus rhythm:<br>✓ Rate 60–100<br>✓ สม่ำเสมอ<br>✓ P ตั้งขึ้น นำหน้า QRS ทุกตัว<br>✓ PR 0.12–0.20 วินาที<br>✓ QRS &lt; 0.12 วินาที') },
+  { type: 'content', title: 'ดูบนกราฟจริง', strip: 'summary', body: '<p>กราฟนี้ผ่านทั้ง 5 ข้อ: rate 75, สม่ำเสมอ, P ปกติ, PR 0.16, QRS 0.08 → <strong>Normal sinus rhythm</strong></p>' },
+  { type: 'practice', n: 10, title: 'แบบทดสอบอ่านกราฟเต็ม (10 กราฟ)' }
+]},
+{ id: 'brady', title: 'Sinus Bradycardia / Tachycardia', desc: 'sinus ที่ช้าหรือเร็วเกินไป · สาเหตุ · สิ่งที่ต้องทำ', pages: [
+  { type: 'content', title: 'ต่างจาก NSR แค่ข้อเดียว: HR', svg: 'rate_cmp',
+    body: '<p>ทั้งสองแบบยังเป็น <strong>sinus</strong> ครบทุกข้อ (สม่ำเสมอ, P ตั้งขึ้นนำหน้า QRS ทุกตัว, PR และ QRS ปกติ) ต่างกันที่อัตราการเต้นเท่านั้น</p>'
+      + K('🐢 <strong>Sinus bradycardia</strong> — HR &lt; 60 (R–R ห่างเกิน 5 ช่องใหญ่)<br>✅ <strong>Normal sinus rhythm</strong> — HR 60–100 (R–R 3–5 ช่องใหญ่)<br>🐇 <strong>Sinus tachycardia</strong> — HR &gt; 100 (R–R ห่างไม่ถึง 3 ช่องใหญ่)')
+      + HL('💡 จำง่าย: R–R <strong>เกิน 5 ช่องใหญ่ = ช้า</strong> · <strong>น้อยกว่า 3 ช่องใหญ่ = เร็ว</strong>') },
+  { type: 'content', title: 'Sinus bradycardia บนกราฟจริง', strip: 'rate', stripOpts: { n: 30 },
+    body: '<p>R–R ห่าง 6 ช่องใหญ่ → 300 ÷ 6 = <strong>50 ครั้ง/นาที</strong> ส่วนอื่นปกติทั้งหมด</p>'
+      + K('📌 <strong>พบได้ปกติ</strong>: นักกีฬา ขณะนอนหลับ<br>📌 <strong>ยา</strong>: beta-blocker, calcium channel blocker, digoxin<br>📌 <strong>โรค</strong>: hypothyroid, hypothermia, ความดันในกะโหลกสูง, กล้ามเนื้อหัวใจขาดเลือด (inferior MI), กระตุ้น vagus (อาเจียน เบ่ง)') },
+  { type: 'content', title: 'เจอ bradycardia ต้องทำอะไร?', svg: 'brady_action',
+    body: HL('ดู <strong>ผู้ป่วย</strong> ก่อนดูตัวเลข: มีอาการหรือไม่?')
+      + K('✅ <strong>ไม่มีอาการ</strong> รู้สึกตัวดี BP ปกติ → วัด vital signs ซ้ำ ทบทวนยา แจ้งพยาบาลหัวหน้าเวร/แพทย์ตามแนวทางหน่วยงาน')
+      + '<div class="highlight">🚨 <strong>มีอาการ (unstable)</strong> → ตามทีมทันที · ต่อ monitor · เปิดเส้นให้สารน้ำ · ให้ออกซิเจนถ้า SpO₂ ต่ำ<br>สัญญาณอันตราย: ความดันต่ำ · ซึม/สับสน · หน้ามืดเป็นลม · เจ็บหน้าอก · หัวใจล้มเหลวเฉียบพลัน</div>'
+      + '<p style="font-size:.78rem;color:#8A7A80">การให้ยา (เช่น atropine) หรือ pacing เป็นไปตามแผนการรักษาของแพทย์และแนวทาง ACLS ของหน่วยงาน</p>' },
+  { type: 'content', title: 'Sinus tachycardia บนกราฟจริง', strip: 'rate', stripOpts: { n: 12, pr: 0.14 },
+    body: '<p>R–R ห่าง <strong>12 ช่องเล็ก</strong> (ไม่ถึง 3 ช่องใหญ่) → 1500 ÷ 12 = <strong>125 ครั้ง/นาที</strong></p>'
+      + HL('👀 ยิ่งเร็ว P ยิ่งชิดกับ T ของบีตก่อนหน้า ต้องมองหา P ให้เจอทุกตัว')
+      + K('📌 <strong>สาเหตุที่พบบ่อย</strong> (ร่างกายตอบสนองต่อบางอย่าง): ไข้ ปวด กังวล ขาดน้ำ/เสียเลือด ซีด ออกซิเจนต่ำ ติดเชื้อรุนแรง ไทรอยด์เป็นพิษ ยา (salbutamol) คาเฟอีน') },
+  { type: 'content', title: 'เจอ tachycardia ต้องทำอะไร?', svg: 'tachy_action',
+    body: HL('💡 Sinus tachycardia <strong>ไม่ใช่โรค</strong> แต่เป็นสัญญาณว่ามีบางอย่างผิดปกติ → <strong>หาสาเหตุและแก้ที่สาเหตุ</strong>')
+      + K('✅ วัดไข้ ประเมินความปวด ดูภาวะขาดน้ำ/เสียเลือด วัด SpO₂ ทบทวนยา แล้วรายงานแพทย์')
+      + '<div class="highlight">⚠️ ถ้า HR &gt; 150 สม่ำเสมอมาก หา P ไม่เจอ → อาจไม่ใช่ sinus (เช่น SVT) แจ้งแพทย์ทันที<br>🚨 ถ้ามีอาการ unstable (ความดันต่ำ ซึม เจ็บหน้าอก) → ตามทีมทันที</div>' },
+  { type: 'quiz', svg: 'rate_cmp', strip: { opts: { n: 32 }, q: 'rateQ', a: 'rate' }, question: 'กราฟจริงด้านล่าง R–R ห่างกันมากกว่า 6 ช่องใหญ่ สม่ำเสมอ P ปกติทุกตัว คือจังหวะอะไร?', choices: [
+    { t: 'Sinus tachycardia', ok: false, fb: 'R–R ยิ่งห่าง HR ยิ่งช้า ไม่ใช่เร็ว' },
+    { t: 'Sinus bradycardia (HR ≈ 47)', ok: true, fb: '1500 ÷ 32 ช่องเล็ก ≈ 47 ครั้ง/นาที < 60 และเป็น sinus → Sinus bradycardia' },
+    { t: 'Normal sinus rhythm', ok: false, fb: 'NSR ต้องมี HR 60–100' }] },
+  { type: 'quiz', svg: 'tachy_action', strip: { opts: { n: 11, pr: 0.12 }, q: 'rateQ', a: 'rate' }, question: 'ผู้ป่วยไข้ 39°C กราฟเป็น sinus tachycardia HR ≈ 136 ควรทำอะไรก่อน?', choices: [
+    { t: 'ลดไข้ ประเมินภาวะขาดน้ำ แล้วรายงานแพทย์', ok: true, fb: 'sinus tachycardia แก้ที่สาเหตุ ไข้ลด HR จะลดตาม' },
+    { t: 'เตรียมช็อกไฟฟ้า (cardioversion)', ok: false, fb: 'sinus tachycardia ไม่รักษาด้วยการช็อกไฟฟ้า' },
+    { t: 'ไม่ต้องทำอะไร เพราะเป็น sinus', ok: false, fb: 'เป็น sinus จริง แต่ร่างกายกำลังบอกว่ามีปัญหา ต้องหาสาเหตุ' }] },
+  { type: 'quiz', svg: 'brady_action', strip: { opts: { n: 36 }, q: 'rateQ', a: 'rate' }, question: 'ผู้ป่วย HR ≈ 42 (กราฟด้านล่าง) บ่นหน้ามืด BP 78/40 ควรทำอย่างไร?', choices: [
+    { t: 'ให้นอนพักแล้ววัดใหม่อีก 1 ชั่วโมง', ok: false, fb: 'มีอาการ + ความดันต่ำ = unstable ไม่ควรรอ' },
+    { t: 'ตามทีม/แพทย์ทันที ต่อ monitor เปิดเส้น เตรียมยาตามแนวทาง', ok: true, fb: 'bradycardia ที่มีอาการ (unstable) ต้องรักษาทันทีตามแนวทาง ACLS' },
+    { t: 'ให้ดื่มน้ำหวานแล้วสังเกตอาการ', ok: false, fb: 'ไม่ได้แก้ปัญหาหัวใจเต้นช้าและความดันต่ำ' }] },
+  { type: 'practice', n: 10, title: 'แบบทดสอบอ่านกราฟเต็ม (10 กราฟ)', kinds: ['nsr', 'brady', 'tachy'] }
+]},
+{ id: 'test1', title: 'บททดสอบ: Normal Sinus Rhythm · Sinus Bradycardia · Sinus Tachycardia', desc: 'แยกจังหวะ และบอกว่า P, PR, QRS ผิดปกติหรือไม่', pages: [
+  { type: 'content', title: 'วิธีสอบ',
+    body: '<p>ข้อสอบมี <strong>20 กราฟ</strong> แต่ละกราฟอ่านครบ 5 ขั้น (จังหวะ+HR → P → QRS → PR → สรุป)</p>'
+      + HL('🎯 กราฟที่นับว่า "อ่านถูก" ต้องตอบถูกครบทั้ง 5 ขั้น · ผ่านเมื่ออ่านถูก <strong>16 กราฟขึ้นไป (80%)</strong> · ทำค้างไว้กลับมาทำต่อได้ · ผ่านแล้วเซ็นชื่อยืนยัน')
+      + K('ทบทวนเกณฑ์ปกติ<br>📌 HR 60–100 · &lt; 60 = brady · &gt; 100 = tachy<br>📌 P กว้าง &lt; 0.12 วินาที สูง &lt; 2.5 มม. (2.5 ช่องเล็ก) ตั้งขึ้นนำหน้า QRS ทุกตัว<br>📌 PR 0.12–0.20 วินาที · QRS &lt; 0.12 วินาที')
+      + '<p>กราฟในข้อสอบอาจเป็น sinus ที่มีความผิดปกติร่วม 1–2 อย่าง เช่น <em>Sinus bradycardia + PR ยาว</em> ต้องบอกให้ครบ</p>' },
+  { type: 'content', title: 'P wave ผิดปกติที่ต้องรู้เพิ่ม', svg: 'p_abn',
+    body: K('📌 <strong>P สูงแหลม</strong> &gt; 2.5 มม. (P pulmonale) → นึกถึงห้องบนขวาโต เช่น โรคปอดเรื้อรัง<br>📌 <strong>P กว้าง</strong> &gt; 0.12 วินาที มักหยัก 2 ยอด (P mitrale) → นึกถึงห้องบนซ้ายโต เช่น โรคลิ้นหัวใจไมทรัล')
+      + '<p>ทั้งสองแบบยังเป็น sinus (P ตั้งขึ้นนำหน้า QRS ทุกตัว) แต่ต้องรายงานว่า P ผิดปกติ</p>' },
+  { type: 'content', title: 'P สูงแหลม บนกราฟจริง', strip: 'pwave', stripOpts: { n: 20, pAmp: 0.3 },
+    body: '<p>P สูง 3 ช่องเล็ก (3 มม.) เกิน 2.5 มม. (2.5 ช่องเล็ก) → <strong>P สูงแหลม</strong> ส่วน HR 75 PR QRS ปกติ</p>' },
+  { type: 'content', title: 'P กว้าง บนกราฟจริง', strip: 'pwave', stripOpts: { n: 30, pShape: 'wide' },
+    body: '<p>P กว้าง 3.5 ช่องเล็ก (0.14 วินาที) มี 2 ยอด → <strong>P กว้าง</strong> และ HR 50 → <em>Sinus bradycardia + P กว้าง</em></p>' },
+  { type: 'practice', n: 20, exam: true, title: 'ข้อสอบเปรียบเทียบ (20 กราฟ)' }
+]},
+{ id: 'twave', title: 'T wave', desc: 'T ปกติ · สูงแหลม · กลับหัว · แบน', pages: [
+  { type: 'content', title: 'T wave คืออะไร', svg: 't_cmp',
+    body: '<p>T wave คือช่วงที่หัวใจห้องล่าง <strong>คืนประจุ (repolarization)</strong> เตรียมบีบตัวครั้งถัดไป อยู่หลัง QRS เสมอ</p>'
+      + K('📌 ปกติใน lead II: <strong>โค้งมน หัวขึ้น</strong> ทิศเดียวกับ QRS<br>📌 สูงไม่เกินราว 5 มม. (5 ช่องเล็ก) ขาขึ้นช้ากว่าขาลงเล็กน้อย')
+      + HL('ดู T ทุกครั้ง 3 เรื่อง: <strong>ทิศทาง</strong> (ขึ้น/ลง) · <strong>ความสูง</strong> (สูงแหลม/แบน) · <strong>รูปร่าง</strong> (มนหรือแหลม)') },
+  { type: 'content', title: 'T ปกติ บนกราฟจริง', strip: 'twave', stripOpts: { n: 20 },
+    body: '<p>แถบสีเขียวคือ T ทุกตัว โค้งมน หัวขึ้น สูงราว 3 มม. (3 ช่องเล็ก)</p>' },
+  { type: 'content', title: 'T สูงแหลม — โพแทสเซียมสูง', strip: 'twave', stripOpts: { n: 22, tShape: 'peaked' },
+    body: K('📌 ยอด <strong>แหลม ฐานแคบ</strong> สูงเด่นจนเกือบเท่า R<br>📌 นึกถึง <strong>โพแทสเซียมในเลือดสูง (hyperkalemia)</strong> เช่น ไตวาย ยาบางชนิด (ACEI, spironolactone)')
+      + '<div class="highlight">🚨 อาจรุนแรงจนหัวใจหยุดเต้นได้ → <strong>แจ้งแพทย์ทันที</strong> ต่อ monitor เตรียมตรวจเกลือแร่</div>' },
+  { type: 'content', title: 'T กลับหัว — กล้ามเนื้อหัวใจขาดเลือด', strip: 'twave', stripOpts: { n: 21, tShape: 'inverted' },
+    body: K('📌 T อยู่ <strong>ใต้เส้นฐาน</strong> ในลีดที่ควรหัวขึ้น (lead II)<br>📌 นึกถึง <strong>กล้ามเนื้อหัวใจขาดเลือด</strong> หรือภาวะอื่น เช่น หัวใจห้องล่างหนา')
+      + HL('⚠️ ผู้ป่วยมีเจ็บแน่นหน้าอกร่วม → แจ้งแพทย์ทันที · ควรทำ EKG 12 lead เทียบกับของเดิม')
+      + '<p style="font-size:.78rem;color:#8A7A80">กราฟในบทเรียนเป็น lead II เส้นเดียว การบอกตำแหน่งที่ขาดเลือดต้องใช้ EKG 12 lead</p>' },
+  { type: 'quiz', svg: 't_cmp', strip: { opts: { n: 22, tShape: 'peaked' }, q: 'twaveQ', a: 'twave' }, question: 'ผู้ป่วยไตวาย T wave ในกราฟจริงด้านล่างเป็นแบบนี้ นึกถึงอะไร?', choices: [
+    { t: 'โพแทสเซียมต่ำ', ok: false, fb: 'K ต่ำ T จะแบน และมี U wave เด่น' },
+    { t: 'โพแทสเซียมสูง — แจ้งแพทย์ทันที', ok: true, fb: 'T สูงแหลมฐานแคบ + ไตวาย → hyperkalemia อันตราย' },
+    { t: 'ปกติ ไม่ต้องทำอะไร', ok: false, fb: 'T สูงแหลมไม่ใช่ลักษณะปกติ' }] },
+  { type: 'drill', ex: 9, n: 5, title: 'แบบทดสอบท้ายบท: แยกรูปแบบ T wave', hint: 'ดูทิศทาง ความสูง และรูปร่างของ T ในแถบที่ไฮไลต์' }
+]},
+{ id: 'qt', title: 'QT interval', desc: 'วัด QT · กฎครึ่ง R–R · QT ยาว', pages: [
+  { type: 'content', title: 'QT คืออะไร วัดอย่างไร', svg: 'qt_measure',
+    body: '<p>QT คือเวลาตั้งแต่หัวใจห้องล่าง <strong>เริ่มบีบ</strong> จนถึง <strong>คืนประจุเสร็จ</strong> วัดจาก <strong>ต้น QRS ถึงจบ T</strong></p>'
+      + K('📌 ค่า QT เปลี่ยนตาม HR (HR เร็ว QT สั้นลง)<br>📌 <strong>กฎจำง่าย</strong> (ใช้เมื่อ HR 60–100): จบ T ต้อง <strong>ไม่เกินครึ่งทาง</strong> ระหว่าง R สองตัว<br>📌 ค่าที่แม่นกว่าคือ QTc (ปรับตาม HR) มักรายงานโดยเครื่อง: QTc &gt; 0.50 วินาที = อันตราย') },
+  { type: 'content', title: 'QT ปกติ บนกราฟจริง', strip: 'qt', stripOpts: { n: 22, qt: 0.40 },
+    body: '<p>QT = 10 ช่องเล็ก = <strong>0.40 วินาที</strong> · R–R = 0.88 วินาที ครึ่งหนึ่ง = 0.44 → จบ T ก่อนครึ่งทาง = <strong>ปกติ</strong></p>' },
+  { type: 'content', title: 'QT ยาว บนกราฟจริง', strip: 'qt', stripOpts: { n: 22, qt: 0.56 },
+    body: '<p>QT = 14 ช่องเล็ก = <strong>0.56 วินาที</strong> เกินครึ่ง R–R (0.44) → <strong>QT ยาว</strong></p>'
+      + K('📌 สาเหตุ: <strong>ยา</strong> (เช่น ยาปฏิชีวนะกลุ่ม macrolide/quinolone, ยาต้านอาการทางจิต, ondansetron, amiodarone) · <strong>เกลือแร่ต่ำ</strong> (K, Mg, Ca) · โรคทางพันธุกรรม')
+      + '<div class="highlight">⚠️ เสี่ยงหัวใจเต้นผิดจังหวะชนิดอันตราย <strong>Torsades de pointes</strong> → ทบทวนยาที่ได้รับ รายงานแพทย์ ถ้าหน้ามืด/หมดสติ ตามทีมทันที</div>' },
+  { type: 'quiz', svg: 'qt_measure', strip: { opts: { n: 22, qt: 0.56 }, q: 'qtQ', a: 'qt' }, question: 'กราฟด้านล่าง จบ T เลยครึ่งทางระหว่าง R สองตัว หมายความว่าอย่างไร?', choices: [
+    { t: 'QT ปกติ', ok: false, fb: 'ถ้าจบ T เลยครึ่ง R–R ถือว่ายาว' },
+    { t: 'QT ยาว — ทบทวนยาและเกลือแร่ รายงานแพทย์', ok: true, fb: 'QT ยาวเสี่ยง Torsades de pointes' },
+    { t: 'PR ยาว', ok: false, fb: 'PR วัดจากต้น P ถึงต้น QRS คนละช่วงกับ QT' }] },
+  { type: 'drill', ex: 10, n: 5, title: 'แบบทดสอบท้ายบท: วัด QT', hint: 'วัดจากต้น QRS ถึงจบ T แล้วเทียบกับครึ่ง R–R' }
+]},
+{ id: 'uwave', title: 'U wave', desc: 'U ปกติ · U เด่นในโพแทสเซียมต่ำ', pages: [
+  { type: 'content', title: 'U wave คืออะไร', svg: 'u_wave',
+    body: '<p>U wave คือคลื่นเล็ก ๆ ที่อาจเห็น <strong>ตามหลัง T</strong> ทิศเดียวกับ T</p>'
+      + K('📌 <strong>ส่วนใหญ่มองไม่เห็น</strong> หรือเห็นเล็กมาก (&lt; 1 มม.) → ปกติ พบบ่อยเมื่อ HR ช้า<br>📌 <strong>U เด่น สูงกว่า T</strong> ที่แบนลง → นึกถึง <strong>โพแทสเซียมต่ำ (hypokalemia)</strong>')
+      + HL('⚠️ K ต่ำ: ท้องเสีย อาเจียน ยาขับปัสสาวะ → เสี่ยงหัวใจเต้นผิดจังหวะ รายงานแพทย์ ตรวจเกลือแร่') },
+  { type: 'content', title: 'U เล็ก (ปกติ) บนกราฟจริง', strip: 'uwave', stripOpts: { n: 27, uAmp: 0.05 },
+    body: '<p>วงสีส้มคือ U เล็ก ๆ หลัง T ปกติ สูงไม่ถึง 1 มม. (1 ช่องเล็ก) → <strong>พบได้ในคนปกติ</strong></p>' },
+  { type: 'content', title: 'T แบน + U เด่น — โพแทสเซียมต่ำ', strip: 'uwave', stripOpts: { n: 27, tShape: 'flat', uAmp: 0.2 },
+    body: '<p>T เตี้ยแบน แต่ U สูงเด่นกว่า T → รูปแบบของ <strong>โพแทสเซียมต่ำ</strong></p>'
+      + '<p style="font-size:.78rem;color:#8A7A80">T กับ U ที่ติดกันอาจทำให้วัด QT ยาวเกินจริง ให้วัด QT ถึงจบ T ไม่รวม U</p>' },
+  { type: 'quiz', svg: 'u_wave', strip: { opts: { n: 27, tShape: 'flat', uAmp: 0.2 }, q: 'uQ', a: 'uwave' }, question: 'ผู้ป่วยท้องเสียหลายวัน กราฟด้านล่างมี T แบน และคลื่นเด่นตามหลัง นึกถึงอะไร?', choices: [
+    { t: 'โพแทสเซียมต่ำ — รายงานแพทย์ ตรวจเกลือแร่', ok: true, fb: 'T แบน + U เด่น + เสียโพแทสเซียมทางอุจจาระ → hypokalemia' },
+    { t: 'โพแทสเซียมสูง', ok: false, fb: 'K สูง T จะสูงแหลม ไม่แบน' },
+    { t: 'เป็น P wave ของบีตถัดไป', ok: false, fb: 'P จะอยู่ชิดหน้า QRS ส่วนคลื่นนี้อยู่ติดหลัง T' }] },
+  { type: 'drill', ex: 11, n: 5, title: 'แบบทดสอบท้ายบท: ดู U wave', hint: 'ดูช่วงหลัง T ว่ามีคลื่นเพิ่มหรือไม่ และสูงเด่นแค่ไหน' }
+]},
+{ id: 'test2', title: 'บททดสอบ: T wave · QT interval · U wave', desc: 'อ่าน T, QT, U และบอกว่าต้องทำอะไร', pages: [
+  { type: 'content', title: 'วิธีสอบ', svg: 't_cmp',
+    body: '<p>ข้อสอบมี <strong>10 กราฟ</strong> แต่ละกราฟอ่าน 5 ขั้น: <strong>จังหวะ+HR → T wave → QT → U wave → สรุป</strong></p>'
+      + HL('🎯 กราฟที่นับว่า "อ่านถูก" ต้องถูกครบทั้ง 5 ขั้น · ผ่านเมื่ออ่านถูก <strong>8 กราฟขึ้นไป (80%)</strong>')
+      + K('ทบทวน<br>📌 T สูงแหลม → K สูง 🚨 · T กลับหัว → ขาดเลือด · T แบน + U เด่น → K ต่ำ<br>📌 QT: ต้น QRS → จบ T · จบ T เลยครึ่ง R–R = QT ยาว') },
+  { type: 'practice', n: 10, gen: 'tqu', title: 'ข้อสอบรวม T · QT · U (10 กราฟ)' }
+]},
+{ id: 'full', title: 'อ่านกราฟครบทุกขั้น (รวมทุกเรื่อง)', desc: 'จังหวะ · HR · P · PR · QRS · T · QT · U → สรุปและสิ่งที่ต้องทำ', pages: [
+  { type: 'content', title: 'อ่าน EKG อย่างเป็นระบบ 8 ขั้น', svg: 'full_steps',
+    body: '<p>บทนี้รวมทุกเรื่องที่เรียนมา อ่านกราฟ <strong>ทีละขั้นตามลำดับเดิมทุกครั้ง</strong> จะไม่พลาดความผิดปกติ</p>'
+      + '<ol class="steps8"><li><strong>จังหวะ + HR</strong> — R–R สม่ำเสมอไหม · HR เท่าไร (1500 ÷ ช่องเล็ก / 300 ÷ ช่องใหญ่ / 6 วินาที × 10)</li>'
+      + '<li><strong>P wave</strong> — มีไหม ตั้งขึ้นไหม นำหน้า QRS ทุกตัวไหม สูง/กว้างเกินไหม</li>'
+      + '<li><strong>PR interval</strong> — ต้น P → ต้น QRS (0.12–0.20 วินาที = 3–5 ช่องเล็ก)</li>'
+      + '<li><strong>QRS</strong> — กว้างเท่าไร (&lt; 0.12 วินาที = น้อยกว่า 3 ช่องเล็ก)</li>'
+      + '<li><strong>T wave</strong> — ทิศทาง · ความสูง · รูปร่าง</li>'
+      + '<li><strong>QT</strong> — ต้น QRS → จบ T ไม่เกินครึ่ง R–R</li>'
+      + '<li><strong>U wave</strong> — มีไหม เด่นกว่า T ไหม</li>'
+      + '<li><strong>สรุป</strong> — ชื่อจังหวะ + ความผิดปกติที่พบ + สิ่งที่ต้องทำ</li></ol>'
+      + HL('🎯 เคล็ดลับ: ขั้น 1–2 บอก <strong>ชื่อจังหวะ</strong> · ขั้น 3–7 บอก <strong>ความผิดปกติเพิ่มเติม</strong> ที่ต้องต่อท้ายชื่อ') },
+  { type: 'content', title: 'ค่าปกติที่ต้องจำ (สรุปทุกบท)', strip: 'allA', stripOpts: { n: 20, qt: 0.36 },
+    body: '<table class="norm-t"><tr><th>ขั้น</th><th>ค่าปกติ</th><th>ผิดปกติที่เรียนมา</th></tr>'
+      + '<tr><td>จังหวะ + HR</td><td>R–R เท่ากัน · 60–100</td><td>&lt; 60 brady · &gt; 100 tachy · R–R ไม่เท่า = sinus arrhythmia</td></tr>'
+      + '<tr><td>P</td><td>ตั้งขึ้น นำหน้า QRS ทุกตัว · สูง ≤ 2.5 มม. (2.5 ช่องเล็ก) · กว้าง ≤ 0.12 วินาที (3 ช่องเล็ก)</td><td>สูงแหลม · กว้าง · กลับหัว/ไม่มี (junctional)</td></tr>'
+      + '<tr><td>PR</td><td>0.12–0.20 วินาที (3–5 ช่องเล็ก)</td><td>&gt; 0.20 ยาว · &lt; 0.12 สั้น</td></tr>'
+      + '<tr><td>QRS</td><td>&lt; 0.12 วินาที (น้อยกว่า 3 ช่องเล็ก)</td><td>≥ 0.12 กว้าง</td></tr>'
+      + '<tr><td>T</td><td>หัวขึ้น โค้งมน สูง ≤ 5 มม. (5 ช่องเล็ก)</td><td>สูงแหลม (K สูง) · กลับหัว (ขาดเลือด) · แบน (K ต่ำ)</td></tr>'
+      + '<tr><td>QT</td><td>ไม่เกินครึ่ง R–R</td><td>เกินครึ่ง = QT ยาว</td></tr>'
+      + '<tr><td>U</td><td>ไม่มี หรือเล็ก &lt; 1 มม. (1 ช่องเล็ก)</td><td>U เด่นกว่า T (K ต่ำ)</td></tr></table>'
+      + '<p style="font-size:.8rem">กราฟจริงด้านล่าง: ทุกขั้นปกติ → <strong>Normal sinus rhythm</strong></p>' },
+  { type: 'content', title: 'ตัวอย่างวิเคราะห์ 1', strip: 'allA', stripOpts: { kind: 'brady', n: 32, pr: 0.28, qt: 0.44, tShape: 'inverted' },
+    body: '<ol class="steps8"><li>R–R เท่ากัน 32 ช่องเล็ก → สม่ำเสมอ · 1500 ÷ 32 ≈ <strong>47</strong> → ช้า</li>'
+      + '<li>P ตั้งขึ้น นำหน้า QRS ทุกตัว → sinus</li>'
+      + '<li>PR = 7 ช่องเล็ก = <strong>0.28 วินาที</strong> → ยาว</li>'
+      + '<li>QRS = 2 ช่องเล็ก = 0.08 วินาที → แคบ ปกติ</li>'
+      + '<li>T <strong>อยู่ใต้เส้นฐาน</strong> → กลับหัว</li>'
+      + '<li>QT = 11 ช่องเล็ก = 0.44 วินาที · ครึ่ง R–R = 0.64 → ปกติ</li>'
+      + '<li>ไม่มี U</li></ol>'
+      + HL('<strong>สรุป:</strong> Sinus bradycardia + PR ยาว (1st degree AV block) + T กลับหัว<br>👉 ประเมินอาการหน้ามืด/เจ็บหน้าอก ทบทวนยาที่ทำให้หัวใจช้า ทำ EKG 12 lead รายงานแพทย์') },
+  { type: 'content', title: 'ตัวอย่างวิเคราะห์ 2', strip: 'allA', stripOpts: { n: 24, qt: 0.36, pAmp: 0.3, tShape: 'flat', uAmp: 0.2 },
+    body: '<ol class="steps8"><li>R–R เท่ากัน 24 ช่องเล็ก → สม่ำเสมอ · 1500 ÷ 24 ≈ <strong>63</strong> → ปกติ</li>'
+      + '<li>P สูง 3 มม. (3 ช่องเล็ก) เกิน 2.5 มม. → <strong>P สูงแหลม</strong></li>'
+      + '<li>PR = 4 ช่องเล็ก = 0.16 วินาที → ปกติ</li>'
+      + '<li>QRS = 2 ช่องเล็ก = 0.08 วินาที → ปกติ</li>'
+      + '<li>T เตี้ยไม่ถึง 1 มม. (1 ช่องเล็ก) → <strong>T แบน</strong></li>'
+      + '<li>QT = 9 ช่องเล็ก = 0.36 วินาที · ครึ่ง R–R = 0.48 → ปกติ (วัดถึงจบ T ไม่รวม U)</li>'
+      + '<li>มีคลื่นเด่นหลัง T สูงกว่า T → <strong>U เด่น</strong></li></ol>'
+      + HL('<strong>สรุป:</strong> Sinus rhythm (HR ปกติ) + P สูงแหลม + T แบน + U เด่น<br>👉 นึกถึงโพแทสเซียมต่ำ → รายงานแพทย์ ตรวจเกลือแร่ · P สูงแหลมบันทึกไว้ (ห้องบนขวาอาจโต)') },
+  { type: 'content', title: 'ตัวอย่างวิเคราะห์ 3', strip: 'allA', stripOpts: { kind: 'tachy', n: 13, pr: 0.12, qrs: 0.06, qt: 0.24, tShape: 'peaked' },
+    body: '<ol class="steps8"><li>R–R เท่ากัน 13 ช่องเล็ก → สม่ำเสมอ · 1500 ÷ 13 ≈ <strong>115</strong> → เร็ว</li>'
+      + '<li>P ตั้งขึ้น นำหน้า QRS ทุกตัว → sinus</li>'
+      + '<li>PR = 3 ช่องเล็ก = 0.12 วินาที → ปกติ (ขอบล่าง)</li>'
+      + '<li>QRS = 1.5 ช่องเล็ก = 0.06 วินาที → แคบ</li>'
+      + '<li>T สูงเกือบเท่า R ยอดแหลม ฐานแคบ → <strong>T สูงแหลม</strong></li>'
+      + '<li>QT = 6 ช่องเล็ก = 0.24 วินาที · ครึ่ง R–R = 0.26 → ปกติ (HR เร็ว QT สั้นลงตาม)</li>'
+      + '<li>ไม่มี U</li></ol>'
+      + '<div class="highlight">🚨 <strong>สรุป:</strong> Sinus tachycardia + T สูงแหลม<br>👉 นึกถึงโพแทสเซียมสูง → <strong>แจ้งแพทย์ทันที</strong> ต่อ monitor เตรียมตรวจเกลือแร่</div>' },
+  { type: 'content', title: 'เจอหลายอย่างพร้อมกัน รายงานอะไรก่อน', svg: 't_cmp', strip: 'qt', stripOpts: { n: 22, qt: 0.56 },
+    body: '<p>เมื่อพบความผิดปกติหลายอย่าง ให้ <strong>บอกครบทุกข้อ</strong> แต่จัดลำดับความเร่งด่วน</p>'
+      + '<div class="highlight">🚨 <strong>แจ้งทันที</strong>: T สูงแหลม (K สูง) · ผู้ป่วยมีอาการ (เจ็บหน้าอก หน้ามืด ความดันต่ำ) ร่วมกับกราฟผิดปกติ</div>'
+      + K('⚠️ <strong>รายงานแพทย์</strong>: QT ยาว (กราฟด้านล่าง) · T แบน + U เด่น (K ต่ำ) · T กลับหัว · QRS กว้าง · PR สั้น · จังหวะไม่ใช่ sinus')
+      + '<p>📝 <strong>บันทึก / เฝ้าระวัง</strong>: PR ยาว · P สูงแหลม/กว้าง · sinus brady/tachy ที่ไม่มีอาการ (หาสาเหตุร่วมด้วย)</p>'
+      + '<p style="font-size:.78rem;color:#8A7A80">กราฟในบทเรียนเป็น lead II เส้นเดียว การวินิจฉัยต้องยืนยันด้วย EKG 12 lead และการประเมินของแพทย์</p>' },
+  { type: 'quiz', svg: 'full_steps', strip: { opts: { n: 22, qt: 0.56, qrs: 0.14 }, q: 'rhythmRate', a: 'allA' },
+    question: 'อ่านกราฟด้านล่างครบ 8 ขั้นแล้ว (HR 68 สม่ำเสมอ · P ปกติ · PR 0.16) ข้อใดสรุปได้ถูกต้องที่สุด?', choices: [
+    { t: 'Normal sinus rhythm — ไม่พบความผิดปกติ', ok: false, fb: 'ลองวัด QRS และ QT อีกครั้ง — ทั้งสองยาวเกินเกณฑ์' },
+    { t: 'Sinus rhythm (HR ปกติ) + QRS กว้าง + QT ยาว', ok: true, fb: 'QRS 3.5 ช่องเล็ก (0.14) ≥ 0.12 และ QT 14 ช่องเล็ก (0.56) เกินครึ่ง R–R (0.44) → รายงานแพทย์ ทบทวนยา' },
+    { t: 'Sinus rhythm (HR ปกติ) + QT ยาว', ok: false, fb: 'ถูกบางส่วน แต่ยังขาด QRS กว้าง (0.14 วินาที)' },
+    { t: 'Sinus bradycardia + PR ยาว', ok: false, fb: 'HR 68 อยู่ในช่วงปกติ และ PR 0.16 ปกติ' }] },
+  { type: 'quiz', svg: 't_cmp', strip: { opts: { kind: 'brady', n: 30, qt: 0.44, tShape: 'peaked' }, q: 'twaveQ', a: 'allA' },
+    question: 'ผู้ป่วยไตวาย กราฟด้านล่าง HR 50 และ T เป็นแบบนี้ ควรทำอะไรก่อน?', choices: [
+    { t: 'Sinus bradycardia + T สูงแหลม → แจ้งแพทย์ทันที ต่อ monitor', ok: true, fb: 'T สูงแหลม + ไตวาย → K สูง อันตรายถึงหัวใจหยุดเต้น และ HR ช้าลงได้อีก' },
+    { t: 'Sinus bradycardia อย่างเดียว บันทึกไว้ก่อน', ok: false, fb: 'พลาด T สูงแหลม ซึ่งเร่งด่วนที่สุดในกราฟนี้' },
+    { t: 'Normal sinus rhythm ไม่ต้องทำอะไร', ok: false, fb: 'HR 50 ช้ากว่า 60 และ T ผิดปกติ' }] },
+  { type: 'practice', n: 10, steps: 8, gen: 'all', title: 'แบบทดสอบอ่านกราฟครบ 8 ขั้น (10 กราฟ)' }
+]},
+{ id: 'st', title: 'ST segment', desc: 'ST ปกติ · ST ยก · ST กด · สิ่งที่ต้องทำ', pages: [
+  { type: 'content', title: 'ST segment คืออะไร', svg: 'st_what',
+    body: '<p>ST segment คือช่วง <strong>ตั้งแต่จบ QRS ถึงต้น T</strong> เป็นช่วงที่หัวใจห้องล่างบีบตัวเต็มที่ จุดที่ QRS จบเรียกว่า <strong>J point</strong></p>'
+      + K('📌 ปกติ ST จะ <strong>อยู่ระดับเดียวกับเส้นฐาน</strong><br>📌 เส้นฐานให้ดูจาก <strong>PR segment</strong> (จบ P ถึงต้น QRS) หรือ TP segment (จบ T ถึง P ตัวถัดไป)')
+      + HL('ดู ST เพื่อหา <strong>กล้ามเนื้อหัวใจขาดเลือด / หัวใจขาดเลือดเฉียบพลัน</strong> ซึ่งเป็นภาวะที่ต้องรีบรายงาน') },
+  { type: 'content', title: 'วิธีดู ST ทีละขั้น', svg: 'st_what',
+    body: '<ol class="steps8"><li>ลากเส้นฐานในใจ ตามระดับ <strong>PR segment</strong></li>'
+      + '<li>หา <strong>J point</strong> — จุดที่ QRS จบและเส้นเริ่มหักเข้าสู่ ST</li>'
+      + '<li>ดูระดับ ST <strong>หลัง J point ประมาณ 1–2 ช่องเล็ก</strong> (0.04–0.08 วินาที)</li>'
+      + '<li>นับว่าสูงหรือต่ำกว่าเส้นฐานกี่ <strong>ช่องเล็ก</strong> (1 ช่องเล็ก = 1 มม. = 0.1 mV)</li></ol>'
+      + K('📌 <strong>ST ยก</strong> ≥ 1 มม. (1 ช่องเล็ก) ใน 2 lead ที่ติดกัน → สงสัย STEMI<br>'
+      + '&nbsp;&nbsp;&nbsp;(lead V2–V3 เกณฑ์สูงกว่า: ชาย ≥ 2 มม. (2 ช่องเล็ก) · หญิง ≥ 1.5 มม. (1.5 ช่องเล็ก))<br>'
+      + '📌 <strong>ST กด</strong> ≥ 0.5 มม. (0.5 ช่องเล็ก) แบบแนวราบหรือลาดลง → สงสัยขาดเลือด') },
+  { type: 'content', title: 'ST ปกติ บนกราฟจริง', strip: 'st', stripOpts: { n: 20, qt: 0.36 },
+    body: '<p>เส้นประสีฟ้าคือเส้นฐาน · แถบสีส้มคือ ST segment ของทุกบีต · ST อยู่ระดับเดียวกับเส้นฐาน → <strong>ปกติ</strong></p>' },
+  { type: 'content', title: 'ST ยก / ST กด หน้าตาเป็นอย่างไร', svg: 'st_cmp',
+    body: K('📌 <strong>ST ยก</strong>: ST โค้งนูนขึ้นต่อกับ T เหมือน "ป้ายหลุมศพ" ในรายที่ยกมาก<br>📌 <strong>ST กดแนวราบ / ลาดลง</strong>: ST อยู่ใต้เส้นฐานเป็นเส้นตรงหรือลาดลง<br>📌 ST ที่กดแต่ <strong>ลาดขึ้นเร็ว</strong> (upsloping) มักพบเมื่อหัวใจเต้นเร็ว มีความหมายน้อยกว่า')
+      + '<p>ความสูงให้บอกเป็นทั้ง มม. และช่องเล็กเสมอ เช่น "ST ยก 2 มม. (2 ช่องเล็ก)"</p>' },
+  { type: 'content', title: 'ST ยก บนกราฟจริง', strip: 'st', stripOpts: { n: 21, qt: 0.36, st: 0.25 },
+    body: '<p>หลัง J point เส้นอยู่สูงกว่าเส้นฐาน <strong>2.5 ช่องเล็ก (2.5 มม.)</strong> ทุกบีต และต่อเนื่องไปกับ T → <strong>ST ยก</strong></p>'
+      + '<div class="highlight">🚨 ST ยก + เจ็บ/แน่นหน้าอก → <strong>สงสัย STEMI</strong><br>'
+      + '👉 แจ้งแพทย์/ทีมทันที · ทำ <strong>EKG 12 lead ภายใน 10 นาที</strong> · ต่อ monitor · วัดสัญญาณชีพ · ให้ออกซิเจนเมื่อ SpO₂ &lt; 90% · เปิดเส้นเลือด · เตรียมยาตามแนวทาง <strong>STEMI fast track</strong> ของโรงพยาบาล</div>' },
+  { type: 'content', title: 'ST กด บนกราฟจริง', strip: 'st', stripOpts: { n: 20, qt: 0.36, st: -0.15 },
+    body: '<p>หลัง J point เส้นอยู่ต่ำกว่าเส้นฐาน <strong>1.5 ช่องเล็ก (1.5 มม.)</strong> เป็นแนวราบ → <strong>ST กด</strong></p>'
+      + K('📌 นึกถึง <strong>กล้ามเนื้อหัวใจขาดเลือด</strong> (เช่น NSTE-ACS)<br>📌 สาเหตุอื่น: ยา digoxin (ST โค้งแอ่งเหมือนตะขอ) · หัวใจห้องล่างหนา · โพแทสเซียมต่ำ')
+      + HL('⚠️ ST กด + เจ็บหน้าอก → รายงานแพทย์ ทำ EKG 12 lead · เจ็บหน้าอกซ้ำ ให้ทำ EKG ซ้ำทุกครั้งเพื่อเทียบ') },
+  { type: 'content', title: 'ข้อควรระวังในการอ่าน ST', svg: 'st_cmp',
+    body: K('📌 <strong>กราฟ lead เดียวบอก MI ไม่ได้</strong> ต้องใช้ EKG 12 lead ร่วมกับอาการและผลเลือด<br>'
+      + '📌 ST ยกไม่ได้เป็น MI เสมอ: <strong>เยื่อหุ้มหัวใจอักเสบ</strong> (ยกหลาย lead แบบแอ่ง) · early repolarization · QRS กว้าง (LBBB) · หัวใจห้องล่างหนา<br>'
+      + '📌 ถ้า <strong>QRS กว้าง</strong> การแปลผล ST ทำได้ยาก ให้รายงานแพทย์')
+      + HL('🎯 หลักจำ: เจ็บหน้าอก = EKG 12 lead ภายใน 10 นาที · <strong>ไม่แน่ใจ ให้รายงาน</strong> ห้ามรอ') },
+  { type: 'quiz', svg: 'st_cmp', strip: { opts: { n: 22, qt: 0.36, st: 0.25 }, q: 'stQ', a: 'st' },
+    question: 'ผู้ป่วยชาย 58 ปี แน่นหน้าอกร้าวไปแขนซ้าย 20 นาที กราฟ monitor เป็นแบบด้านล่าง ควรทำอะไรก่อน?', choices: [
+    { t: 'แจ้งแพทย์/ทีมทันที และทำ EKG 12 lead ภายใน 10 นาที', ok: true, fb: 'ST ยก 2.5 มม. (2.5 ช่องเล็ก) + อาการเข้าได้กับ ACS → สงสัย STEMI เวลาคือกล้ามเนื้อหัวใจ' },
+    { t: 'ให้นอนพักก่อน 30 นาทีแล้วดูกราฟใหม่', ok: false, fb: 'การรอทำให้กล้ามเนื้อหัวใจตายมากขึ้น ต้องแจ้งทันที' },
+    { t: 'ST ปกติ บันทึกไว้', ok: false, fb: 'ST อยู่สูงกว่าเส้นฐาน 2.5 ช่องเล็ก — ไม่ปกติ' }] },
+  { type: 'quiz', svg: 'st_what', strip: { opts: { n: 20, qt: 0.36, st: -0.15 }, q: 'stQ', a: 'st' },
+    question: 'ST ในกราฟด้านล่างอยู่ระดับไหนเมื่อเทียบกับเส้นฐาน (PR segment)?', choices: [
+    { t: 'กดลง ≈ 1.5 มม. (1.5 ช่องเล็ก)', ok: true, fb: 'ต่ำกว่าเส้นฐาน 1.5 ช่องเล็ก แนวราบ → ST กด ≥ 0.5 มม. ผิดปกติ' },
+    { t: 'ยกขึ้น ≈ 1.5 มม. (1.5 ช่องเล็ก)', ok: false, fb: 'ดูทิศทางอีกครั้ง — ST อยู่ใต้เส้นประสีฟ้า' },
+    { t: 'อยู่ระดับเส้นฐาน', ok: false, fb: 'เทียบกับ PR segment จะเห็นว่า ST ต่ำกว่า' }] },
+  { type: 'drill', ex: 12, n: 5, title: 'แบบทดสอบท้ายบท: ST segment', hint: 'เทียบระดับ ST (แถบสีส้ม) กับ PR segment แล้วนับเป็นช่องเล็ก' }
+]}
+];
+
+/* ================================================
+   APP
+   ================================================ */
+OV.rateQ = () => { const qc = css('--c-qrs'); visibleR().forEach(r => dot(r, volt(S, r), qc, 4)); vline(S.R[1], qc); vline(S.R[2], qc); label('R–R = ? ช่องใหญ่', (X(S.R[1]) + X(S.R[2])) / 2, Ymm(7), cM()); };
+OV.smallQ = () => { const m = cM(), t = 2.0; ctx.fillStyle = m; ctx.globalAlpha = .35; ctx.fillRect(X(t), Ymm(3), X(.04), X(.04)); ctx.globalAlpha = 1; bracket(t, t + .04, 6, m, ''); label('1 ช่องเล็ก = ? วินาที', X(t) + 12, Ymm(3.5), m, 'left'); };
+OV.smallA = p => { const m = cM(), t = 2.0; ctx.globalAlpha = seg(p, 0, 2); ctx.fillStyle = m; ctx.globalAlpha *= .35; ctx.fillRect(X(t), Ymm(3), X(.04), X(.04)); ctx.globalAlpha = seg(p, 0, 2); label('1 ช่องเล็ก = 0.04 วินาที', X(t) + 12, Ymm(3.5), m, 'left'); ctx.globalAlpha = seg(p, 1, 2); bracket(0, 1, 32, m, '25 ช่องเล็ก = 1 วินาที'); ctx.globalAlpha = 1; };
+OV.bigQ = () => { const m = cM(); ctx.fillStyle = m; ctx.globalAlpha = .12; ctx.fillRect(X(2.8), Ymm(20), X(.2), Ymm(5)); ctx.globalAlpha = 1; vbracket(2.75, 20, 25, m, 'สูง 1 ช่องใหญ่ = ? mV'); };
+OV.bigA = () => { const m = cM(); ctx.fillStyle = m; ctx.globalAlpha = .12; ctx.fillRect(X(2.8), Ymm(20), X(.2), Ymm(5)); ctx.globalAlpha = 1; vbracket(2.75, 20, 25, m, '5 ช่องเล็ก × 0.1 = 0.5 mV'); vbracket(S.R[1] + .06, BASE - volt(S, S.R[1]) * 10, BASE, css('--c-qrs'), `R สูง ≈ ${(volt(S, S.R[1])).toFixed(1)} mV`); };
+OV.pQ = () => { const [a, b] = waveRange(S, S.R[1], 'P'); band(a, b, css('--c-p'), .25); label('คลื่นนี้คือ P', X((a + b) / 2), Ymm(8), css('--c-p')); };
+OV.irrQ = () => { const qc = css('--c-qrs'); visibleR().forEach(r => { dot(r, volt(S, r), qc, 4); vline(r, qc); }); label('R–R แต่ละช่วงยาวไม่เท่ากัน', X(3), Ymm(31), cM()); };
+OV.qrsQ = () => { const r = S.R[1]; arrowAt(r, 'QRS', css('--c-qrs')); };
+OV.rhythmRate = p => {
+  OV.rhythm(p);
+  if (p > .6) label(`HR = 1500 ÷ ${S.n} ≈ ${S.rate} ครั้ง/นาที`, X(S.R[1]), Ymm(31), cM(), 'left');
+};
+OV.allA = p => { OV.pwave(Math.min(1, p * 2)); OV.qt(p); };
+OV.stQ = () => { const o = on(S, S.R[1]); band(o + S.qrs, o + S.tc - S.tSig, '#B9770E', .22); label('ช่วงนี้อยู่ระดับไหนเทียบเส้นฐาน?', X(o + S.qrs), Ymm(5), '#B9770E'); };
+OV.twaveQ = () => { const [a, b] = waveRange(S, S.R[1], 'T'); band(a, b, css('--c-t'), .2); label('T wave นี้', X((a + b) / 2), Ymm(4), css('--c-t')); };
+OV.qtQ = () => { const R1 = S.R[1]; vline(on(S, R1), '#8E44AD'); vline(on(S, R1) + S.qt, '#8E44AD'); vline(R1 + (S.R[2] - R1) / 2, cM()); label('← ครึ่ง R–R', X(R1 + (S.R[2] - R1) / 2) + 6, Ymm(6), cM(), 'left'); };
+OV.uQ = () => { const [a, b] = waveRange(S, S.R[1], 'U'); band(a, b, '#D68910', .2); label('คลื่นนี้?', X((a + b) / 2), Ymm(10), '#D68910'); };
+OV.rate1500 = p => {
+  const m = cM(), qc = css('--c-qrs'), R1 = S.R[1], R2 = S.R[2];
+  visibleR().forEach(r => dot(r, volt(S, r), qc, 4));
+  vline(R1, qc); vline(R2, qc);
+  const shown = Math.floor(seg(p, 0, 1.3) * S.n + 1e-6);
+  for (let k = 1; k <= shown; k++) {
+    const a = R1 + (k - 1) * .04;
+    ctx.fillStyle = m; ctx.globalAlpha = k % 2 ? .28 : .12; ctx.fillRect(X(a), Ymm(4), X(.04), Ymm(3)); ctx.globalAlpha = 1;
+    if (k % 5 === 0 || k === S.n) label(String(k), X(a + .02), Ymm(9.5), m);
+  }
+  if (p > .8) {
+    ctx.globalAlpha = seg(p, 4, 5);
+    label(`${S.n} ช่องเล็ก → 1500 ÷ ${S.n} ≈ ${S.rate} ครั้ง/นาที`, X(R2) + 8, Ymm(31), m, 'left');
+    ctx.globalAlpha = 1;
+  }
+};
+OV.rate1500Q = () => { const qc = css('--c-qrs'); visibleR().forEach(r => dot(r, volt(S, r), qc, 4)); vline(S.R[1], qc); vline(S.R[2], qc); label('นับช่องเล็กระหว่างเส้นประ', (X(S.R[1]) + X(S.R[2])) / 2, Ymm(7), cM()); };
+OV.rate6 = p => {
+  const m = cM(), rs = S.R.filter(x => x < DUR - 0.05);
+  bracket(0.02, DUR - 0.02, 33, m, '6 วินาที');
+  rs.forEach((r, i) => { ctx.globalAlpha = seg(p, i, rs.length); dot(r, volt(S, r), css('--c-qrs'), 4); label(String(i + 1), X(r), Ymm(7), m); });
+  ctx.globalAlpha = 1;
+};
+
+function el(id) { return document.getElementById(id); }
+const $ = el;
+const monitor = el('monitor'), park = el('park');
+const lessonS = makeStrip({ n: 20, pr: 0.16, qrs: 0.08 });
+function useStrip(ns, info) { S = ns; buildPts(); play(); el('stripInfo').textContent = info; }
+const PASS = 0.8, PER_STRIP = 5;
+const STEPS = pg => (pg && pg.steps) || PER_STRIP;   // จำนวนขั้นต่อกราฟ
+// บทฝึก: ข้อสรุปต้องถูก และผิดได้ไม่เกิน 1 ขั้น (บท 8 ขั้น ผิดได้ 2) · บททดสอบเปรียบเทียบ: ต้องถูกครบทุกขั้น
+const wrongAllowed = pg => (pg && pg.exam) ? 0 : (STEPS(pg) >= 8 ? 2 : 1);
+
+/* ---- กระดาษคำตอบ: เก็บรูปกราฟ + สรุปคำตอบทีละข้อ ระหว่างทำแบบทดสอบรอบปัจจุบัน ---- */
+let paperBuf = { items: [], images: [] }, paperPending = 0;
+function captureGraphImage() {
+  try {
+    const maxW = 640, scale = Math.min(1, maxW / cv.width);
+    const off = document.createElement('canvas');
+    off.width = Math.round(cv.width * scale); off.height = Math.round(cv.height * scale);
+    off.getContext('2d').drawImage(cv, 0, 0, off.width, off.height);
+    return off.toDataURL('image/jpeg', 0.6);
+  } catch (e) { return ''; }
+}
+function pushPaperItem(item) {
+  const idx = paperBuf.items.length;
+  paperBuf.items.push(item); paperBuf.images.push('');
+  paperPending++;
+  // รอให้ภาพเฉลย (overlay) วาดจบก่อนค่อยแคป (แอนิเมชันเฉลยยาว ~1.7 วินาที)
+  // แต่ถ้าตอบเร็วมาก (กราฟยังวาดเส้นไม่จบ — sweep-in ของกราฟใหม่ยาว ~3 วินาที เริ่มนับใหม่ทุกครั้งที่ขึ้นกราฟใหม่)
+  // ต้องรอให้เส้นวาดจบ (sweeping === false) ก่อน ไม่งั้นจะได้ภาพกราฟที่ขาดครึ่งเดียว (มีจุดเขียวค้างกลางกราฟ)
+  const start = performance.now();
+  const tryCapture = () => {
+    const doneEnough = !sweeping && (performance.now() - start) >= 1750;
+    if (doneEnough || performance.now() - start >= 4500) {   // กันรอค้างไม่จบในเคสผิดปกติ
+      paperBuf.images[idx] = captureGraphImage(); paperPending--;
+    } else {
+      setTimeout(tryCapture, 150);
+    }
+  };
+  setTimeout(tryCapture, 1750);
+}
+function whenPaperReady(cb, tries) {
+  tries = tries || 0;
+  if (paperPending <= 0 || tries > 12) return cb();
+  setTimeout(() => whenPaperReady(cb, tries + 1), 300);
+}
+
+/* ================= พิมพ์บทเรียน: เฉพาะเนื้อหาที่สอนกราฟ + ข้อสอบเปล่า (ไม่มีเฉลย) ================= */
+function prEsc(s) {
+  return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+function captureStripImage() {
+  try {
+    const maxW = 900, scale = Math.min(1, maxW / cv.width);
+    const off = document.createElement('canvas');
+    off.width = Math.round(cv.width * scale); off.height = Math.round(cv.height * scale);
+    off.getContext('2d').drawImage(cv, 0, 0, off.width, off.height);
+    return off.toDataURL('image/jpeg', 0.75);
+  } catch (e) { return ''; }
+}
+// รอให้เส้นกราฟวาดจบ (sweep-in ~3 วิ) ก่อนเสมอ · withOverlay=true คือรอให้ภาพเฉลย/คำอธิบายวาดจบด้วย (~1.7 วิ)
+async function waitGraphReady(withOverlay) {
+  const t0 = performance.now();
+  while (sweeping && performance.now() - t0 < 5000) await sleep(120);
+  await sleep(withOverlay ? 1750 : 150);
+}
+function prSetProgress(txt) { const n = el('prLoadingN'); if (n) n.textContent = txt; }
+
+// สร้าง HTML สำหรับพิมพ์ของบทเรียนที่ระบุ: เนื้อหาสอน (content/quiz ทุกหน้า) + ข้อสอบเปล่าไม่มีเฉลย (สุ่มชุดใหม่)
+async function buildLessonPrintDoc(les) {
+  let html = `<div class="pr-title">${prEsc(les.title)}</div>`;
+  const pages = les.pages.filter(p => p.type === 'content' || p.type === 'quiz');
+  for (let i = 0; i < pages.length; i++) {
+    const pg = pages[i];
+    prSetProgress(`กำลังเตรียมเนื้อหา ${i + 1}/${pages.length}`);
+    if (pg.type === 'content') {
+      let block = `<section class="pr-block"><h3>${prEsc(pg.title || '')}</h3><div class="pr-body">${pg.body || ''}</div>`;
+      if (pg.svg) block += `<div class="pr-svg">${genSVG(pg.svg)}</div>`;
+      if (pg.strip) {
+        useStrip(pg.stripOpts ? makeStrip(pg.stripOpts) : lessonS, '');
+        setOverlay(pg.strip);
+        await waitGraphReady(true);
+        block += `<img class="pr-strip" src="${captureStripImage()}">`;
+      }
+      html += block + '</section>';
+    } else {
+      let block = `<section class="pr-block"><div class="pr-qtext">${prEsc(pg.question || '')}</div><ul class="pr-choices">` +
+        pg.choices.map(c => `<li${c.ok ? ' class="pr-right"' : ''}>${c.ok ? '✔ ' : ''}${prEsc(c.t)}</li>`).join('') + '</ul>';
+      if (pg.svg) block += `<div class="pr-svg">${genSVG(pg.svg)}</div>`;
+      if (pg.strip) {
+        useStrip(makeStrip(pg.strip.opts), '');
+        setOverlay(pg.strip.a || pg.strip.q);
+        await waitGraphReady(true);
+        block += `<img class="pr-strip" src="${captureStripImage()}">`;
+      }
+      html += block + '</section>';
+    }
+  }
+
+  const ti = testPageIdx(les), tpg = les.pages[ti];
+  if (tpg) {
+    html += `<div class="pr-title">แบบฝึกหัดท้ายบท (${tpg.n} ${unitName(tpg)} — ไม่มีเฉลย สำหรับฝึกทำมือ)</div>`;
+    seedRNG(newSeed());
+    for (let g = 0; g < tpg.n; g++) {
+      prSetProgress(`กำลังสร้างข้อสอบกราฟที่ ${g + 1}/${tpg.n}`);
+      if (tpg.type === 'drill') {
+        const D = EX[tpg.ex]();
+        useStrip(D.S, ''); setOverlay('none');
+        await waitGraphReady(false);
+        html += `<section class="pr-exam-item"><div class="pr-exam-no">ข้อ ${g + 1}/${tpg.n}</div>
+          <img class="pr-strip" src="${captureStripImage()}">
+          <div class="pr-qtext">${prEsc(D.q)}</div>
+          <ul class="pr-blank-choices">${D.opts.map(o => `<li><span class="pr-box"></span>${prEsc(o[0])}</li>`).join('')}</ul></section>`;
+      } else {
+        const Sx = tpg.exam ? genExamStrip() : tpg.gen === 'tqu' ? genTquStrip() : tpg.gen === 'all' ? genAllStrip() : genStrip(tpg.kinds);
+        const Qs = tpg.exam ? buildExamQs(Sx) : tpg.gen === 'tqu' ? buildTquQs(Sx) : tpg.gen === 'all' ? buildAllQs(Sx) : buildQs(Sx, tpg.kinds);
+        useStrip(Sx, ''); setOverlay('none');
+        await waitGraphReady(false);
+        html += `<section class="pr-exam-item"><div class="pr-exam-no">กราฟที่ ${g + 1}/${tpg.n}</div>
+          <img class="pr-strip" src="${captureStripImage()}">` +
+          Qs.map(Q => `<div class="pr-qtext">${prEsc(Q.tag)}: ${prEsc(Q.q)}</div>
+            <ul class="pr-blank-choices">${Q.opts.map(o => `<li><span class="pr-box"></span>${prEsc(o[0])}</li>`).join('')}</ul>`).join('') +
+          `</section>`;
+      }
+    }
+  }
+  return html;
+}
+// ปุ่ม "🖨️ เนื้อหา EKG" ในหน้าแอดมินหลัก เปิดลิงก์ ?page=ekg&print=all มาที่นี่ — ให้เลือกบทที่จะพิมพ์ก่อน (ไม่บังคับพิมพ์รวดเดียวทั้งคอร์ส)
+function showLessonPicker() {
+  parkMonitor();
+  show('lesson');
+  el('v-lesson').innerHTML = `<div class="content-card">
+      <h3>🖨️ เลือกบทที่ต้องการพิมพ์</h3>
+      <p>ติ๊กเลือกบทเรียนที่ต้องการ (จะได้เนื้อหาสอนที่เกี่ยวกับกราฟ + แบบฝึกหัดท้ายบทแบบไม่มีเฉลย) แล้วกดเตรียมเอกสารด้านล่าง</p>
+      <div class="pk-tools">
+        <button type="button" onclick="pkSetAll(true)">เลือกทั้งหมด</button>
+        <button type="button" onclick="pkSetAll(false)">ไม่เลือกเลย</button>
+      </div>
+      <div class="pk-list">${LESSONS.map(l => `<label class="pk-item"><input type="checkbox" class="pk-chk" value="${prEsc(l.id)}" checked> ${prEsc(l.title)}</label>`).join('')}</div>
+      <button class="next-btn" onclick="printSelectedLessons()">🖨️ เตรียมเอกสารพิมพ์บทที่เลือก</button>
+      <button class="ghost-btn wide" onclick="renderMenu()">ยกเลิก กลับเมนูบทเรียน</button>
+    </div>`;
+}
+function pkSetAll(v) { [...document.querySelectorAll('.pk-chk')].forEach(c => c.checked = v); }
+function printSelectedLessons() {
+  const ids = [...document.querySelectorAll('.pk-chk:checked')].map(c => c.value);
+  if (!ids.length) { toast('กรุณาเลือกอย่างน้อย 1 บท'); return; }
+  runPrintJob(LESSONS.filter(l => ids.includes(l.id)));
+}
+async function runPrintJob(list) {
+  parkMonitor();
+  show('lesson');
+  el('v-lesson').innerHTML = `<div class="lesson-header"><h2>🖨️ กำลังเตรียมเอกสารพิมพ์ EKG</h2>
+      <div class="lh-sub" id="prAllMsg">กำลังเริ่มต้น… (มีหลายบท อาจใช้เวลาหลายนาที กรุณาอย่าปิดแท็บนี้)</div></div>
+    <div id="monSlot"></div>`;
+  const slot = el('monSlot');
+  if (slot) slot.replaceWith(monitor);   // ต้องย้าย monitor เข้ามาในหน้าที่มองเห็นได้ ไม่งั้นกราฟจะไม่มีขนาด แคปภาพไม่ได้
+  let all = '';
+  for (let i = 0; i < list.length; i++) {
+    const les = list[i];
+    const msg = el('prAllMsg');
+    if (msg) msg.textContent = `กำลังเตรียมบทที่ ${i + 1}/${list.length}: ${les.title}`;
+    all += await buildLessonPrintDoc(les);
+  }
+  const area = el('printArea');
+  if (area) area.innerHTML = all;
+  parkMonitor();
+  el('v-lesson').innerHTML = `<div class="content-card done-card"><h3>✅ เอกสารพร้อมพิมพ์แล้ว</h3>
+    <p>รวมเนื้อหาสอน + แบบฝึกหัดท้ายบท (ไม่มีเฉลย) ที่เลือกไว้ ${list.length} บท</p>
+    <button class="next-btn" onclick="window.print()">🖨️ พิมพ์เอกสาร</button>
+    <button class="ghost-btn wide" onclick="renderMenu()">กลับเมนูบทเรียน</button></div>`;
+}
+async function printLesson() {
+  const les = curLes();
+  const btn = el('printBtn'), loading = el('prLoading');
+  if (btn) btn.disabled = true;
+  if (loading) loading.hidden = false;
+  try {
+    const html = await buildLessonPrintDoc(les);
+    const area = el('printArea');
+    if (area) area.innerHTML = html;
+    renderPage();   // คืนค่าหน้าจอปกติ (กราฟที่ถูกเขียนทับไปมาระหว่างเตรียมเอกสาร) ก่อนสั่งพิมพ์
+    await sleep(80);
+    if (loading) loading.hidden = true;   // ปิดก่อนเปิดกล่องพิมพ์ (window.print() บางเบราว์เซอร์หยุดสคริปต์รอจนกว่าจะปิดกล่อง)
+    window.print();
+  } catch (e) {
+    toast('เตรียมเอกสารพิมพ์ไม่สำเร็จ: ' + (e && e.message || e));
+  } finally {
+    if (loading) loading.hidden = true;
+    if (btn) btn.disabled = false;
+  }
+}
+
+/* ================= เก็บความคืบหน้า (เครื่อง + Google Sheet) ================= */
+const gs = () => (window.google && google.script && google.script.run) ? google.script.run : null;
+const SIGN = () => !!gs();   // เซ็นชื่อเฉพาะเมื่อเปิดผ่านระบบ Learning OPD
+let saved = { v: 2, done: {}, test: {}, page: {}, updatedAt: 0 };
+try { const v = JSON.parse(localStorage.getItem('ekgApp2') || 'null'); if (v) Object.assign(saved, v); } catch (e) {}
+let cloudT = 0;
+function persist() {
+  saved.updatedAt = Date.now();
+  try { localStorage.setItem('ekgApp2', JSON.stringify(saved)); } catch (e) {}
+  const r = gs(); if (!r) return;
+  clearTimeout(cloudT);
+  cloudT = setTimeout(() => { try { gs().withFailureHandler(() => {}).saveEkgState(JSON.stringify(saved)); } catch (e) {} }, 1200);
+}
+function loadCloud(cb) {
+  const r = gs(); if (!r) return cb();
+  let doneCb = false; const go = () => { if (!doneCb) { doneCb = true; cb(); } };
+  setTimeout(go, 6000);
+  r.withSuccessHandler(txt => {
+    try {
+      const v = JSON.parse(txt || 'null');
+      if (v && v.v === 2 && (v.updatedAt || 0) > (saved.updatedAt || 0)) {
+        saved = Object.assign({ v: 2, done: {}, test: {}, page: {}, updatedAt: 0 }, v);
+        try { localStorage.setItem('ekgApp2', JSON.stringify(saved)); } catch (e) {}
+      }
+    } catch (e) {}
+    go();
+  }).withFailureHandler(go).getEkgState();
+}
+
+let toastT = 0;
+function toast(msg) { const t = el('toast'); t.textContent = msg; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => t.hidden = true, 2800); }
+
+/* ================= เมนูและการเปลี่ยนหน้า ================= */
+const ST = { lesson: 0, page: 0 };
+function show(v) { ['menu', 'lesson'].forEach(n => el('v-' + n).classList.toggle('active', n === v)); }
+function parkMonitor() { park.appendChild(monitor); }
+let HOME_URL = '';
+try {
+  google.script.run.withSuccessHandler(u => { HOME_URL = u; el('homeLink').href = u; }).withFailureHandler(() => {}).getEkgHomeUrl();
+} catch (e) {}
+function goBack(e) {
+  // อยู่ในบทเรียน → กลับหน้ารายชื่อบท EKG
+  if (el('v-lesson').classList.contains('active')) { if (e) e.preventDefault(); renderMenu(); return false; }
+  // อยู่หน้ารายชื่อบท → กลับหน้าหลักของระบบ
+  if (HOME_URL) return true;
+  if (e) e.preventDefault();
+  if (!gs()) return false;
+  history.back();
+  return false;
+}
+const curLes = () => LESSONS[ST.lesson], curPg = () => curLes().pages[ST.page];
+const testPageIdx = les => les.pages.findIndex(p => p.type === 'drill' || p.type === 'practice');
+const testN = les => { const p = les.pages[testPageIdx(les)]; return p ? p.n : 0; };
+const isFull = pg => pg && pg.type === 'practice';
+const totalItems = pg => isFull(pg) ? pg.n * STEPS(pg) : pg.n;          // จำนวนขั้นที่ต้องตอบทั้งหมด
+const unitName = pg => isFull(pg) ? 'กราฟ' : 'ข้อ';
+// ผลรายกราฟ: true = ถูกครบ 5 ขั้น, false = ผิดอย่างน้อย 1 ขั้น, undefined = ยังไม่ครบ
+function unitResults(t, pg) {
+  if (!isFull(pg)) return t.res.slice();
+  const m = STEPS(pg), allow = wrongAllowed(pg), out = [];
+  for (let k = 0; k * m < t.res.length; k++) {
+    const ch = t.res.slice(k * m, (k + 1) * m);
+    const wrong = ch.filter(x => !x).length;
+    if (ch.length < m) { out.push(wrong > allow ? false : undefined); continue; }
+    out.push(!!ch[m - 1] && wrong <= allow);   // ข้อสรุปต้องถูก และผิดได้ไม่เกิน allow ขั้น
+  }
+  return out;
+}
+const unitsDone = (t, pg) => isFull(pg) ? Math.floor(t.i / STEPS(pg)) : t.i;
+const unitsRight = (t, pg) => unitResults(t, pg).filter(v => v === true).length;
+function freshTest(prev) {
+  return { base: newSeed(), i: 0, right: 0, res: [], cur: [], attempt: prev ? (prev.attempt || 1) + 1 : 1,
+    passed: prev ? !!prev.passed : false, signed: prev ? !!prev.signed : false, best: prev ? prev.best || null : null };
+}
+function T(les) { les = les || curLes(); return saved.test[les.id] || (saved.test[les.id] = freshTest()); }
+
+function lessonStatus(les) {
+  const t = saved.test[les.id], pg = les.pages[testPageIdx(les)], n = testN(les), tot = totalItems(pg);
+  if (saved.done[les.id] && t && (t.signed || !SIGN())) return { cls: 'done', txt: 'ผ่านแล้ว ✓' };
+  if (saved.done[les.id]) return { cls: 'sign', txt: '✍️ รอเซ็นชื่อ' };
+  if (t && t.i > 0 && t.i < tot) return { cls: 'doing', txt: `ทำต่อ ${unitName(pg)} ${Math.min(unitsDone(t, pg) + 1, n)}/${n}` };
+  if (t && t.i >= tot) return { cls: 'doing', txt: 'ดูผลสอบ / สอบใหม่' };
+  if (saved.page[les.id]) return { cls: 'doing', txt: `เรียนต่อ หน้า ${saved.page[les.id] + 1}` };
+  return null;
+}
+function renderMenu() {
+  parkMonitor();
+  const n = LESSONS.filter(l => saved.done[l.id]).length;
+  let h = `<div class="progress-bar"><div class="progress-fill" style="width:${n / LESSONS.length * 100}%"></div></div>
+    <div class="menu-meta">ผ่าน ${n}/${LESSONS.length} บท · ทำค้างไว้กลับมาทำต่อได้ทุกบท</div><div class="lesson-list">`;
+  LESSONS.forEach((les, i) => {
+    const st = lessonStatus(les), d = saved.done[les.id];
+    h += `<button class="lesson-card" onclick="startLesson(${i})"><span class="lnum ${d ? 'done' : 'todo'}">${d ? '✓' : i + 1}</span>
+      <span><span class="ltitle">${les.title}</span><span class="ldesc">${les.desc} · ข้อสอบ ${testN(les)} ${unitName(les.pages[testPageIdx(les)])}</span></span>
+      ${st ? `<span class="lstatus s-${st.cls}">${st.txt}</span>` : ''}</button>`;
+  });
+  el('v-menu').innerHTML = h + '</div>';
+  show('menu'); window.scrollTo(0, 0);
+}
+function startLesson(i, fromStart) {
+  ST.lesson = i;
+  const les = curLes(), t = saved.test[les.id], ti = testPageIdx(les);
+  const n = totalItems(les.pages[ti]);
+  ST.page = fromStart ? 0 : (t && ((t.i > 0 && t.i < n) || (saved.done[les.id] && !t.signed && SIGN()))) ? ti : (saved.page[les.id] || 0);
+  renderPage();
+}
+
+function renderPage() {
+  parkMonitor();
+  const les = curLes(), pg = curPg();
+  saved.page[les.id] = ST.page; persist();
+  let h = `<div class="top-row"><button class="back-btn" onclick="renderMenu()">‹ กลับเมนู</button>${ST.page ? `<button class="back-btn" onclick="startLesson(${ST.lesson}, true)">↺ เริ่มบทนี้ใหม่จากหน้าแรก</button>` : ''}<button class="back-btn" id="printBtn" onclick="printLesson()">🖨️ พิมพ์บทเรียนนี้</button></div>
+    <div class="lesson-header"><h2>${les.title}</h2><div class="lh-sub">หน้า ${ST.page + 1}/${les.pages.length}</div></div>
+    <div class="step-dots">${les.pages.map((p, i) => `<span class="sdot ${i < ST.page ? 'done' : i === ST.page ? 'now' : ''} ${p.type === 'drill' || p.type === 'practice' ? 'star' : ''}"></span>`).join('')}</div>`;
+  const nav = () => `<div class="nav-row">${ST.page > 0 ? '<button class="ghost-btn" onclick="prevPage()">← ย้อน</button>' : ''}<button class="next-btn" onclick="nextPage()">ถัดไป →</button></div>`;
+  if (pg.type === 'content') {
+    h += `<div class="content-card"><h3>${pg.title}${pg.strip ? ' <span class="tag">กราฟจริง</span>' : ''}</h3>${pg.body}</div>`;
+    if (pg.svg) h += `<div class="svg-area">${genSVG(pg.svg)}</div>`;
+    if (pg.strip) h += '<div id="monSlot"></div>';
+    h += nav();
+  } else if (pg.type === 'quiz') {
+    const order = shuffle(pg.choices.map((_, i) => i));
+    if (pg.svg) h += `<div class="svg-area"><div class="svg-cap">ภาพประกอบเพื่อเทียบ</div><div id="qSvg">${genSVG(pg.svg)}</div></div>`;
+    if (pg.strip) h += '<div id="monSlot"></div>';
+    h += `<div class="quiz-box"><div class="q-label">📝 คำถามทบทวน (ยังไม่นับคะแนน)</div><div class="q-text">${pg.question}</div>
+      ${order.map(ci => `<button class="q-btn" onclick="answerQuiz(this,${ci})">${pg.choices[ci].t}</button>`).join('')}</div><div id="qfb"></div>
+      <div class="nav-row"><button class="ghost-btn" onclick="prevPage()">← ย้อน</button><button class="ghost-btn" style="flex:1" onclick="nextPage()">ข้ามไปหน้าถัดไป</button></div>`;
+  } else {
+    h += testShell(pg);
+  }
+  el('v-lesson').innerHTML = h;
+  const slot = el('monSlot');
+  if (slot) slot.replaceWith(monitor);
+  show('lesson'); window.scrollTo(0, 0);
+  if (pg.type === 'content' && pg.strip) { useStrip(pg.stripOpts ? makeStrip(pg.stripOpts) : lessonS, 'ตัวอย่าง 6 วินาที'); setOverlay(pg.strip); }
+  if (pg.type === 'quiz' && pg.strip) { useStrip(makeStrip(pg.strip.opts), 'กราฟจริงเพื่อเทียบ'); setOverlay(pg.strip.q); }
+  if (pg.type === 'drill' || pg.type === 'practice') startItem();
+}
+function prevPage() { if (ST.page > 0) { ST.page--; renderPage(); } }
+function nextPage() {
+  const les = curLes();
+  if (ST.page < les.pages.length - 1) { ST.page++; return renderPage(); }
+  parkMonitor();
+  const nxt = LESSONS[ST.lesson + 1], t = T();
+  el('v-lesson').innerHTML = `<div class="content-card done-card"><h3>🎉 จบบทนี้แล้ว</h3><p><strong>${les.title}</strong></p>
+    ${t.best ? `<p>คะแนนสอบที่ผ่าน: ${t.best.right != null ? t.best.right : t.best.score}/${t.best.allSteps != null ? t.best.allSteps : t.best.total}</p>` : ''}
+    ${nxt ? `<button class="next-btn" onclick="startLesson(${ST.lesson + 1})">บทถัดไป: ${nxt.title} →</button>` : ''}
+    <button class="ghost-btn wide" onclick="renderMenu()">กลับเมนูบทเรียน</button></div>`;
+  window.scrollTo(0, 0);
+}
+
+// ---- คำถามทบทวน (ไม่นับคะแนน) ----
+function answerQuiz(btn, ci) {
+  const pg = curPg(), c = pg.choices[ci];
+  if (c.ok) {
+    document.querySelectorAll('.quiz-box .q-btn').forEach(b => b.disabled = true);
+    if (pg.svgAns) el('qSvg').innerHTML = genSVG(pg.svgAns);
+    if (pg.strip) setOverlay(pg.strip.a);
+    btn.classList.add('ok');
+    el('qfb').innerHTML = `<div class="q-fb ok"><strong>✓ ถูกต้อง!</strong>${c.fb}</div><button class="next-btn" onclick="nextPage()">ถัดไป →</button>`;
+  } else {
+    btn.classList.add('bad'); btn.disabled = true;
+    el('qfb').innerHTML = `<div class="q-fb bad"><strong>✕ ลองอีกครั้ง</strong>${c.fb}</div>`;
+  }
+}
+
+/* ================= แบบทดสอบ (บันทึก ทำต่อได้ เซ็นชื่อเมื่อผ่าน) ================= */
+function testShell(pg) {
+  const full = pg.type === 'practice';
+  return `<div class="content-card"><div class="drill-head"><h3>🏁 ${pg.title}</h3></div>
+      <p>${full ? `รวม <strong>${pg.n} กราฟ</strong> แต่ละกราฟอ่าน ${STEPS(pg)} ขั้น: <strong>${pg.gen === 'tqu' ? 'จังหวะ+HR → T wave → QT → U wave → สรุป' : pg.gen === 'all' ? 'จังหวะ+HR → P → PR → QRS → T → QT → U → สรุปและสิ่งที่ต้องทำ' : 'จังหวะ+HR → P wave → QRS → PR → สรุป'}</strong> · ${pg.exam ? `กราฟที่ถูกครบทั้ง ${STEPS(pg)} ขั้นจึงนับว่าอ่านถูก` : `กราฟนับว่าอ่านถูกเมื่อ <strong>ข้อสรุปถูก</strong> และผิดได้ไม่เกิน <strong>${wrongAllowed(pg)} ขั้น</strong>`}` : `${pg.hint} · รวม ${pg.n} ข้อ (ข้อละ 1 กราฟ)`}
+      · ผ่านเมื่อได้ <strong>${Math.ceil(pg.n * PASS)}/${pg.n} ${unitName(pg)} (${Math.round(PASS * 100)}%)</strong> · ทำค้างไว้ได้ ระบบบันทึกทุกข้อ</p>
+      <div class="t-prog"><span id="tProgTxt"></span><span class="qdots" id="tDots"></span></div></div>
+    <div id="monSlot"></div>
+    <div id="tQ"><div class="quiz-box"><div class="pq-head"><span id="pLabel"></span></div>
+      <div class="q-text" id="qText"></div><div id="opts"></div></div>
+      <div id="fb"></div>
+      <div class="nav-row"><button class="ghost-btn" onclick="prevPage()">← ย้อน</button><button class="next-btn" id="qNext" hidden>ข้อต่อไป →</button></div></div>
+    <div id="tFinal"></div>
+    ${full ? `<div class="sheet" id="sheetBox"><div class="sheet-h">📋 ผลอ่าน EKG ของฉัน <span id="sheetNo"></span></div>
+      <table class="sheet-t"><tbody id="pSheet"></tbody></table></div>` : ''}`;
+}
+let D = null, P = null, results = [], picked = [], qi = 0;
+function renderProg() {
+  const t = T(), pg = curPg(), n = pg.n, u = unitName(pg), ur = unitResults(t, pg), cur = unitsDone(t, pg);
+  el('tProgTxt').textContent = `ทำแล้ว ${Math.min(cur, n)}/${n} ${u} · อ่านถูก ${unitsRight(t, pg)} ${u}${t.attempt > 1 ? ` · ครั้งที่ ${t.attempt}` : ''}`;
+  el('tDots').innerHTML = Array.from({ length: n }, (_, i) => `<b class="${ur[i] === true ? 'ok' : ur[i] === false ? 'no' : i === cur ? 'cur' : ''}"></b>`).join('');
+}
+function startItem() {
+  const pg = curPg(), t = T();
+  if (t.i === 0) paperBuf = { items: [], images: [] };
+  el('qNext').onclick = startItem;
+  renderProg();
+  if (t.i >= totalItems(pg)) return showFinal();
+  el('tQ').hidden = false; el('tFinal').innerHTML = '';
+  if (el('sheetBox')) el('sheetBox').hidden = false;
+  if (pg.type === 'drill') {
+    seedRNG(t.base + t.i * 7919);
+    D = EX[pg.ex]();
+    useStrip(D.S, `ข้อสอบข้อ ${t.i + 1}/${pg.n}`); setOverlay(D.draw);
+    el('pLabel').textContent = `ข้อ ${t.i + 1}/${pg.n}`;
+    el('qText').textContent = D.q;
+    el('opts').innerHTML = D.opts.map(([x], k) => `<button class="q-btn" data-i="${k}">${x}</button>`).join('');
+    el('opts').onclick = answerDrill;
+  } else {
+    const m = STEPS(pg), k = Math.floor(t.i / m), j = t.i % m;
+    if (j === 0) t.cur = [];
+    seedRNG(t.base + k * 7919);
+    const Sx = pg.exam ? genExamStrip() : pg.gen === 'tqu' ? genTquStrip() : pg.gen === 'all' ? genAllStrip() : genStrip(pg.kinds);
+    S = Sx;
+    P = pg.exam ? buildExamQs(Sx) : pg.gen === 'tqu' ? buildTquQs(Sx) : pg.gen === 'all' ? buildAllQs(Sx) : buildQs(Sx, pg.kinds);
+    useStrip(Sx, `กราฟที่ ${k + 1}/${pg.n}`);
+    results = t.res.slice(k * m, k * m + j);
+    picked = t.cur.map((ix, m) => P[m].opts[ix][0]);
+    qi = j;
+    el('sheetNo').textContent = `· กราฟที่ ${k + 1}/${pg.n}`;
+    setOverlay(j ? P[j - 1].ov : 'none');
+    renderPQ();
+    el('opts').onclick = answerPractice;
+  }
+  el('fb').innerHTML = ''; el('qNext').hidden = true;
+}
+function afterAnswer(ok, exText) {
+  const t = T(), pg = curPg();
+  t.res.push(ok); t.i++; if (ok) t.right++;
+  persist(); renderProg();
+  el('fb').innerHTML = `<div class="q-fb ${ok ? 'ok' : 'bad'}"><strong>${ok ? '✓ ถูกต้อง' : '✕ ยังไม่ถูก — ดูเส้นวัดบนกราฟ'}</strong>${exText}</div>`;
+  const endStrip = pg.type === 'practice' && t.i % STEPS(pg) === 0;
+  el('qNext').textContent = t.i >= totalItems(pg) ? 'ดูผลสอบ →' : endStrip ? 'กราฟถัดไป →' : 'ขั้นต่อไป →';
+  el('qNext').hidden = false;
+}
+function answerDrill(e) {
+  const b = e.target.closest('.q-btn'); if (!b || b.disabled || !D) return;
+  const ci = +b.dataset.i, ok = D.opts[ci][1];
+  [...el('opts').children].forEach((x, k) => { x.disabled = true; if (D.opts[k][1]) x.classList.add('ok'); });
+  if (!ok) b.classList.add('bad');
+  const g = D; setOverlay(p => (typeof g.reveal === 'function' ? g.reveal : OV[g.reveal])(p));
+  pushPaperItem({ q: D.q, chosenText: D.opts[ci][0], correctText: (D.opts.find(o => o[1]) || [''])[0], correct: ok });
+  afterAnswer(ok, D.ex);
+}
+function renderPQ() {
+  const Q = P[qi];
+  el('pLabel').textContent = `กราฟที่ ${Math.floor(T().i / STEPS(curPg())) + 1}/${curPg().n} · ขั้นที่ ${qi + 1}/${STEPS(curPg())} · ${Q.tag}`;
+  el('qText').textContent = Q.q;
+  el('opts').innerHTML = Q.opts.map(([x], k) => `<button class="q-btn" data-i="${k}">${x}</button>`).join('');
+  renderSheet();
+}
+function renderSheet() {
+  el('pSheet').innerHTML = P.map((Q, i) => {
+    const done = results[i] !== undefined, right = Q.opts.find(o => o[1])[0];
+    const val = done
+      ? `<span class="${results[i] ? 'sv-ok' : 'sv-no'}">${results[i] ? '✓' : '✕'} ${picked[i]}</span>${results[i] ? '' : `<div class="sv-fix">ที่ถูก: ${right}</div>`}`
+      : `<span class="sv-wait">${i === qi ? '← กำลังตอบ' : '…'}</span>`;
+    return `<tr class="${i === qi && !done ? 'cur' : ''}"><th>${i + 1}. ${Q.tag}</th><td>${val}</td></tr>`;
+  }).join('');
+}
+function answerPractice(e) {
+  const b = e.target.closest('.q-btn'); if (!b || b.disabled) return;
+  const k = +b.dataset.i, Q = P[qi], ok = Q.opts[k][1], t = T();
+  [...el('opts').children].forEach((x, j) => { x.disabled = true; if (Q.opts[j][1]) x.classList.add('ok'); });
+  if (!ok) b.classList.add('bad');
+  results[qi] = ok; picked[qi] = Q.opts[k][0]; t.cur.push(k);
+  setOverlay(Q.ov);
+  let ex = Q.ex;
+  if (qi === P.length - 1) {
+    ex += `<div style="margin-top:4px">คำตอบของกราฟนี้: <b>${curPg().exam ? examSummary(S) : curPg().gen === 'tqu' ? TQU[S.kind] : curPg().gen === 'all' ? allSummary(S) : DX[S.kind]}</b></div>`;
+    // กระดาษคำตอบ: 1 กราฟ = 1 ข้อ รวมทุกขั้นย่อยเป็นข้อความสรุปเดียว ไม่แยกข้อย่อย
+    const pg = curPg(), m = STEPS(pg), gi = Math.floor(T().i / m);
+    const wrong = results.filter(x => !x).length;
+    pushPaperItem({
+      q: `กราฟที่ ${gi + 1}/${pg.n}`,
+      // ขั้นที่ตอบผิด แสดงเฉลยที่ถูกต้องต่อท้ายไว้ในบรรทัดเดียวกันเลย (index.html จะเน้นสีแดงให้บรรทัดที่มี ✕)
+      chosenText: P.map((Qs, i) => {
+        const right = Qs.opts.find(o => o[1])[0];
+        return results[i] ? `${Qs.tag}: ${picked[i]} ✓` : `${Qs.tag}: ${picked[i]} ✕ (เฉลย: ${right})`;
+      }).join('\n'),
+      correctText: P.map((Qs, i) => `${Qs.tag}: ${Qs.opts.find(o => o[1])[0]}`).join('\n'),
+      correct: !!results[m - 1] && wrong <= wrongAllowed(pg)
+    });
+  }
+  qi++;
+  renderSheet();
+  afterAnswer(ok, ex);
+}
+
+function showFinal() {
+  const pg = curPg(), les = curLes(), t = T();
+  const score = unitsRight(t, pg), pct = score / pg.n, pass = pct >= PASS, u = unitName(pg);
+  const full = isFull(pg), dScore = full ? t.right : score, dTotal = full ? totalItems(pg) : pg.n, dPct = dTotal ? dScore / dTotal : 0;
+  el('tQ').hidden = true;
+  if (el('sheetBox')) el('sheetBox').hidden = true;
+  // ทุกครั้งที่ "ผ่าน" ให้บันทึกทับด้วยผลรอบล่าสุดเสมอ (ของเดิมเคยเช็คว่าต้อง "ดีกว่ารอบก่อน" เท่านั้นถึงจะบันทึก
+  // ซึ่งถ้าเคยผ่านครบ 10/10 กราฟมาแล้วครั้งหนึ่ง รอบต่อไปจะไม่มีทาง "มากกว่า" ได้อีก เลยไม่เคยบันทึกทับให้ ทำให้
+  // กระดาษคำตอบค้างเป็นข้อมูลรอบแรกสุดตลอด ต่อให้สอบใหม่ผ่านอีกกี่รอบก็ตาม)
+  if (pass) {
+    const firstTime = !t.passed;
+    t.passed = true; t.best = { score, total: pg.n, right: t.right, allSteps: totalItems(pg), date: new Date().toISOString() };
+    if (firstTime) saved.done[les.id] = true;
+    persist(); recordPass(les, t);
+  }
+  const needSign = saved.done[les.id] && !t.signed && SIGN();
+  el('tFinal').innerHTML = `<div class="q-fb ${pass ? 'ok' : 'bad'} final-card">
+      <strong>${pass ? '🎉 สอบผ่าน' : 'ยังไม่ผ่าน'} · คะแนน ${dScore}/${dTotal} (${Math.round(dPct * 100)}%)</strong>
+      ${full ? `<span style="opacity:.75">ผ่านเกณฑ์รายกราฟ ${score}/${pg.n} กราฟ (แต่ละกราฟผิดได้ไม่เกิน ${wrongAllowed(pg)} ขั้น) · </span>` : ''}${pass ? 'เก่งมาก! บทนี้ผ่านเกณฑ์แล้ว' : `ต้องอ่านถูก ${Math.ceil(pg.n * PASS)} ${u}ขึ้นไป ทบทวนเนื้อหาแล้วสอบใหม่ได้ (สุ่มโจทย์ชุดใหม่)`}
+    </div>
+    ${needSign ? signBox(les, t) : ''}
+    ${!needSign && saved.done[les.id] ? (SIGN() ? '<div class="q-fb ok">✍️ เซ็นชื่อยืนยันและบันทึกผลเรียบร้อยแล้ว</div>' : '<div class="q-fb ok">💾 บันทึกความคืบหน้าไว้ในเบราว์เซอร์นี้แล้ว</div>') : ''}
+    <div class="nav-row">
+      <button class="ghost-btn" onclick="retakeTest()">🔁 ${pass ? 'สอบใหม่เพื่อฝึกเพิ่ม' : 'สอบใหม่'}</button>
+      ${saved.done[les.id] && !needSign ? '<button class="next-btn" onclick="nextPage()">จบบทนี้ →</button>' : ''}
+      ${!pass && !saved.done[les.id] ? `<button class="next-btn" onclick="startLesson(${ST.lesson}, true)">ทบทวนเนื้อหา</button>` : ''}
+    </div>`;
+  if (needSign) initSigPad();
+  setOverlay('none');
+  el('tFinal').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+function retakeTest() {
+  saved.test[curLes().id] = freshTest(T());
+  persist(); startItem();
+  el('monitor').scrollIntoView({ block: 'nearest' });
+}
+
+/* ---- บันทึกผลสอบผ่านลงระบบ (ขึ้นในประวัติ/หน้าแอดมินทันที แม้ยังไม่เซ็น) ---- */
+function recordPass(les, t) {
+  const r = gs(); if (!r || !t.best) return;
+  whenPaperReady(() => {
+    r.withSuccessHandler(res => { if (res && res.attemptId) { t.attemptId = res.attemptId; persist(); } })
+     .withFailureHandler(err => toast('บันทึกผลสอบไม่สำเร็จ: ' + (err && err.message || err)))
+     // score/total = เกณฑ์ผ่านจริง (รายกราฟ) ใช้ตรวจสอบฝั่งเซิร์ฟเวอร์ / displayScore-Total = คะแนนที่จะโชว์บนกระดาษคำตอบ (รายขั้น .../50)
+     .saveEkgResult({
+       lessonId: les.id, lessonTitle: les.title,
+       score: t.best.score, total: t.best.total,
+       displayScore: t.best.right != null ? t.best.right : t.best.score,
+       displayTotal: t.best.allSteps != null ? t.best.allSteps : t.best.total,
+       passedAt: t.best.date, paper: paperBuf
+     });
+  });
+}
+
+/* ---- ลายเซ็น ---- */
+function signBox(les, t) {
+  const pg = curPg(), full = isFull(pg);
+  const b = t.best || { score: t.right, total: pg.n, right: t.right, allSteps: totalItems(pg) };
+  const dScore = full ? (b.right != null ? b.right : t.right) : b.score;
+  const dTotal = full ? (b.allSteps != null ? b.allSteps : totalItems(pg)) : b.total;
+  return `<div class="sign-box">
+    <div class="sign-h">✍️ เซ็นชื่อยืนยันการผ่านบทเรียน</div>
+    <div class="sign-sub">${les.title} · คะแนน ${dScore}/${dTotal} ${full ? 'ขั้น' : unitName(pg)} — ลายเซ็นนี้ใช้ในแบบฟอร์ม OJT ของโรงพยาบาล</div>
+    <div class="sig-wrap"><canvas id="sigPad" width="500" height="170"></canvas></div>
+    <div class="sign-sub">ใช้นิ้วหรือเมาส์เซ็นในกรอบ</div>
+    <div class="nav-row"><button class="ghost-btn" onclick="clearSig()">ล้าง</button>
+      <button class="ghost-btn" onclick="renderMenu()">เซ็นภายหลัง</button>
+      <button class="next-btn" id="sigOk" onclick="submitSig()">ยืนยันลายเซ็น</button></div>
+  </div>`;
+}
+let sigCtx = null, sigDraw = false, sigHas = false;
+function initSigPad() {
+  const c = el('sigPad'); sigCtx = c.getContext('2d'); sigHas = false;
+  sigCtx.fillStyle = '#fff'; sigCtx.fillRect(0, 0, c.width, c.height);
+  sigCtx.strokeStyle = '#1f2937'; sigCtx.lineWidth = 2.4; sigCtx.lineCap = 'round'; sigCtx.lineJoin = 'round';
+  const pos = e => { const r = c.getBoundingClientRect(), p = e.touches ? e.touches[0] : e; return { x: (p.clientX - r.left) * c.width / r.width, y: (p.clientY - r.top) * c.height / r.height }; };
+  const start = e => { e.preventDefault(); sigDraw = true; const p = pos(e); sigCtx.beginPath(); sigCtx.moveTo(p.x, p.y); };
+  const move = e => { if (!sigDraw) return; e.preventDefault(); const p = pos(e); sigCtx.lineTo(p.x, p.y); sigCtx.stroke(); sigHas = true; };
+  const end = () => { sigDraw = false; };
+  c.addEventListener('mousedown', start); c.addEventListener('mousemove', move); window.addEventListener('mouseup', end);
+  c.addEventListener('touchstart', start, { passive: false }); c.addEventListener('touchmove', move, { passive: false }); c.addEventListener('touchend', end);
+}
+function clearSig() { const c = el('sigPad'); sigCtx.fillStyle = '#fff'; sigCtx.fillRect(0, 0, c.width, c.height); sigHas = false; }
+function submitSig() {
+  if (!sigHas) return toast('กรุณาเซ็นชื่อในกรอบก่อน');
+  const les = curLes(), t = T(), b = t.best, sig = el('sigPad').toDataURL('image/png');
+  const btn = el('sigOk'); btn.disabled = true; btn.textContent = 'กำลังบันทึก…';
+  const ok = () => { t.signed = true; persist(); toast('บันทึกผลและลายเซ็นแล้ว'); showFinal(); };
+  const r = gs();
+  if (!r) return ok();   // เปิดนอก Apps Script (ทดลอง)
+  whenPaperReady(() => {
+    r.withSuccessHandler(ok)
+     .withFailureHandler(err => { btn.disabled = false; btn.textContent = 'ยืนยันลายเซ็น'; toast('บันทึกไม่สำเร็จ: ' + (err && err.message || err)); })
+     .saveEkgResult({
+       lessonId: les.id, lessonTitle: les.title,
+       score: b.score, total: b.total,
+       displayScore: b.right != null ? b.right : b.score,
+       displayTotal: b.allSteps != null ? b.allSteps : b.total,
+       passedAt: b.date, signature: sig, paper: paperBuf
+     });
+  });
+}
+
+/* ---- ลิงก์ตรงเข้าบท: ?page=ekg&lesson=nsr หรือ #nsr  /  ?page=ekg&print=all (ปุ่ม "🖨️ เนื้อหา EKG" หน้าแอดมิน) ---- */
+function openFromLink(id) {
+  id = (id || '').replace(/^#/, '').trim();
+  const i = LESSONS.findIndex(l => l.id === id);
+  if (i >= 0) startLesson(i); else renderMenu();
+}
+addEventListener('keydown', e => { if (e.key === 'Escape' && el('v-lesson').classList.contains('active')) renderMenu(); });
+Object.assign(window, { goBack, renderMenu, startLesson, prevPage, nextPage, answerQuiz, retakeTest, clearSig, submitSig, printLesson, showLessonPicker, pkSetAll, printSelectedLessons });
+el('v-menu').innerHTML = '<div class="menu-meta" style="padding:30px 0;text-align:center">กำลังโหลดความคืบหน้า…</div>';
+loadCloud(() => {
+  try {
+    if (gs() && google.script.url) google.script.url.getLocation(loc => {
+      const p = loc.parameter || {};
+      if (p.print === 'all') showLessonPicker(); else openFromLink(p.lesson || loc.hash);
+    });
+    else {
+      const qs = new URLSearchParams(location.search);
+      if (qs.get('print') === 'all') showLessonPicker(); else openFromLink(qs.get('lesson') || location.hash);
+    }
+  } catch (e) { renderMenu(); }
+});
+if (document.fonts) document.fonts.ready.then(kick);
+
+})();
+</script>
+</body>
+</html>

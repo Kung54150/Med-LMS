@@ -1,0 +1,1000 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<base target="_top">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>เกม KPI Challenge</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Mitr:wght@400;500;600&family=IBM+Plex+Sans+Thai+Looped:wght@400;500;600&display=swap">
+<style>
+:root{
+  --bg:#FFF6FA; --surface:#FFFFFF; --sunken:#FFF0F6; --line:#F7DCE7;
+  --ink:#3D2439; --ink-2:#7C5F77; --ink-3:#AB90A6;
+  --sun:#D98B0B; --sun-soft:#FFEFCF; --sun-ink:#8A5600;
+  --pink:#E9538A; --pink-soft:#FFDCE9; --pink-ink:#98063F;
+  --blue:#2196C9; --blue-soft:#D6EEFA; --blue-ink:#0A5A80;
+  --violet:#7466DE; --violet-soft:#E4E0FC; --violet-ink:#3E32A0;
+  --good:#0E9B72; --good-soft:#D2F2E7; --good-ink:#0A6A4F;
+  --warn:#CE8005; --warn-soft:#FFE9C6; --warn-ink:#8A5600;
+  --bad:#DC4159; --bad-soft:#FFDBE2; --bad-ink:#98122C;
+  --focus:#7466DE;
+  --shadow-s:0 2px 0 #F3D3E1;
+  --shadow-m:0 3px 0 #F0CBDC, 0 10px 22px -14px rgba(61,36,57,.4);
+  --display:"Mitr","Mitr Fallback",system-ui,sans-serif;
+  --body:"IBM Plex Sans Thai Looped","Noto Sans Thai",system-ui,sans-serif;
+}
+*{box-sizing:border-box}
+[hidden]{display:none !important}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.7;-webkit-font-smoothing:antialiased}
+h1,h2,h3,h4,.dp{font-family:var(--display);font-weight:500;line-height:1.35;text-wrap:balance}
+.num{font-family:var(--display);font-variant-numeric:tabular-nums}
+:focus-visible{outline:3px solid var(--focus);outline-offset:2px;border-radius:10px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+.wrap{max-width:1080px;margin:0 auto;padding:0 16px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* ---------- topbar ---------- */
+.topbar{background:var(--surface);border-bottom:2px solid var(--line);position:sticky;top:0;z-index:20}
+.topbar .in{max-width:1080px;margin:0 auto;padding:10px 16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:9px;font-family:var(--display);font-weight:500;font-size:15px}
+.brand .lg{width:34px;height:34px;border-radius:11px;background:linear-gradient(135deg,var(--pink),var(--violet));display:grid;place-items:center;color:#fff;font-size:16px}
+.tr{margin-inline-start:auto;display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.hchip{display:flex;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(135deg,#0E9B72,#17B98A);border-radius:14px;padding:6px 16px;min-height:50px;color:#fff}
+.hchip b{font-family:var(--display);font-weight:600;font-size:18px;line-height:1.1}
+.hchip span{font-size:10.5px;opacity:.93}
+.btn{font:inherit;font-family:var(--display);font-weight:500;font-size:14px;border:none;cursor:pointer;background:var(--ink);color:var(--bg);border-radius:999px;padding:9px 22px;transition:transform .12s}
+.btn:hover{transform:translateY(-2px)}
+.btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.btn.ghost{background:var(--surface);color:var(--ink);border:2px solid var(--line)}
+.btn.sm{font-size:13px;padding:7px 16px}
+
+/* ---------- hero ---------- */
+.hero{padding:20px 0 24px;position:relative;overflow:hidden}
+.hero::before{content:"";position:absolute;inset:-120px -20% auto -20%;height:320px;z-index:0;
+  background:radial-gradient(closest-side at 22% 60%,var(--pink-soft),transparent),
+             radial-gradient(closest-side at 62% 40%,var(--violet-soft),transparent),
+             radial-gradient(closest-side at 88% 70%,var(--blue-soft),transparent);opacity:.9}
+.hero .wrap{position:relative;z-index:1}
+.headline{display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap}
+.mascot{width:84px;height:84px;flex:none;filter:drop-shadow(0 6px 0 rgba(233,83,138,.16))}
+.headline h1{margin:0 0 4px;font-size:clamp(23px,4.6vw,32px);font-weight:600}
+.headline p{margin:0;color:var(--ink-2);font-size:14.5px;max-width:56ch}
+.months{display:flex;gap:7px;flex-wrap:wrap;margin-top:18px}
+.months button{font:inherit;font-family:var(--display);font-size:13.5px;color:var(--ink-2);background:var(--surface);
+  border:2px solid var(--line);border-radius:999px;padding:4px 15px;cursor:pointer;transition:transform .12s,background .12s}
+.months button:hover{transform:translateY(-2px)}
+.months button[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--bg)}
+
+/* ---------- layout ---------- */
+main{padding:4px 0 60px}
+.cols{display:grid;gap:20px;grid-template-columns:1fr}
+@media(min-width:940px){.cols{grid-template-columns:minmax(0,1.55fr) minmax(300px,1fr);gap:24px;align-items:start}}
+.card{background:var(--surface);border:2px solid var(--line);border-radius:22px;padding:18px;box-shadow:var(--shadow-s)}
+.card h3{margin:0 0 3px;font-size:16px;font-weight:600}
+.card .sub{margin:0 0 12px;font-size:12.5px;color:var(--ink-3)}
+
+/* ---------- scorecard สรุปเดือน ---------- */
+.scorecard{background:var(--surface);border:2px solid var(--line);border-radius:26px;padding:20px;box-shadow:var(--shadow-m);display:grid;gap:20px;margin-bottom:8px}
+@media(min-width:760px){.scorecard{padding:22px 26px}}
+.ring{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.ring .lead{min-width:0;flex:1 1 260px}
+.ring .lead p{max-width:62ch}
+.ring svg{width:118px;height:118px;flex:none}
+.ring .lead .big{font-family:var(--display);font-weight:600;font-size:30px;line-height:1.1;display:block}
+.ring .lead p{margin:2px 0 0;font-size:13.5px;color:var(--ink-2)}
+.ptiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+@media(min-width:520px){.ptiles{grid-template-columns:repeat(4,minmax(0,1fr))}}
+.ptile{font:inherit;text-align:start;width:100%;cursor:pointer;border-radius:18px;padding:12px 13px;
+  border:2px solid transparent;display:flex;flex-direction:column;gap:2px;min-width:0;
+  transition:transform .12s,box-shadow .12s,opacity .12s;position:relative}
+.ptile:hover{transform:translateY(-2px)}
+.ptile[aria-pressed="true"]{box-shadow:0 0 0 3px var(--ink) inset;transform:translateY(-2px)}
+.ptile[aria-pressed="true"]::after{content:"กำลังดู";position:absolute;top:8px;inset-inline-end:10px;
+  font-family:var(--display);font-size:10px;background:var(--ink);color:var(--bg);border-radius:999px;padding:1px 8px}
+.ptile.dim{opacity:.5}
+.ptile.dim:hover{opacity:1}
+.filterbar{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin:18px 0 -6px;
+  background:var(--sunken);border:2px dashed var(--line);border-radius:16px;padding:10px 14px;font-size:13px;color:var(--ink-2)}
+.filterbar b{font-family:var(--display);color:var(--ink)}
+.filterbar button{margin-inline-start:auto}
+.ptile svg{width:24px;height:24px;margin-bottom:2px}
+.ptile .nmp{font-family:var(--display);font-size:13px;line-height:1.3}
+.ptile .psc{font-family:var(--display);font-size:20px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.ptile .psc small{font-size:12px;font-weight:400;opacity:.75}
+.ptile .nd{font-size:10.5px;opacity:.8;line-height:1.4}
+.ring .lead .note{margin:6px 0 0;font-size:12px;color:var(--ink-3);line-height:1.6}
+.p-F{background:var(--sun-soft);color:var(--sun-ink);border-color:color-mix(in srgb,var(--sun) 30%,transparent)}
+.p-C{background:var(--pink-soft);color:var(--pink-ink);border-color:color-mix(in srgb,var(--pink) 30%,transparent)}
+.p-I{background:var(--blue-soft);color:var(--blue-ink);border-color:color-mix(in srgb,var(--blue) 30%,transparent)}
+.p-L{background:var(--violet-soft);color:var(--violet-ink);border-color:color-mix(in srgb,var(--violet) 30%,transparent)}
+
+/* ---------- หัวข้อ section ---------- */
+.sec{margin-top:34px}
+.sec-head{display:grid;grid-template-columns:1fr auto;align-items:baseline;gap:3px 14px;margin-bottom:15px}
+.sec-head h2{grid-column:1;grid-row:1;margin:0;font-size:21px;font-weight:600}
+.sec-head p{grid-column:1/-1;grid-row:2;margin:0;font-size:13px;color:var(--ink-2);max-width:60ch}
+.linkbtn{grid-column:2;grid-row:1;justify-self:end;font:inherit;font-size:13px;background:var(--surface);
+  border:2px solid var(--line);border-radius:999px;padding:3px 13px;color:var(--ink-2);cursor:pointer}
+.linkbtn:hover{border-color:var(--focus);color:var(--ink)}
+.pgroup-head{display:flex;align-items:center;gap:9px;margin:26px 0 11px}
+.pgroup-head svg{width:22px;height:22px;flex:none}
+.pgroup-head h3{margin:0;font-size:16px;font-weight:500}
+.pgroup-head .cnt{font-size:12.5px;color:var(--ink-3);margin-inline-start:auto;font-family:var(--display)}
+
+/* ---------- การ์ด KPI ---------- */
+.cards{display:grid;gap:12px}
+@media(min-width:640px){.cards{grid-template-columns:1fr 1fr}}
+@media(min-width:1000px){.cards{grid-template-columns:1fr 1fr 1fr}}
+.kc{background:var(--surface);border:2px solid var(--line);border-radius:20px;padding:14px 15px;
+  display:flex;flex-direction:column;gap:9px;box-shadow:var(--shadow-s);transition:transform .14s}
+.kc:hover{transform:translateY(-2px)}
+.kc .code{font-family:var(--display);font-size:11px;color:var(--ink-3);letter-spacing:.06em}
+.kc h4{margin:0;font-size:14.5px;font-weight:500;line-height:1.45}
+.kc .top{display:flex;gap:9px;align-items:flex-start}
+.kc .top>div{min-width:0;flex:1}
+.face{flex:none;width:38px;height:38px;border-radius:13px;display:grid;place-items:center}
+.face svg{width:24px;height:24px}
+.st-good .face{background:var(--good-soft)} .st-warn .face{background:var(--warn-soft)}
+.st-bad .face{background:var(--bad-soft)}   .st-na .face{background:var(--sunken)}
+.pill{display:inline-flex;align-items:center;align-self:flex-start;font-family:var(--display);
+  font-size:11.5px;padding:2px 10px;border-radius:999px}
+.st-good .pill{background:var(--good-soft);color:var(--good-ink)}
+.st-warn .pill{background:var(--warn-soft);color:var(--warn-ink)}
+.st-bad .pill{background:var(--bad-soft);color:var(--bad-ink)}
+.st-na .pill{background:var(--sunken);color:var(--ink-3)}
+.vline{display:flex;align-items:baseline;gap:7px;flex-wrap:wrap}
+.vline .v{font-family:var(--display);font-weight:600;font-size:27px;line-height:1;font-variant-numeric:tabular-nums}
+.st-good .v{color:var(--good)} .st-warn .v{color:var(--warn)} .st-bad .v{color:var(--bad)}
+.st-na .v{color:var(--ink-3);font-size:16px}
+.vline .u{font-size:12.5px;color:var(--ink-2)}
+.vline .tg{margin-inline-start:auto;font-size:12px;color:var(--ink-3);font-variant-numeric:tabular-nums}
+.meter{position:relative;height:9px;background:var(--sunken);border-radius:999px}
+.meter .fill{position:absolute;inset:0 auto 0 0;border-radius:999px}
+.st-good .meter .fill{background:var(--good)} .st-warn .meter .fill{background:var(--warn)}
+.st-bad .meter .fill{background:var(--bad)}
+.meter .goal{position:absolute;top:-4px;bottom:-4px;inset-inline-end:0;width:2px;background:var(--ink);opacity:.45;border-radius:2px}
+.trend{height:34px}
+.trend svg{width:100%;height:34px;display:block;overflow:visible}
+.mean{margin:0;font-size:13px;color:var(--ink-2);line-height:1.65}
+.kc details{margin-top:auto;border-top:2px dotted var(--line);padding-top:8px}
+.kc summary{cursor:pointer;font-size:12.5px;font-family:var(--display);color:var(--focus);
+  list-style:none;display:flex;gap:5px;align-items:center}
+.kc summary::-webkit-details-marker{display:none}
+.kc summary::after{content:"▾";font-size:9px;transition:transform .2s}
+.kc details[open] summary::after{transform:rotate(180deg)}
+.kc details p{margin:7px 0 0;font-size:13px;color:var(--ink-2)}
+
+/* ---------- game ---------- */
+.game{border:2px solid var(--line);border-radius:26px;overflow:hidden;background:var(--surface);box-shadow:var(--shadow-m);position:relative}
+.gtop{padding:14px 20px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+  background:linear-gradient(135deg,var(--violet-soft),var(--pink-soft));border-bottom:2px solid var(--line)}
+.gtop h3{margin:0;font-size:17px;font-weight:600}
+.gtop .meta{margin-inline-start:auto;display:flex;gap:14px;align-items:center;font-family:var(--display);font-size:13px}
+.gtop .meta b{font-size:18px;font-variant-numeric:tabular-nums}
+.combo{background:var(--sun);color:#3B2A00;border-radius:999px;padding:1px 10px;font-size:12px}
+.gbody{padding:20px;min-height:280px;display:flex;flex-direction:column;gap:13px}
+.timerbar{height:7px;background:var(--sunken);border-radius:999px;overflow:hidden}
+.timerbar i{display:block;height:100%;background:var(--violet);border-radius:999px;transition:width .2s linear}
+.timerbar i.low{background:var(--bad)}
+.qtext{margin:0;font-size:17px;font-family:var(--display);font-weight:500;line-height:1.5}
+.qsub{margin:0;font-size:13px;color:var(--ink-2)}
+.opts{display:grid;gap:9px;margin-top:2px}
+@media(min-width:560px){.opts.two{grid-template-columns:1fr 1fr}}
+.opt{font:inherit;font-family:var(--display);font-size:15px;text-align:start;background:var(--sunken);
+  border:2px solid var(--line);border-radius:16px;padding:12px 15px;cursor:pointer;transition:transform .12s,border-color .12s;position:relative}
+.opt:hover:not(:disabled){transform:translateY(-2px);border-color:var(--focus)}
+.opt:disabled{cursor:default;color:var(--ink-2);opacity:1;-webkit-text-fill-color:currentColor}
+.opt.ok{background:var(--good-soft);border-color:var(--good);color:var(--good-ink);-webkit-text-fill-color:var(--good-ink)}
+.opt.no{background:var(--bad-soft);border-color:var(--bad);color:var(--bad-ink);-webkit-text-fill-color:var(--bad-ink)}
+.opt .mark{float:inline-end;font-family:var(--body);font-size:12.5px;font-weight:600}
+.fb{margin:0;font-size:13.5px;padding:12px 15px;border-radius:16px;line-height:1.75;
+  background:var(--sunken);color:var(--ink-2);border:2px solid var(--line)}
+.fb.good{background:var(--good-soft);border-color:color-mix(in srgb,var(--good) 40%,transparent)}
+.fb.bad{background:var(--bad-soft);border-color:color-mix(in srgb,var(--bad) 40%,transparent)}
+.fb b{color:var(--ink)}
+.fb .hd{display:block;font-family:var(--display);font-weight:600;font-size:14.5px;margin-bottom:3px}
+.fb.good .hd{color:var(--good-ink)}
+.fb.bad .hd{color:var(--bad-ink)}
+.gbody > .btn{align-self:flex-start}
+.gstart{display:flex;flex-direction:column;gap:12px;align-items:flex-start;padding-top:4px}
+.gstart p{margin:0;color:var(--ink-2);font-size:14px;max-width:56ch}
+.rules{margin:0;padding-inline-start:18px;color:var(--ink-2);font-size:13.5px;line-height:1.9}
+.result{text-align:center;padding:6px 0}
+.result .big{font-family:var(--display);font-size:48px;font-weight:600;line-height:1;display:block}
+.result .rank{font-family:var(--display);font-size:20px;margin:8px 0 4px}
+.result p{margin:0 auto 10px;color:var(--ink-2);max-width:46ch;font-size:14px}
+.stars-row{display:flex;gap:6px;justify-content:center;margin:10px 0}
+.stars-row svg{width:32px;height:32px}
+.verdict{font-family:var(--display);font-weight:500;font-size:15px;margin:2px 0 10px}
+.verdict.p{color:var(--good)} .verdict.f{color:var(--bad)}
+.award{background:var(--good-soft);border:2px solid color-mix(in srgb,var(--good) 40%,transparent);color:var(--good-ink);
+  border-radius:18px;padding:12px 16px;margin:10px auto;max-width:480px;font-size:14px;font-family:var(--display);font-weight:500}
+.award small{display:block;font-family:var(--body);font-weight:400;font-size:12.5px;margin-top:3px;color:var(--ink-2)}
+.award.info{background:var(--blue-soft);border-color:color-mix(in srgb,var(--blue) 40%,transparent);color:var(--blue-ink)}
+.rvitem{border:2px solid var(--line);border-inline-start-width:5px;border-radius:16px;padding:11px 14px;margin-bottom:9px;font-size:13.5px;line-height:1.7}
+.rvitem.ok{border-inline-start-color:var(--good);background:color-mix(in srgb,var(--good-soft) 45%,var(--surface))}
+.rvitem.no{border-inline-start-color:var(--bad);background:color-mix(in srgb,var(--bad-soft) 45%,var(--surface))}
+.rvitem b.t{font-family:var(--display);font-weight:500}
+
+/* ---------- signature ---------- */
+.sigcard{margin-top:16px;background:var(--good-soft);border:2px solid var(--good);border-radius:22px;padding:18px}
+.sigcard h3{margin:0 0 3px;font-size:16px;font-weight:600;color:var(--good-ink)}
+.sigcard p{margin:0 0 11px;font-size:13px;color:var(--ink-2)}
+.sigpad{background:#fff;border:2px solid var(--line);border-radius:16px;overflow:hidden;display:grid;place-items:center}
+.sigpad canvas{display:block;touch-action:none;cursor:crosshair;max-width:100%}
+.sigacts{display:flex;gap:8px;justify-content:space-between;flex-wrap:wrap;margin-top:11px}
+.sigdone{text-align:center;padding:18px 4px;color:var(--good-ink);font-family:var(--display);font-size:15.5px}
+
+/* ---------- leaderboard ---------- */
+.lbhead{display:flex;align-items:center;justify-content:space-between;gap:9px;flex-wrap:wrap;margin-bottom:6px}
+select.msel{font:inherit;font-size:12.5px;padding:6px 10px;border:2px solid var(--line);border-radius:12px;background:var(--surface);color:var(--ink)}
+ol.lb{list-style:none;margin:0;padding:0}
+ol.lb li{display:grid;grid-template-columns:32px 1fr auto;gap:10px;align-items:center;padding:9px 6px;border-bottom:1px dotted var(--line);border-radius:12px}
+ol.lb li:last-of-type{border-bottom:none}
+ol.lb li.me{background:var(--violet-soft);box-shadow:inset 0 0 0 2px color-mix(in srgb,var(--violet) 35%,transparent)}
+.rk{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;font-family:var(--display);font-weight:600;font-size:13px;background:var(--sunken);color:var(--ink-3)}
+.rk.m1{background:linear-gradient(135deg,var(--sun),#F2C14E);color:#4A3000}
+.rk.m2{background:linear-gradient(135deg,#C9D2CE,#E2E8E5);color:#2E3A36}
+.rk.m3{background:linear-gradient(135deg,#D69A63,#B9793F);color:#3A1F05}
+.nm{display:block;font-size:14px;line-height:1.35;overflow-wrap:anywhere}
+.dpt{display:block;font-size:11px;color:var(--ink-3)}
+.sc{font-family:var(--display);font-weight:600;font-size:17px;color:var(--violet);font-variant-numeric:tabular-nums}
+.mine{margin-top:11px;font-size:12.5px;color:var(--ink-2);background:var(--sunken);border-radius:14px;padding:9px 12px}
+.mine b{color:var(--ink);font-family:var(--display)}
+.hoursbox{margin-top:16px;border-radius:22px;padding:18px;color:#fff;background:linear-gradient(140deg,#0E9B72,#17B98A)}
+.hoursbox .lbl{font-size:12px;opacity:.92}
+.hoursbox .big{font-family:var(--display);font-weight:600;font-size:34px;line-height:1.1}
+.hoursbox .brk{margin-top:9px;font-size:12.5px;line-height:1.85;opacity:.96}
+
+/* ---------- history ---------- */
+.tablewrap{overflow-x:auto;border:2px solid var(--line);border-radius:18px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;min-width:560px;font-size:13px}
+th,td{padding:9px 12px;text-align:start;border-bottom:1px solid var(--line)}
+th{font-family:var(--display);font-weight:500;font-size:12px;color:var(--ink-2);background:var(--sunken)}
+tbody tr:last-child td{border-bottom:none}
+.tp{color:var(--good);font-family:var(--display)}
+.tf{color:var(--bad);font-family:var(--display)}
+.sigthumb{width:58px;border:2px solid var(--line);border-radius:8px;background:#fff;cursor:pointer;padding:2px}
+.siglate{padding:5px 13px;font-size:12px;white-space:nowrap}
+
+.center{text-align:center;padding:34px 16px;color:var(--ink-3)}
+.spin{width:26px;height:26px;border:3px solid var(--line);border-top-color:var(--violet);border-radius:50%;animation:sp .8s linear infinite;margin:0 auto 10px}
+@keyframes sp{to{transform:rotate(360deg)}}
+.confetti{position:fixed;inset:0;pointer-events:none;overflow:hidden;z-index:60}
+.cf{position:absolute;width:9px;height:14px;border-radius:2px;animation:fall linear forwards}
+@keyframes fall{to{transform:translateY(105vh) rotate(600deg);opacity:0}}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="in">
+    <div class="brand"><span class="lg">★</span> เกม KPI Challenge</div>
+    <div class="tr">
+      <div class="hchip"><b class="num" id="hoursNum">-</b><span>ชม.เรียนรู้สะสม</span></div>
+      <button class="btn ghost sm" type="button" onclick="goHome()">&larr; กลับหน้าหลัก</button>
+    </div>
+  </div>
+</header>
+
+<section class="hero">
+  <div class="wrap">
+    <div class="headline">
+      <svg class="mascot" viewBox="0 0 100 100" aria-hidden="true">
+        <ellipse cx="50" cy="92" rx="30" ry="5" fill="#E9538A" opacity=".13"/>
+        <path d="M50 14c-19 0-32 13-32 31 0 17 13 30 32 30s32-13 32-30c0-18-13-31-32-31z" fill="#FFD9E6" stroke="#E9538A" stroke-width="3.5"/>
+        <path d="M26 30c4-11 13-17 24-17s20 6 24 17c-7-5-15-7-24-7s-17 2-24 7z" fill="#FFFFFF" stroke="#E9538A" stroke-width="3"/>
+        <path d="M46 20h8v4h4v8h-4v4h-8v-4h-4v-8h4z" fill="#E9538A"/>
+        <circle cx="39" cy="48" r="4.2" fill="#3D2439"/><circle cx="61" cy="48" r="4.2" fill="#3D2439"/>
+        <circle cx="40.5" cy="46.5" r="1.5" fill="#fff"/><circle cx="62.5" cy="46.5" r="1.5" fill="#fff"/>
+        <path d="M42 58c2.6 3 13.4 3 16 0" stroke="#3D2439" stroke-width="3.4" stroke-linecap="round" fill="none"/>
+        <ellipse cx="30" cy="55" rx="5" ry="3.4" fill="#F58BB1" opacity=".7"/>
+        <ellipse cx="70" cy="55" rx="5" ry="3.4" fill="#F58BB1" opacity=".7"/>
+      </svg>
+      <div>
+        <h1>เล่นเกมทำความรู้จัก KPI ของแผนกเรา</h1>
+        <p id="heroSub">คำถามสร้างจากตัวเลข KPI จริงของแผนก OPD1 เฉลยทันทีทีละข้อ เล่นผ่านแล้วได้ชั่วโมงการเรียนรู้และลงลายเซ็นเหมือนบททดสอบ</p>
+      </div>
+    </div>
+    <div class="months" id="months" role="group" aria-label="เลือกเดือนข้อมูล KPI"></div>
+  </div>
+</section>
+
+<main class="wrap">
+
+  <section class="scorecard" id="board" aria-label="สรุปตัวชี้วัดของเดือนที่เลือก">
+    <div class="center" style="grid-column:1/-1"><div class="spin"></div>กำลังโหลดสรุป KPI...</div>
+  </section>
+
+  <section class="sec">
+    <div class="sec-head">
+      <h2 id="secTitle">ตัวชี้วัดทั้งหมด</h2>
+      <p>กดที่การ์ดสี 4 ใบด้านบนเพื่อดูทีละมุมมอง กดซ้ำอีกครั้งเพื่อกลับมาดูทั้งหมด และกดที่ “แล้วเราทำอะไรได้” เพื่อดูสิ่งที่ทำได้จริงในเวรของตัวเอง</p>
+      <button class="linkbtn" id="toggleTable" type="button" aria-expanded="false">ดูเป็นตาราง</button>
+    </div>
+    <div class="filterbar" id="filterBar" hidden></div>
+    <div id="groups"><div class="center"><div class="spin"></div>กำลังโหลด...</div></div>
+    <div class="tablewrap" id="kpiTable" hidden></div>
+  </section>
+
+  <section class="sec">
+    <div class="sec-head">
+      <h2>เกม KPI Challenge</h2>
+      <p>คำถามสร้างจากตัวเลขของเดือนที่เลือกด้านบน เฉลยทันทีทีละข้อ เล่นผ่านแล้วได้ชั่วโมงการเรียนรู้และลงลายเซ็นยืนยัน</p>
+    </div>
+  </section>
+
+  <div class="cols">
+    <div>
+      <div class="game" id="game">
+        <div class="center"><div class="spin"></div>กำลังเตรียมเกม...</div>
+      </div>
+      <div id="sigHost"></div>
+
+      <section class="card" style="margin-top:18px">
+        <h3>ประวัติการเล่นของฉัน</h3>
+        <p class="sub">ผลการเล่นและลายเซ็นยืนยันการเรียนรู้ ใช้อ้างอิงในแบบฟอร์มบันทึกการอบรมประจำเดือนได้ · รอบที่ผ่านแล้วแต่ยังไม่ได้เซ็น กดปุ่มเซ็นย้อนหลังได้ตลอดเวลา</p>
+        <div id="histBox"><div class="center"><div class="spin"></div>กำลังโหลด...</div></div>
+      </section>
+    </div>
+
+    <aside>
+      <section class="card">
+        <div class="lbhead">
+          <h3>อันดับประจำเดือน</h3>
+          <select class="msel" id="lbMonth" onchange="loadLeaderboard()" aria-label="เลือกเดือน"></select>
+        </div>
+        <p class="sub" id="lbSub">5 อันดับแรกที่ทำคะแนนสูงสุด นับคะแนนที่ดีที่สุดของแต่ละคน</p>
+        <div id="lbBox"><div class="center"><div class="spin"></div>กำลังโหลด...</div></div>
+      </section>
+
+      <section class="hoursbox">
+        <div class="lbl">ชั่วโมงการเรียนรู้สะสมของคุณ</div>
+        <div class="big num" id="hrBig">-</div>
+        <div class="brk" id="hrBrk">กำลังโหลด...</div>
+      </section>
+    </aside>
+  </div>
+</main>
+
+<script>
+var BASE_URL = '<?!= ScriptApp.getService().getUrl() ?>';
+function goHome(){ window.top.location.href = BASE_URL; }
+
+var INIT=null, CUR=null, GAME=null, S=null, TIMER=null, BOARD=null, FILTER=null;
+
+function $(s){ return document.querySelector(s); }
+function el(t,c,x){ var e=document.createElement(t); if(c)e.className=c; if(x!=null)e.textContent=x; return e; }
+function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function starSvg(on){
+  return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.6l2.9 5.9 6.5.9-4.7 4.6 1.1 6.5L12 17.4 6.2 20.5l1.1-6.5L2.6 9.4l6.5-.9z" fill="'+(on?'#D98B0B':'none')+'" stroke="'+(on?'#D98B0B':'#AB90A6')+'" stroke-width="1.7" stroke-linejoin="round"/></svg>';
+}
+
+function faceSvg(st){
+  var c = st==='good'?'var(--good)':st==='warn'?'var(--warn)':st==='bad'?'var(--bad)':'var(--ink-3)';
+  var mouth = st==='good' ? 'M8 15c1.8 2.4 6.2 2.4 8 0'
+            : st==='warn' ? 'M8 15.5h8'
+            : st==='bad'  ? 'M8 16.6c1.8-2.4 6.2-2.4 8 0'
+            : 'M9 15.5h6';
+  return '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true">'+
+    '<circle cx="12" cy="12" r="9.4" stroke="'+c+'" stroke-width="2"/>'+
+    '<circle cx="9" cy="10" r="1.35" fill="'+c+'"/><circle cx="15" cy="10" r="1.35" fill="'+c+'"/>'+
+    '<path d="'+mouth+'" stroke="'+c+'" stroke-width="2" stroke-linecap="round"/></svg>';
+}
+function persIcon(id){
+  var c='currentColor';
+  if(id==='F') return '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="8.6" stroke="'+c+'" stroke-width="2"/><path d="M12 7.4v9.2M9.6 10.2h4.1a1.9 1.9 0 010 3.8H9.6M9.2 12.1h5" stroke="'+c+'" stroke-width="1.9" stroke-linecap="round"/></svg>';
+  if(id==='C') return '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 20.2S3.8 15.4 3.8 9.8A4.3 4.3 0 0112 7.6a4.3 4.3 0 018.2 2.2c0 5.6-8.2 10.4-8.2 10.4z" stroke="'+c+'" stroke-width="2" stroke-linejoin="round"/></svg>';
+  if(id==='I') return '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="8.6" stroke="'+c+'" stroke-width="2"/><path d="M12 7v5.3l3.4 2" stroke="'+c+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  return '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 20V11" stroke="'+c+'" stroke-width="2" stroke-linecap="round"/><path d="M12 12.6c-3.4 0-5.4-2-5.4-5.4 3.4 0 5.4 2 5.4 5.4zM12 14.6c3.1 0 5-1.8 5-4.9-3.1 0-5 1.8-5 4.9z" stroke="'+c+'" stroke-width="1.9" stroke-linejoin="round"/><path d="M7 20h10" stroke="'+c+'" stroke-width="2" stroke-linecap="round"/></svg>';
+}
+var PCOL = { F:'var(--sun)', C:'var(--pink)', I:'var(--blue)', L:'var(--violet)' };
+var STLBL = { good:'ถึงเป้าแล้ว', warn:'เฉียดเป้า', bad:'ยังไม่ถึงเป้า', na:'ยังไม่มีข้อมูล' };
+
+/* เส้นแนวโน้มเล็กในการ์ด */
+function trendSvg(series, status, months){
+  var W=210,H=34,P=5;
+  var pts=[];
+  series.forEach(function(s,i){ if(s.v !== null && s.v !== undefined) pts.push([i, s.v]); });
+  if(pts.length < 2){
+    return '<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="ข้อมูลยังไม่พอวาดแนวโน้ม">'+
+      '<text x="0" y="21" font-size="11" font-family="IBM Plex Sans Thai Looped,sans-serif" fill="var(--ink-3)">ข้อมูลยังไม่พอวาดแนวโน้ม</text></svg>';
+  }
+  var vs = pts.map(function(p){ return p[1]; });
+  var lo = Math.min.apply(null, vs), hi = Math.max.apply(null, vs);
+  if(hi === lo){ hi = lo + 1; lo = lo - 1; }
+  var span = Math.max(1, months - 1);
+  var x = function(i){ return P + i*(W-P*2)/span; };
+  var y = function(v){ return P + (hi-v)/(hi-lo)*(H-P*2); };
+  var col = status==='good'?'var(--good)':status==='warn'?'var(--warn)':status==='bad'?'var(--bad)':'var(--ink-3)';
+  var d = pts.map(function(p,i){ return (i?'L':'M') + x(p[0]) + ',' + y(p[1]); }).join(' ');
+  var last = pts[pts.length-1];
+  return '<svg viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none" role="img" aria-label="แนวโน้มย้อนหลัง">'+
+    '<path d="'+d+'" fill="none" stroke="'+col+'" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>'+
+    '<circle cx="'+x(last[0])+'" cy="'+y(last[1])+'" r="3.6" fill="'+col+'" stroke="var(--surface)" stroke-width="2"/></svg>';
+}
+
+/* ---------- กระดานสรุป KPI ---------- */
+function loadBoard(){
+  $('#board').innerHTML = '<div class="center" style="grid-column:1/-1"><div class="spin"></div>กำลังโหลดสรุป KPI...</div>';
+  $('#groups').innerHTML = '<div class="center"><div class="spin"></div>กำลังโหลด...</div>';
+  google.script.run.withSuccessHandler(renderBoard).withFailureHandler(function(e){
+    $('#board').innerHTML = '<div class="center" style="grid-column:1/-1;color:var(--bad)">โหลดสรุป KPI ไม่สำเร็จ</div>';
+    $('#groups').innerHTML = '';
+  }).getKpiBoard(CUR);
+}
+
+function renderBoard(d){
+  BOARD = d;
+
+  /* วงกลมสรุป */
+  var C = 2*Math.PI*48, arc = (C*d.pct/100).toFixed(1);
+  var col = d.pct>=70 ? 'var(--good)' : (d.pct>=45 ? 'var(--warn)' : 'var(--bad)');
+  var b = $('#board'); b.innerHTML = '';
+  var ring = el('div','ring');
+  ring.innerHTML =
+    '<svg viewBox="0 0 120 120" role="img" aria-label="สัดส่วนตัวชี้วัดที่ผ่านเป้า '+d.pct+' เปอร์เซ็นต์">'+
+      '<circle cx="60" cy="60" r="48" fill="none" stroke="var(--sunken)" stroke-width="15"/>'+
+      '<circle cx="60" cy="60" r="48" fill="none" stroke="'+col+'" stroke-width="15" stroke-linecap="round"'+
+        ' transform="rotate(-90 60 60)" stroke-dasharray="'+arc+' '+C.toFixed(1)+'"/>'+
+      '<text x="60" y="58" text-anchor="middle" font-family="Mitr,sans-serif" font-size="26" font-weight="600" fill="var(--ink)">'+d.pct+'%</text>'+
+      '<text x="60" y="76" text-anchor="middle" font-family="IBM Plex Sans Thai Looped,sans-serif" font-size="11" fill="var(--ink-3)">ผ่านเป้า</text>'+
+    '</svg>';
+  var lead = el('div','lead');
+  lead.appendChild(el('span','big num', d.pass + ' / ' + d.totalAll));
+  lead.appendChild(el('p',null,'ตัวชี้วัดที่ผ่านเป้าในเดือน' + d.monthFull + ' จากตัวชี้วัดทั้งหมดของแผนก ' + d.totalAll + ' ตัว'));
+  lead.appendChild(el('p','note',
+    'เดือนนี้ลงข้อมูลแล้ว ' + d.withData + ' ตัว' +
+    (d.noData ? ' ยังไม่ลงข้อมูลอีก ' + d.noData + ' ตัว' : ' ครบทุกตัว') +
+    ' · วงกลม ' + d.pct + '% คิดจากเฉพาะตัวที่มีข้อมูล'));
+  ring.appendChild(lead);
+  b.appendChild(ring);
+
+  var pt = el('div','ptiles');
+  d.pers.forEach(function(p){
+    var t = el('button','ptile p-'+p.id); t.type='button';
+    t.setAttribute('aria-pressed', FILTER===p.id ? 'true':'false');
+    t.title = FILTER===p.id ? 'กดอีกครั้งเพื่อดูทุกมุมมอง' : 'กดเพื่อดูเฉพาะมุมมอง' + p.name;
+    t.innerHTML = persIcon(p.id);
+    t.appendChild(el('span','nmp',p.name));
+    var sc = el('span','psc'); sc.innerHTML = p.pass + ' <small>/ ' + p.total + ' ผ่าน</small>';
+    t.appendChild(sc);
+    t.appendChild(el('span','nd', p.noData ? ('ยังไม่ลงข้อมูล ' + p.noData + ' ตัว') : 'ลงข้อมูลครบแล้ว'));
+    t.addEventListener('click', function(){
+      FILTER = (FILTER === p.id) ? null : p.id;
+      renderBoard(BOARD);
+      document.getElementById('groups').scrollIntoView({behavior:'smooth', block:'start'});
+    });
+    pt.appendChild(t);
+  });
+  if(FILTER){
+    Array.prototype.forEach.call(pt.children, function(c,i){
+      if(d.pers[i].id !== FILTER) c.classList.add('dim');
+    });
+  }
+  b.appendChild(pt);
+
+  $('#secTitle').textContent = 'ตัวชี้วัดทั้งหมด ' + d.totalAll + ' ตัว';
+
+  /* แถบบอกว่ากำลังกรองอยู่ */
+  var fb = $('#filterBar');
+  if(FILTER){
+    var pn = '', pc = 0;
+    d.pers.forEach(function(p){ if(p.id===FILTER){ pn = p.name; pc = p.total; } });
+    fb.hidden = false; fb.innerHTML = '';
+    fb.appendChild(document.createTextNode('กำลังดูเฉพาะมุมมอง '));
+    fb.appendChild(el('b',null,pn));
+    fb.appendChild(document.createTextNode(' จำนวน ' + pc + ' ตัวชี้วัด'));
+    var rb = el('button','linkbtn','ดูทุกมุมมอง'); rb.type='button';
+    rb.style.gridColumn='auto'; rb.style.gridRow='auto'; rb.style.justifySelf='auto';
+    rb.addEventListener('click', function(){ FILTER=null; renderBoard(BOARD); });
+    fb.appendChild(rb);
+  } else {
+    fb.hidden = true; fb.innerHTML = '';
+  }
+
+  /* การ์ดรายตัวชี้วัด แยกตามมุมมอง */
+  var g = $('#groups'); g.innerHTML = '';
+  d.pers.filter(function(p){ return !FILTER || p.id === FILTER; }).forEach(function(p){
+    var head = el('div','pgroup-head');
+    var ic = el('span'); ic.innerHTML = persIcon(p.id); ic.style.color = PCOL[p.id];
+    head.appendChild(ic);
+    head.appendChild(el('h3',null,p.name + ' (' + p.total + ' ตัวชี้วัด)'));
+    head.appendChild(el('span','cnt',p.desc));
+    g.appendChild(head);
+
+    var box = el('div','cards');
+    d.kpis.filter(function(k){ return k.p === p.id; }).forEach(function(k){
+      var card = el('article','kc st-'+k.status);
+
+      var top = el('div','top');
+      var fc = el('span','face'); fc.innerHTML = faceSvg(k.status); top.appendChild(fc);
+      var td = el('div');
+      td.appendChild(el('span','code',k.code));
+      td.appendChild(el('h4',null,k.name));
+      top.appendChild(td);
+      card.appendChild(top);
+
+      card.appendChild(el('span','pill',STLBL[k.status]));
+
+      var vl = el('div','vline');
+      if(k.na){
+        vl.appendChild(el('span','v',k.naText));
+      } else {
+        vl.appendChild(el('span','v',k.value));
+        vl.appendChild(el('span','u',k.unit));
+        vl.appendChild(el('span','tg','เป้า ' + (k.dir==='up'?'≥ ':'≤ ') + k.targetText));
+      }
+      card.appendChild(vl);
+
+      if(!k.na){
+        var mt = el('div','meter');
+        var f = el('span','fill'); f.style.width = k.meterPct + '%';
+        mt.appendChild(f); mt.appendChild(el('span','goal'));
+        mt.setAttribute('role','img');
+        mt.setAttribute('aria-label', k.name + ' ' + k.value + ' ' + k.unit + ' เป้า ' + k.targetText + ' สถานะ ' + STLBL[k.status]);
+        card.appendChild(mt);
+      }
+
+      var tr = el('div','trend');
+      tr.innerHTML = trendSvg(k.series, k.status, k.series.length);
+      card.appendChild(tr);
+
+      card.appendChild(el('p','mean',k.mean));
+
+      if(k.tip){
+        var det = el('details');
+        det.appendChild(el('summary',null,'แล้วเราทำอะไรได้'));
+        det.appendChild(el('p',null,k.tip));
+        card.appendChild(det);
+      }
+      box.appendChild(card);
+    });
+    g.appendChild(box);
+  });
+
+  /* มุมมองตาราง */
+  var rows = '<table><caption class="sr">ตาราง KPI เดือน'+esc(d.monthFull)+'</caption><thead><tr>'+
+    '<th>รหัส</th><th>ตัวชี้วัด</th><th>ผลเดือนนี้</th><th>เป้าหมาย</th><th>สถานะ</th></tr></thead><tbody>';
+  d.kpis.filter(function(k){ return !FILTER || k.p === FILTER; }).forEach(function(k){
+    rows += '<tr><td>'+esc(k.code)+'</td><td>'+esc(k.name)+'</td>'+
+            '<td>'+(k.na ? esc(k.naText) : esc(k.value + ' ' + k.unit))+'</td>'+
+            '<td>'+(k.dir==='up'?'≥ ':'≤ ')+esc(k.targetText)+'</td>'+
+            '<td>'+STLBL[k.status]+'</td></tr>';
+  });
+  $('#kpiTable').innerHTML = rows + '</tbody></table>';
+}
+
+/* ---------- bootstrap ---------- */
+window.addEventListener('DOMContentLoaded', function(){
+  google.script.run.withSuccessHandler(onInit).withFailureHandler(fail).getKpiGameInit();
+  google.script.run.withSuccessHandler(fillMonths).withFailureHandler(function(){
+    $('#lbBox').innerHTML = '<div class="center">ยังไม่มีข้อมูลอันดับ</div>';
+  }).getGameMonths();
+  loadHours(); loadHistory();
+});
+
+function fail(e){
+  $('#game').innerHTML = '<div class="center" style="color:var(--bad)">เกิดข้อผิดพลาด<br>' + esc(e && e.message ? e.message : e) + '</div>';
+}
+
+function onInit(d){
+  INIT = d; CUR = d.defaultMonth;
+  $('#heroSub').textContent = 'สวัสดี ' + d.user.name + ' · คำถามสร้างจากตัวเลข KPI จริงของแผนก เฉลยทันทีทีละข้อ ตอบถูกตั้งแต่ ' +
+    Math.ceil(d.questionCount * d.passRatio) + ' ข้อขึ้นไปได้ชั่วโมงการเรียนรู้ ' + d.learnHours + ' ชม. และลงลายเซ็นยืนยัน';
+  var box = $('#months'); box.innerHTML = '';
+  d.months.forEach(function(m){
+    if(!m.kpiCount) return;
+    var b = el('button', null, m.short); b.type='button';
+    b.setAttribute('aria-pressed', m.key===CUR ? 'true':'false');
+    b.addEventListener('click', function(){
+      CUR = m.key;
+      Array.prototype.forEach.call(box.children, function(c){ c.setAttribute('aria-pressed', c===b?'true':'false'); });
+      loadBoard();
+      startScreen();
+    });
+    box.appendChild(b);
+  });
+  loadBoard();
+  startScreen();
+}
+
+document.getElementById('toggleTable').addEventListener('click', function(){
+  var t = $('#kpiTable'), g = $('#groups'), on = t.hidden;
+  t.hidden = !on; g.hidden = on;
+  this.textContent = on ? 'ดูเป็นการ์ด' : 'ดูเป็นตาราง';
+  this.setAttribute('aria-expanded', on ? 'true' : 'false');
+});
+
+/* ---------- หน้าเริ่มเกม ---------- */
+function startScreen(){
+  clearInterval(TIMER);
+  $('#sigHost').innerHTML = '';
+  var label = '';
+  INIT.months.forEach(function(m){ if(m.key===CUR) label = m.full; });
+
+  var g = $('#game'); g.innerHTML = '';
+  var top = el('div','gtop');
+  top.appendChild(el('h3',null,'เกม KPI Challenge'));
+  var meta = el('div','meta'); meta.appendChild(el('span',null,'ข้อมูลเดือน'+label));
+  top.appendChild(meta); g.appendChild(top);
+
+  var body = el('div','gbody');
+  var st = el('div','gstart');
+  st.appendChild(el('p',null,'คำถามทั้ง ' + INIT.questionCount + ' ข้อสร้างจากตัวเลข KPI จริงของเดือนที่เลือกไว้ด้านบน เมื่อข้อมูลเดือนใหม่เข้ามา คำถามจะเปลี่ยนเองโดยไม่ต้องเขียนใหม่'));
+  var ul = el('ul','rules');
+  [ 'ข้อละ ' + INIT.secondsPerQuestion + ' วินาที ตอบช้าถือว่าผิด',
+    'ตอบแล้วเฉลยทันทีทีละข้อ พร้อมคำอธิบายว่าตัวเลขจริงคือเท่าไร',
+    'ตอบถูกได้ 10 แต้ม ตอบถูกติดกันได้โบนัสคอมโบเพิ่มครั้งละ 5 แต้ม',
+    'ตอบผิดไม่หักแต้ม แต่คอมโบจะเริ่มนับใหม่',
+    'ตอบถูกตั้งแต่ ' + Math.ceil(INIT.questionCount*INIT.passRatio) + ' ข้อขึ้นไปถือว่าผ่าน ได้ชั่วโมงการเรียนรู้ ' + INIT.learnHours + ' ชม.',
+    'ชั่วโมงการเรียนรู้นับครั้งเดียวต่อหนึ่งเดือนข้อมูล เล่นซ้ำเพื่อทำคะแนนแข่งขันได้ไม่จำกัด'
+  ].forEach(function(t){ ul.appendChild(el('li',null,t)); });
+  st.appendChild(ul);
+  var b = el('button','btn','เริ่มเล่น'); b.type='button';
+  b.addEventListener('click', startGame);
+  st.appendChild(b);
+  body.appendChild(st); g.appendChild(body);
+}
+
+function startGame(){
+  $('#sigHost').innerHTML = '';
+  $('#game').innerHTML = '<div class="center"><div class="spin"></div>กำลังสุ่มคำถามจากข้อมูลจริง...</div>';
+  google.script.run.withSuccessHandler(function(g){
+    GAME = g;
+    S = { i:0, score:0, combo:0, best:0, right:0 };
+    showQ();
+  }).withFailureHandler(fail).startKpiGame(CUR);
+}
+
+/* ---------- โครงหน้าเกม ---------- */
+function shell(){
+  $('#sigHost').innerHTML = '';
+  var g = $('#game'); g.innerHTML = '';
+  var top = el('div','gtop');
+  top.appendChild(el('h3',null,'KPI Challenge'));
+  var meta = el('div','meta');
+  var q = el('span',null,''); q.id='gNo'; meta.appendChild(q);
+  var sc = el('span',null,'แต้ม '); var b = el('b','num','0'); b.id='gScore'; sc.appendChild(b); meta.appendChild(sc);
+  var cb = el('span','combo','คอมโบ 0'); cb.id='gCombo'; cb.hidden=true; meta.appendChild(cb);
+  top.appendChild(meta); g.appendChild(top);
+  var body = el('div','gbody'); body.id='gBody'; g.appendChild(body);
+  return body;
+}
+
+/* ---------- แสดงคำถาม + เฉลยทันทีทีละข้อ ---------- */
+function showQ(){
+  clearInterval(TIMER);
+  var body = shell(), Q = GAME.questions[S.i];
+  $('#gNo').textContent = 'ข้อ ' + (S.i+1) + ' / ' + GAME.questions.length;
+  $('#gScore').textContent = S.score;
+  var cb = $('#gCombo'); cb.hidden = S.combo < 2; cb.textContent = 'คอมโบ x' + S.combo;
+
+  var tb = el('div','timerbar'); var ti = el('i'); ti.style.width='100%'; tb.appendChild(ti); body.appendChild(tb);
+  body.appendChild(el('p','qtext',Q.q));
+  body.appendChild(el('p','qsub',Q.sub));
+
+  var opts = el('div','opts'+(Q.o.length===2?' two':''));
+  var done = false;
+  Q.o.forEach(function(o,i){
+    var b = el('button','opt',o); b.type='button';
+    b.addEventListener('click', function(){ answer(i); });
+    opts.appendChild(b);
+  });
+  body.appendChild(opts);
+
+  var total = GAME.secondsPerQuestion*1000, t0 = Date.now();
+  TIMER = setInterval(function(){
+    var rem = total - (Date.now()-t0);
+    ti.style.width = Math.max(0, rem/total*100) + '%';
+    if(rem < 4000) ti.classList.add('low');
+    if(rem <= 0) answer(-1);
+  }, 100);
+
+  function answer(pick){
+    if(done) return; done = true; clearInterval(TIMER);
+    Array.prototype.forEach.call(opts.children, function(c){ c.disabled = true; });
+    ti.style.width = '0%';
+
+    var wait = el('p','fb'); wait.textContent = 'กำลังตรวจคำตอบ...';
+    body.appendChild(wait);
+
+    google.script.run.withSuccessHandler(function(r){
+      wait.remove();
+      Array.prototype.forEach.call(opts.children, function(c,j){
+        if(j === r.correctIndex){ c.classList.add('ok'); c.innerHTML = esc(Q.o[j]) + '<span class="mark">คำตอบที่ถูก</span>'; }
+        else if(j === pick){ c.classList.add('no'); c.innerHTML = esc(Q.o[j]) + '<span class="mark">คำตอบของคุณ</span>'; }
+      });
+
+      S.score = r.score; S.combo = r.combo; S.best = r.bestCombo; S.right = r.rightSoFar;
+      $('#gScore').textContent = S.score;
+      var c2 = $('#gCombo'); c2.hidden = S.combo < 2; c2.textContent = 'คอมโบ x' + S.combo;
+
+      var fb = el('p','fb ' + (r.correct ? 'good' : 'bad'));
+      var hd = el('span','hd', r.correct ? 'ถูกต้อง' : (pick === -1 ? 'หมดเวลา' : 'ยังไม่ใช่'));
+      fb.appendChild(hd);
+      fb.appendChild(document.createTextNode(r.explain));
+      body.appendChild(fb);
+
+      var nb = el('button','btn', r.isLast ? 'ดูผลคะแนน' : 'ข้อต่อไป'); nb.type='button';
+      nb.addEventListener('click', function(){
+        S.i++;
+        if(S.i >= GAME.questions.length) submit(); else showQ();
+      });
+      body.appendChild(nb); nb.focus();
+
+    }).withFailureHandler(function(e){
+      wait.className = 'fb bad';
+      wait.textContent = 'ตรวจคำตอบไม่สำเร็จ: ' + (e && e.message ? e.message : e);
+      var rb = el('button','btn ghost','เริ่มเล่นใหม่'); rb.type='button';
+      rb.addEventListener('click', startScreen);
+      body.appendChild(rb);
+    }).answerKpiQuestion(GAME.gameId, S.i, pick);
+  }
+}
+
+/* ---------- สรุปผล ---------- */
+function submit(){
+  $('#game').innerHTML = '<div class="center"><div class="spin"></div>กำลังสรุปคะแนน...</div>';
+  google.script.run.withSuccessHandler(showResult).withFailureHandler(fail).submitKpiGame(GAME.gameId, []);
+}
+
+function showResult(r){
+  var body = shell();
+  $('#gNo').textContent = 'จบเกม';
+  $('#gScore').textContent = r.score;
+  $('#gCombo').hidden = true;
+
+  var rankName = ['ยังไม่คุ้นตัวเลข ลองอีกรอบ','เริ่มจำได้แล้ว','แม่นพอตัว','เซียน KPI ประจำแผนก'][r.stars];
+  var d = el('div','result');
+  d.appendChild(el('span','big num',String(r.score)));
+  d.appendChild(el('p',null,'แต้มรวม ตอบถูก '+r.correct+' จาก '+r.total+' ข้อ คอมโบสูงสุด x'+r.bestCombo));
+  var sr = el('div','stars-row');
+  for(var i=0;i<3;i++){ var sp=el('span'); sp.innerHTML=starSvg(i<r.stars); sr.appendChild(sp); }
+  d.appendChild(sr);
+  d.appendChild(el('div','rank',rankName));
+  d.appendChild(el('div','verdict '+(r.pass?'p':'f'),
+    (r.pass?'ผ่านเกณฑ์ ':'ยังไม่ผ่านเกณฑ์ ') + 'ต้องตอบถูกอย่างน้อย ' + r.passNeed + ' ข้อ'));
+
+  if(r.learnHoursAwarded > 0){
+    var aw = el('div','award');
+    aw.appendChild(document.createTextNode('ได้รับชั่วโมงการเรียนรู้ ' + r.learnHoursAwarded + ' ชั่วโมง จากเดือน' + r.kpiMonthFull));
+    aw.appendChild(el('small',null,'กรุณาลงลายเซ็นยืนยันด้านล่าง เพื่อบันทึกเป็นหลักฐานการอบรม'));
+    d.appendChild(aw);
+  } else if(r.pass){
+    d.appendChild(el('div','award info','เดือนนี้เคยได้ชั่วโมงการเรียนรู้ไปแล้ว รอบนี้นับเป็นคะแนนแข่งขันอย่างเดียว'));
+  }
+  body.appendChild(d);
+
+  body.appendChild(el('h3',null,'ทบทวนรายข้อ'));
+  var rv = el('div');
+  r.review.forEach(function(it){
+    var b = el('div','rvitem ' + (it.correct?'ok':'no'));
+    var t = el('b','t','ข้อ ' + it.no + ' · ' + (it.correct?'ตอบถูก':'ตอบผิด'));
+    b.appendChild(t); b.appendChild(document.createElement('br'));
+    b.appendChild(document.createTextNode('คำตอบของคุณ: ' + it.chosen));
+    if(!it.correct){ b.appendChild(document.createElement('br')); b.appendChild(document.createTextNode('เฉลย: ' + it.answer)); }
+    b.appendChild(document.createElement('br'));
+    var ex = el('span',null,it.explain); ex.style.color='var(--ink-3)';
+    b.appendChild(ex);
+    rv.appendChild(b);
+  });
+  body.appendChild(rv);
+
+  var row = el('div'); row.style.cssText='display:flex;gap:9px;justify-content:center;flex-wrap:wrap;margin-top:6px';
+  var again = el('button','btn','เล่นอีกรอบ'); again.type='button'; again.addEventListener('click', startGame);
+  var back = el('button','btn ghost','กลับหน้าเริ่ม'); back.type='button'; back.addEventListener('click', startScreen);
+  row.appendChild(again); row.appendChild(back);
+  body.appendChild(row);
+
+  if(r.needSignature) signatureCard(r);
+  if(r.stars >= 2 && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) confetti();
+  loadHours(); loadHistory(); loadLeaderboard();
+}
+
+/* ---------- ลายเซ็น ---------- */
+function signatureCard(r){
+  var host = $('#sigHost'); host.innerHTML = '';
+  var card = el('section','sigcard');
+  card.appendChild(el('h3',null,'ลงลายเซ็นยืนยันการเรียนรู้'));
+  card.appendChild(el('p',null,'เกม KPI Challenge ประจำเดือน' + r.kpiMonthFull + ' · ลายเซ็นนี้จะถูกบันทึกไว้ใช้อ้างอิงในแบบฟอร์มบันทึกการอบรมประจำเดือน เช่นเดียวกับบททดสอบบทเรียน'));
+  var pad = el('div','sigpad');
+  var cv = document.createElement('canvas'); cv.width=480; cv.height=155; pad.appendChild(cv);
+  card.appendChild(pad);
+  card.appendChild(el('p',null,'ใช้นิ้วหรือเมาส์วาดลายเซ็นในกรอบด้านบน'));
+  var acts = el('div','sigacts');
+  var clr = el('button','btn ghost','ล้างลายเซ็น'); clr.type='button';
+  var grp = el('div'); grp.style.cssText='display:flex;gap:8px';
+  var skip = el('button','btn ghost','เซ็นภายหลัง'); skip.type='button';
+  var save = el('button','btn','ยืนยันลายเซ็น'); save.type='button';
+  grp.appendChild(skip); grp.appendChild(save);
+  acts.appendChild(clr); acts.appendChild(grp); card.appendChild(acts);
+  host.appendChild(card);
+
+  var ctx = cv.getContext('2d'), drawing=false, has=false;
+  function reset(){ ctx.fillStyle='#fff'; ctx.fillRect(0,0,cv.width,cv.height); ctx.strokeStyle='#3D2439'; ctx.lineWidth=2.2; ctx.lineCap='round'; has=false; }
+  reset();
+  function pos(e){ var b=cv.getBoundingClientRect(), p=e.touches?e.touches[0]:e;
+    return { x:(p.clientX-b.left)*(cv.width/b.width), y:(p.clientY-b.top)*(cv.height/b.height) }; }
+  function st(e){ e.preventDefault(); drawing=true; var p=pos(e); ctx.beginPath(); ctx.moveTo(p.x,p.y); }
+  function mv(e){ if(!drawing) return; e.preventDefault(); var p=pos(e); ctx.lineTo(p.x,p.y); ctx.stroke(); has=true; }
+  function en(){ drawing=false; }
+  cv.addEventListener('mousedown',st); cv.addEventListener('mousemove',mv); window.addEventListener('mouseup',en);
+  cv.addEventListener('touchstart',st,{passive:false}); cv.addEventListener('touchmove',mv,{passive:false}); cv.addEventListener('touchend',en);
+  clr.addEventListener('click',reset);
+  skip.addEventListener('click',function(){ host.innerHTML=''; });
+  save.addEventListener('click',function(){
+    if(!has){ alert('กรุณาวาดลายเซ็นในกรอบก่อนกดยืนยัน'); return; }
+    var url = cv.toDataURL('image/png');
+    host.innerHTML = '<section class="sigcard"><div class="center"><div class="spin"></div>กำลังบันทึกลายเซ็น...</div></section>';
+    google.script.run.withSuccessHandler(function(res){
+      host.innerHTML = '';
+      var ok = el('section','sigcard');
+      ok.appendChild(el('div','sigdone','บันทึกลายเซ็นเรียบร้อยแล้ว'));
+      var sm = el('p',null,res.courseTitle); sm.style.textAlign='center';
+      ok.appendChild(sm);
+      host.appendChild(ok);
+      loadHistory(); loadHours();
+    }).withFailureHandler(function(e){
+      alert('บันทึกลายเซ็นไม่สำเร็จ: ' + (e && e.message ? e.message : e));
+      signatureCard(r);
+    }).saveGameSignature(r.gameId, url);
+  });
+}
+
+/* ---------- เซ็นย้อนหลังจากตารางประวัติ ---------- */
+function signLate(gameId, monthLabel){
+  var ov = document.createElement('div');
+  ov.style.cssText = 'position:fixed;left:0;top:0;right:0;bottom:0;background:rgba(61,36,57,.48);display:flex;align-items:center;justify-content:center;padding:16px;z-index:9999';
+
+  var card = el('section','sigcard');
+  card.style.cssText = 'max-width:540px;width:100%;margin:0;max-height:92vh;overflow:auto';
+  card.appendChild(el('h3',null,'ลงลายเซ็นย้อนหลัง'));
+  card.appendChild(el('p',null,'เกม KPI Challenge ประจำเดือน' + monthLabel + ' · ลายเซ็นนี้จะถูกบันทึกไว้ใช้อ้างอิงในแบบฟอร์มบันทึกการอบรมประจำเดือน เช่นเดียวกับบททดสอบบทเรียน'));
+
+  var pad = el('div','sigpad');
+  var cv = document.createElement('canvas'); cv.width=480; cv.height=155; pad.appendChild(cv);
+  card.appendChild(pad);
+  card.appendChild(el('p',null,'ใช้นิ้วหรือเมาส์วาดลายเซ็นในกรอบด้านบน'));
+
+  var acts = el('div','sigacts');
+  var clr = el('button','btn ghost','ล้างลายเซ็น'); clr.type='button';
+  var grp = el('div'); grp.style.cssText='display:flex;gap:8px';
+  var cancel = el('button','btn ghost','ยกเลิก'); cancel.type='button';
+  var save = el('button','btn','ยืนยันลายเซ็น'); save.type='button';
+  grp.appendChild(cancel); grp.appendChild(save);
+  acts.appendChild(clr); acts.appendChild(grp); card.appendChild(acts);
+
+  ov.appendChild(card);
+  document.body.appendChild(ov);
+
+  var ctx = cv.getContext('2d'), drawing=false, has=false;
+  function reset(){ ctx.fillStyle='#fff'; ctx.fillRect(0,0,cv.width,cv.height); ctx.strokeStyle='#3D2439'; ctx.lineWidth=2.2; ctx.lineCap='round'; has=false; }
+  reset();
+  function pos(e){ var b=cv.getBoundingClientRect(), q=e.touches?e.touches[0]:e;
+    return { x:(q.clientX-b.left)*(cv.width/b.width), y:(q.clientY-b.top)*(cv.height/b.height) }; }
+  function st(e){ e.preventDefault(); drawing=true; var q=pos(e); ctx.beginPath(); ctx.moveTo(q.x,q.y); }
+  function mv(e){ if(!drawing) return; e.preventDefault(); var q=pos(e); ctx.lineTo(q.x,q.y); ctx.stroke(); has=true; }
+  function en(){ drawing=false; }
+  cv.addEventListener('mousedown',st); cv.addEventListener('mousemove',mv); window.addEventListener('mouseup',en);
+  cv.addEventListener('touchstart',st,{passive:false}); cv.addEventListener('touchmove',mv,{passive:false}); cv.addEventListener('touchend',en);
+
+  function close(){ if(ov.parentNode) ov.parentNode.removeChild(ov); }
+  clr.addEventListener('click', reset);
+  cancel.addEventListener('click', close);
+  ov.addEventListener('click', function(e){ if(e.target === ov) close(); });
+
+  save.addEventListener('click', function(){
+    if(!has){ alert('กรุณาวาดลายเซ็นในกรอบก่อนกดยืนยัน'); return; }
+    var url = cv.toDataURL('image/png');
+    save.disabled = true; cancel.disabled = true; clr.disabled = true;
+    save.textContent = 'กำลังบันทึก...';
+    google.script.run.withSuccessHandler(function(){
+      close(); loadHistory(); loadHours();
+    }).withFailureHandler(function(e){
+      save.disabled = false; cancel.disabled = false; clr.disabled = false;
+      save.textContent = 'ยืนยันลายเซ็น';
+      alert('บันทึกลายเซ็นไม่สำเร็จ: ' + (e && e.message ? e.message : e));
+    }).saveGameSignature(gameId, url);
+  });
+}
+
+/* ---------- ตารางอันดับ ---------- */
+function fillMonths(list){
+  var s = $('#lbMonth'); s.innerHTML='';
+  list.forEach(function(m){ var o=document.createElement('option'); o.value=m.key; o.textContent=m.label; s.appendChild(o); });
+  loadLeaderboard();
+}
+
+function loadLeaderboard(){
+  var m = $('#lbMonth').value;
+  $('#lbBox').innerHTML = '<div class="center"><div class="spin"></div>กำลังโหลด...</div>';
+  google.script.run.withSuccessHandler(renderLb).withFailureHandler(function(){
+    $('#lbBox').innerHTML = '<div class="center">โหลดอันดับไม่สำเร็จ</div>';
+  }).getGameLeaderboard(m);
+}
+
+function renderLb(d){
+  var box = $('#lbBox');
+  $('#lbSub').textContent = '5 อันดับแรกประจำ' + d.monthLabel + ' · ผู้ร่วมเล่น ' + d.totalPlayers + ' คน';
+  if(!d.top.length){
+    box.innerHTML = '<div class="center" style="padding:26px">ยังไม่มีใครเล่นในเดือนนี้<br><b style="color:var(--violet)">เป็นคนแรกของแผนกเลยไหม</b></div>';
+    return;
+  }
+  var ol = el('ol','lb');
+  d.top.forEach(function(p){
+    var li = el('li', p.isMe ? 'me' : null);
+    li.appendChild(el('span','rk'+(p.rank<=3?' m'+p.rank:''),String(p.rank)));
+    var w = el('div');
+    w.appendChild(el('span','nm', p.name + (p.isMe?' (คุณ)':'')));
+    w.appendChild(el('span','dpt', (p.dept||'-') + ' · เล่น ' + p.plays + ' ครั้ง'));
+    li.appendChild(w);
+    li.appendChild(el('span','sc num',String(p.score)));
+    ol.appendChild(li);
+  });
+  box.innerHTML=''; box.appendChild(ol);
+  var mine = el('p','mine');
+  if(d.me){
+    mine.innerHTML = 'อันดับของคุณเดือนนี้ <b>ที่ ' + d.me.rank + '</b> จาก ' + d.totalPlayers + ' คน · คะแนนดีที่สุด <b>' + d.me.score + '</b> แต้ม';
+  } else {
+    mine.innerHTML = 'คุณยังไม่ได้เล่นในเดือนนี้ <b>เริ่มเล่นเพื่อติดอันดับ</b>';
+  }
+  box.appendChild(mine);
+}
+
+/* ---------- ชั่วโมงการเรียนรู้ ---------- */
+function loadHours(){
+  google.script.run.withSuccessHandler(function(h){
+    $('#hoursNum').textContent = h.totalHours;
+    $('#hrBig').textContent = h.totalHours + ' ชม.';
+    $('#hrBrk').innerHTML = 'บทเรียนที่สอบผ่าน ' + h.courseCount + ' บท = ' + h.courseHours + ' ชม.<br>' +
+                            'เกม KPI ที่ผ่าน ' + h.gamePassCount + ' ครั้ง = ' + h.gameHours + ' ชม.';
+  }).withFailureHandler(function(){
+    $('#hrBrk').textContent = 'ยังไม่มีข้อมูลชั่วโมงการเรียนรู้';
+  }).getMyLearningHours();
+}
+
+/* ---------- ประวัติการเล่น ---------- */
+function loadHistory(){
+  google.script.run.withSuccessHandler(function(rows){
+    var box = $('#histBox');
+    if(!rows.length){ box.innerHTML = '<div class="center">ยังไม่มีประวัติการเล่น</div>'; return; }
+    var h = '<div class="tablewrap"><table><thead><tr><th>วันที่</th><th>ข้อมูลเดือน</th><th>คะแนน</th><th>ผล</th><th>ชม.</th><th>ลายเซ็น</th></tr></thead><tbody>';
+    rows.forEach(function(r){
+      h += '<tr><td>'+esc(r.date)+'</td><td>'+esc(r.kpiMonth)+'</td>' +
+           '<td>'+r.score+' ('+r.correct+'/'+r.total+')</td>' +
+           '<td class="'+(r.pass?'tp':'tf')+'">'+(r.pass?'ผ่าน':'ไม่ผ่าน')+'</td>' +
+           '<td>'+(r.learnHours ? r.learnHours : '-')+'</td>' +
+           '<td>'+(r.hasSignature
+              ? '<img class="sigthumb" src="'+r.signatureDataUrl+'" onclick="window.open(this.src,\'_blank\')" alt="ลายเซ็น">'
+              : (r.pass
+                  ? '<button type="button" class="btn ghost siglate" onclick="signLate(\''+r.gameId+'\',\''+esc(r.kpiMonth)+'\')">เซ็นย้อนหลัง</button>'
+                  : '<span style="color:var(--ink-3)">-</span>'))+'</td></tr>';
+    });
+    box.innerHTML = h + '</tbody></table></div>';
+  }).withFailureHandler(function(){
+    $('#histBox').innerHTML = '<div class="center">โหลดประวัติไม่สำเร็จ</div>';
+  }).getMyGameHistory();
+}
+
+/* ---------- confetti ---------- */
+function confetti(){
+  var box = el('div','confetti');
+  var cols = ['#E9538A','#7466DE','#D98B0B','#0E9B72','#2196C9'];
+  for(var i=0;i<45;i++){
+    var p = el('i','cf');
+    p.style.left = (Math.random()*100)+'%';
+    p.style.top = (-14-Math.random()*80)+'px';
+    p.style.background = cols[i%cols.length];
+    p.style.animationDuration = (1.8+Math.random()*1.6)+'s';
+    p.style.animationDelay = (Math.random()*.5)+'s';
+    box.appendChild(p);
+  }
+  document.body.appendChild(box);
+  setTimeout(function(){ box.remove(); }, 4000);
+}
+</script>
+</body>
+</html>

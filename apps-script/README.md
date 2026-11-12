@@ -3,7 +3,8 @@
 โฟลเดอร์นี้เก็บสำเนาโค้ดของระบบจริงที่ `index.html` เด้งไปหา (`script.google.com/macros/s/.../exec`)
 เพื่อให้มีสำรองและประวัติการแก้ไขใน GitHub
 
-> ไฟล์ที่มีตอนนี้: Code.gs, Code_TopDx.gs, Code_EKG.gs, Code_KpiGame.gs, AdminShift.html (ยังขาด appsscript.json และไฟล์ HTML อื่นของระบบ เช่น index, ekg_reading, KpiGame ถ้ามี)
+> ไฟล์ที่มี: Code.gs, Code_TopDx.gs, Code_EKG.gs, Code_KpiGame.gs, Push.gs และหน้า HTML (index, AdminShift, ekg_reading, cpr_trainer, KpiGame) · ยังขาด appsscript.json (เปิดดูได้ที่ Project Settings > Show manifest)
+> หมายเหตุ: `apps-script/index.html` คือหน้าของ Apps Script ไม่ใช่ `index.html` หน้าตัวกลางที่รากรีโป
 
 ## ดึงโค้ดด้วย clasp (ทำครั้งแรก จากเครื่องของคุณ)
 1. ติดตั้ง Node.js แล้วรัน `npm i -g @google/clasp`
