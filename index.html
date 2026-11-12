@@ -52,6 +52,23 @@
     <div class="hint" id="hint"></div>
   </div>
 
+  <!-- ---------- หน้าจอติดตั้งแอปลงหน้าโฮม (แสดงเมื่อเปิดบนมือถือผ่านเบราว์เซอร์) ---------- -->
+  <div id="viewInstall" class="card hide">
+    <div class="bell">📲</div>
+    <h2>ติดตั้ง Med-LMS ลงหน้าโฮม</h2>
+    <div id="insIOS" class="hide">
+      <p style="text-align:left;max-width:none">1. กดปุ่มแชร์ <b>&#x2934;</b> ที่แถบล่างของ Safari<br>
+      2. เลื่อนลงแล้วเลือก <b>เพิ่มไปยังหน้าจอโหมด</b><br>
+      3. กด <b>เพิ่ม</b> แล้วเปิด Med-LMS จากไอคอนบนหน้าโฮม</p>
+      <p id="insIOSWarn" class="hide" style="margin-top:10px;color:#b45309;font-size:13px">ต้องเปิดลิงก์นี้ด้วย <b>Safari</b> เท่านั้น (ถ้าเปิดจาก LINE ให้กดเมนู แล้วเลือกเปิดใน Safari)</p>
+    </div>
+    <div id="insAnd" class="hide">
+      <p>กดปุ่มด้านล่างเพื่อติดตั้งแอปลงหน้าจอโฮม</p>
+      <button class="btn" id="btnInstall">ติดตั้งแอป</button>
+    </div>
+    <button class="btn ghost" id="btnSkipInstall">ข้ามไปเปิดระบบเลย</button>
+  </div>
+
   <!-- ---------- หน้าจอชวนเปิดการแจ้งเตือน (แสดงครั้งแรกครั้งเดียว) ---------- -->
   <div id="viewAsk" class="card hide">
     <div class="bell">🔔</div>
@@ -231,13 +248,6 @@ function go() {
 
 function startRedirect() {
   $('go').href = APP_URL;
-  /* โหมดติดตั้งไอคอน: เปิดด้วย ?install=1 จะไม่เด้งไป Apps Script เพื่อให้กดแชร์ > เพิ่มไปยังหน้าจอโฮมแล้วได้ไอคอนที่ถูกต้อง */
-  if (location.search.indexOf('install=1') !== -1) {
-    $('sp').style.display = 'none';
-    $('go').className = 'btn';
-    $('hint').textContent = 'โหมดติดตั้ง: กดแชร์ > เพิ่มไปยังหน้าจอโฮม จากนั้นเปิดจากไอคอนบนหน้าโฮม';
-    return;
-  }
   redirectTimer = setTimeout(go, 1800);
   setTimeout(function () {
     if (!redirectTimer) return;
@@ -252,7 +262,7 @@ function cancelRedirect() {
 }
 
 function show(which) {
-  ['viewLoad', 'viewAsk', 'viewSet', 'viewDbg'].forEach(function (v) {
+  ['viewLoad', 'viewAsk', 'viewSet', 'viewDbg', 'viewInstall'].forEach(function (v) {
     $(v).className = (v === which) ? (v === 'viewLoad' ? '' : 'card') : 'hide';
   });
   if (which === 'viewDbg') $('viewDbg').style.maxWidth = '520px';
@@ -435,6 +445,36 @@ function openSettings() {
 
   /* เปิดหน้าตั้งค่าโดยตรงด้วยลิงก์ ...?settings=1 */
   if (location.search.indexOf('settings=1') !== -1) { openSettings(); return; }
+
+  /* เปิดบนมือถือผ่านเบราว์เซอร์ (ยังไม่ได้ติดตั้ง) → แสดงหน้าติดตั้ง และหยุดไม่เด้งไป Apps Script
+     เพื่อให้ตอนกดแชร์ iPhone อ่านไอคอนจากหน้านี้ได้ถูกต้อง ลิงก์ ...?go=1 ข้ามหน้านี้ */
+  var skipIns = false;
+  try { skipIns = localStorage.getItem('ml_skipinstall') === '1'; } catch (e) {}
+  var isAndroid = /Android/i.test(navigator.userAgent);
+  if (!isStandalone && (isIOS || isAndroid) && !skipIns && location.search.indexOf('go=1') === -1) {
+    show('viewInstall');
+    $('gear').className = 'gear hide';
+    if (isIOS) {
+      $('insIOS').className = '';
+      if (isInAppBrowser || /CriOS|FxiOS|EdgiOS/.test(navigator.userAgent)) $('insIOSWarn').className = '';
+    } else {
+      $('insIOS').className = 'hide';
+      $('insAnd').className = '';
+      $('insAnd').querySelector('p').textContent = 'ถ้าไม่มีปุ่มติดตั้ง ให้กดเมนู ⋮ ของเบราว์เซอร์ แล้วเลือก "เพิ่มลงหน้าจอหลัก"';
+      $('btnInstall').className = 'btn hide';
+      window.addEventListener('beforeinstallprompt', function (e) {
+        e.preventDefault();
+        $('insAnd').querySelector('p').textContent = 'กดปุ่มด้านล่างเพื่อติดตั้งแอปลงหน้าจอโฮม';
+        $('btnInstall').className = 'btn';
+        $('btnInstall').onclick = function () { e.prompt(); };
+      });
+    }
+    $('btnSkipInstall').onclick = function () {
+      try { localStorage.setItem('ml_skipinstall', '1'); } catch (er) {}
+      show('viewLoad'); startOneSignal(); startRedirect();
+    };
+    return;
+  }
 
   var asked = false;
   try { asked = localStorage.getItem('ml_asked') === '1'; } catch (e) {}
