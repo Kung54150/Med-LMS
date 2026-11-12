@@ -3,7 +3,7 @@
 โฟลเดอร์นี้เก็บสำเนาโค้ดของระบบจริงที่ `index.html` เด้งไปหา (`script.google.com/macros/s/.../exec`)
 เพื่อให้มีสำรองและประวัติการแก้ไขใน GitHub
 
-> ตอนนี้โฟลเดอร์ยังว่าง รอดึงโค้ดจาก Apps Script มาใส่ตามขั้นตอนด้านล่าง
+> ไฟล์ที่มีตอนนี้: Code.gs, Code_TopDx.gs, Code_EKG.gs, Code_KpiGame.gs, AdminShift.html (ยังขาด appsscript.json และไฟล์ HTML อื่นของระบบ เช่น index, ekg_reading, KpiGame ถ้ามี)
 
 ## ดึงโค้ดด้วย clasp (ทำครั้งแรก จากเครื่องของคุณ)
 1. ติดตั้ง Node.js แล้วรัน `npm i -g @google/clasp`
