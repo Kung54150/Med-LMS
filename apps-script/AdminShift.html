@@ -1,0 +1,1659 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ตั้งค่าเวรหยุด (หัวหน้าแผนก)</title>
+  <style>
+    :root{
+      --teal:#0e7c86; --teal-dark:#075964; --teal-light:#e6f4f5;
+      --ink:#1f2d2f; --muted:#6b7c7e; --line:#dbe6e7; --bg:#f6faf9; --card:#ffffff; --red:#c0392b; --amber:#e07b1a;
+    }
+    *{box-sizing:border-box;}
+    body{margin:0;font-family:"Sarabun","Segoe UI",sans-serif;background:var(--bg);color:var(--ink);}
+    .wrap{max-width:920px;margin:0 auto;padding:16px 14px 50px;}
+    h1{font-size:19px;color:var(--teal-dark);margin:0 0 14px;}
+    .tabs{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap;}
+    .tab{padding:8px 14px;border-radius:20px;border:1px solid var(--line);background:var(--card);
+      font-size:13px;cursor:pointer;color:var(--muted);}
+    .tab.active{background:var(--teal);color:#fff;border-color:var(--teal);}
+    .panel{display:none;} .panel.active{display:block;}
+    .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:14px;}
+    .row{display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap;}
+    select,input{font-family:inherit;font-size:13px;padding:7px 9px;border:1px solid var(--line);border-radius:8px;}
+    button.action{background:var(--teal);color:#fff;border:none;border-radius:8px;padding:8px 14px;
+      font-size:13px;cursor:pointer;font-weight:600;}
+    button.action.secondary{background:var(--teal-light);color:var(--teal-dark);}
+    button.action.staged{background:var(--amber);color:#fff;}
+    button.action:disabled{background:#ccc;cursor:not-allowed;}
+    .pendingbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:#fff6ea;
+      border:1.5px solid var(--amber);border-radius:10px;padding:10px 12px;margin-top:10px;}
+    .pendingbar .pcount{font-size:13px;font-weight:700;color:var(--amber);}
+    .pending-set{color:var(--amber);font-weight:700;}
+    .pending-cancel{color:var(--red);font-weight:700;}
+    table{width:100%;border-collapse:collapse;font-size:12.5px;}
+    th,td{border:1px solid var(--line);padding:6px 7px;text-align:center;}
+    th{background:var(--teal-light);color:var(--teal-dark);font-weight:600;}
+    td input{width:52px;text-align:center;padding:5px;}
+    .pos-block{margin-bottom:18px;}
+    .pos-block h3{font-size:14px;margin:0 0 8px;color:var(--teal-dark);}
+    .hint{font-size:12px;color:var(--muted);margin-top:4px;}
+    .userTable td, .userTable th{text-align:left;}
+    .userTable select{width:100%;}
+    .toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--ink);color:#fff;
+      padding:10px 16px;border-radius:20px;font-size:13px;z-index:40;opacity:0;transition:opacity .25s;pointer-events:none;}
+    .toast.show{opacity:1;}
+    /* Pop-up แจ้งผลกลางจอ — ค้างไว้จนกว่าผู้ใช้จะกดตกลง */
+    .mdl-bg{position:fixed;inset:0;background:rgba(15,30,32,.45);display:none;
+      align-items:center;justify-content:center;z-index:200;padding:20px;}
+    .mdl-bg.show{display:flex;}
+    .mdl{background:#fff;border-radius:18px;padding:26px 28px 22px;max-width:430px;width:100%;
+      text-align:center;box-shadow:0 18px 50px rgba(7,89,100,.3);animation:mdlPop .18s ease-out;}
+    @keyframes mdlPop{from{transform:scale(.88);opacity:0}to{transform:scale(1);opacity:1}}
+    .mdl-icon{font-size:46px;line-height:1;margin-bottom:6px;}
+    .mdl-title{font-size:18px;font-weight:700;color:var(--teal-dark);margin-bottom:8px;}
+    .mdl-msg{font-size:14px;color:var(--ink);line-height:1.65;margin-bottom:20px;white-space:pre-wrap;}
+    .mdl-ok{border:none;background:var(--teal);color:#fff;font-family:inherit;font-size:15px;
+      font-weight:700;padding:11px 42px;border-radius:10px;cursor:pointer;min-width:150px;}
+    .mdl-ok:hover{background:var(--teal-dark);}
+    .mdl-ok:focus{outline:3px solid #9ed4d9;outline-offset:2px;}
+    .mdl.fail .mdl-title{color:var(--red);}
+    .mdl.fail .mdl-ok{background:var(--red);}
+    .mdl.fail .mdl-ok:hover{background:#a5301f;}
+    .denied{padding:40px;text-align:center;color:var(--red);}
+    .backbar{margin-bottom:12px;display:flex;gap:8px;flex-wrap:wrap;}
+    .backbar a,.backbar button.navbtn{display:inline-flex;align-items:center;gap:6px;font-size:14px;font-weight:700;
+      color:var(--teal-dark);text-decoration:none;background:var(--teal-light);
+      border:1.5px solid var(--teal);border-radius:10px;padding:9px 16px;cursor:pointer;font-family:inherit;}
+    .backbar a:hover,.backbar button.navbtn:hover{background:var(--teal);color:#fff;}
+    .schSummaryBox{position:fixed;right:14px;bottom:14px;width:250px;max-width:calc(100vw - 28px);
+      background:var(--card);border:1.5px solid var(--teal);border-radius:12px;box-shadow:0 4px 18px rgba(7,89,100,.18);
+      z-index:30;overflow:hidden;font-size:12px;}
+    .schSummaryBox .ssHead{display:flex;align-items:center;justify-content:space-between;gap:8px;
+      background:var(--teal);color:#fff;padding:8px 10px;cursor:pointer;font-weight:700;font-size:12.5px;}
+    .schSummaryBox .ssBody{max-height:52vh;overflow:auto;padding:6px 8px;}
+    .schSummaryBox.collapsed .ssBody{display:none;}
+    .schSummaryBox table{font-size:11.5px;}
+    .schSummaryBox th,.schSummaryBox td{padding:4px 5px;}
+    .schSummaryBox td.num,.schSummaryBox th.num{text-align:center;font-variant-numeric:tabular-nums;}
+    .schSummaryBox tr.ssLow td.num.cp{color:var(--red);font-weight:700;}
+    .schSummaryBox td.num.off.ssOffHigh{color:var(--amber);font-weight:700;}
+    .schSummaryBox td.num.hours{font-weight:700;color:#2e7d32;}
+    .schSummaryBox .ssHint{font-size:10.5px;color:var(--muted);padding:4px 2px 0;}
+    /* ปฏิทินเลือกเดือนแบบกำหนดเอง (แทน <input type="month"> เดิม ที่ต้องเลื่อนหาปีทีละปีในปฏิทินเบราว์เซอร์ ดูยาก) */
+    .monthpick{position:relative;display:inline-block;vertical-align:middle;}
+    .monthpick-btn{font-family:inherit;font-size:13px;font-weight:600;color:var(--ink);
+      background:#fff;border:1px solid var(--line);border-radius:8px;padding:7px 10px;
+      display:inline-flex;align-items:center;gap:8px;cursor:pointer;text-align:left;min-width:150px;}
+    .monthpick-btn:hover{border-color:var(--teal);}
+    .monthpick-btn .car{margin-left:auto;color:var(--muted);font-size:11px;transition:transform .15s;}
+    .monthpick.open .monthpick-btn .car{transform:rotate(180deg);}
+    .monthpick-pop{position:absolute;left:0;top:calc(100% + 6px);background:#fff;width:230px;
+      border:1px solid var(--line);border-radius:14px;box-shadow:0 10px 28px rgba(15,30,32,.16);
+      padding:12px;z-index:35;display:none;}
+    .monthpick-pop.show{display:block;}
+    .mp-yearrow{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+    .mp-yearrow button{border:none;background:var(--teal-light);color:var(--teal-dark);width:30px;height:30px;
+      border-radius:8px;font-size:15px;cursor:pointer;}
+    .mp-yearrow .mp-ylabel{font-weight:700;font-size:14px;color:var(--teal-dark);}
+    .mp-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;}
+    .mp-month{border:1px solid var(--line);background:var(--bg);border-radius:9px;padding:9px 0;
+      font-size:13px;font-family:inherit;cursor:pointer;color:var(--ink);}
+    .mp-month:hover{border-color:var(--teal);}
+    .mp-month.today-mo{border-color:var(--teal);color:var(--teal-dark);font-weight:700;}
+    .mp-month.active{background:var(--teal);color:#fff;border-color:var(--teal);font-weight:700;}
+  </style>
+</head>
+<body>
+
+  <div class="wrap" id="appRoot">
+    <div class="backbar">
+      <a href="<?!= ScriptApp.getService().getUrl() ?>">🏠 กลับหน้าหลัก (Med-LMS)</a>
+      <button type="button" class="navbtn" onclick="goShiftRequest()">📅 ขอเวรหยุดของฉัน</button>
+    </div>
+    <h1>⚙️ ตั้งค่าระบบขอเวรหยุด</h1>
+    <div class="tabs">
+      <div class="tab active" data-tab="quota" onclick="switchTab('quota')">โควต้าต่อวัน</div>
+      <div class="tab" data-tab="adhoc" onclick="switchTab('adhoc')">🔧 โควต้าเฉพาะกิจ</div>
+      <div class="tab" data-tab="users" onclick="switchTab('users')">ตำแหน่ง/ระดับพนักงาน</div>
+      <div class="tab" data-tab="export" onclick="switchTab('export')">ส่งออกคำขอทั้งเดือน</div>
+      <div class="tab" data-tab="manage" onclick="switchTab('manage')">แก้ไขคำขอแทนพนักงาน</div>
+      <div class="tab" data-tab="pattern" onclick="switchTab('pattern')">Pattern อัตรากำลัง</div>
+      <div class="tab" data-tab="schedule" onclick="switchTab('schedule')">สร้าง/ตรวจตารางเวร</div>
+    </div>
+
+    <!-- QUOTA PANEL -->
+    <div class="panel active" id="panel-quota">
+      <div class="card">
+        <div class="row">
+          <label>เดือน:</label>
+          <input type="month" id="quotaMonth">
+          <button class="action secondary" onclick="loadQuota()">Refresh</button>
+          <button class="action secondary" onclick="copyPrev()">คัดลอกจากเดือนก่อนหน้า</button>
+          <button class="action" onclick="saveQuota()">บันทึกโควต้าเดือนนี้</button>
+        </div>
+        <div class="hint" id="quotaHint"></div>
+      </div>
+      <div id="quotaTables">กำลังโหลด...</div>
+    </div>
+    <!-- ADHOC PANEL: โควต้าเฉพาะกิจรายวัน -->
+    <div class="panel" id="panel-adhoc">
+      <div class="card">
+        <div class="row">
+          <label>เดือน:</label>
+          <input type="month" id="adhocMonth">
+          <button class="action secondary" onclick="loadAdhoc()">Refresh</button>
+        </div>
+        <div class="hint">ใช้เมื่อมีเหตุเฉพาะกิจ เช่น วันตรวจ HA, วันประชุมใหญ่, ช่วงที่คนไม่พอ — ตั้งไว้แล้วจะ<b>ทับโควต้าประจำเฉพาะวันนั้น</b> วันอื่นไม่กระทบ</div>
+      </div>
+
+      <div class="card">
+        <h3 style="font-size:14px;margin:0 0 12px;color:var(--teal-dark);">➕ ตั้งค่าใหม่</h3>
+
+        <div class="row">
+          <label>วันที่:</label>
+          <input type="date" id="adhocFrom">
+          <span>ถึง</span>
+          <input type="date" id="adhocTo">
+          <span class="hint" style="margin:0;">(เว้นช่องหลังว่างไว้ = วันเดียว)</span>
+        </div>
+
+        <div class="row">
+          <label>กลุ่มที่ต้องการ:</label>
+          <label style="font-weight:400;"><input type="checkbox" class="adhocGrp" value="RN" checked> RN</label>
+          <label style="font-weight:400;"><input type="checkbox" class="adhocGrp" value="PNNA" checked> PN/NA</label>
+          <label style="font-weight:400;"><input type="checkbox" class="adhocGrp" value="HEAD" checked> หัวหน้าแผนก</label>
+        </div>
+
+        <div class="row" style="align-items:flex-end;">
+          <div><div class="hint" style="margin:0 0 3px;">Off</div><input type="number" min="0" id="adhocOff" style="width:62px;" placeholder="—"></div>
+          <div><div class="hint" style="margin:0 0 3px;">เวรสั้น</div><input type="number" min="0" id="adhocShort" style="width:62px;" placeholder="—"></div>
+          <div><div class="hint" style="margin:0 0 3px;">CP</div><input type="number" min="0" id="adhocCP" style="width:62px;" placeholder="—"></div>
+          <div><div class="hint" style="margin:0 0 3px;">สาย</div><input type="number" min="0" id="adhocLate" style="width:62px;" placeholder="—"></div>
+          <div><div class="hint" style="margin:0 0 3px;">แผนกอื่น</div><input type="number" min="0" id="adhocER" style="width:62px;" placeholder="—"></div>
+          <button type="button" class="action secondary" onclick="adhocFillZero()">ใส่ 0 ทุกช่อง (ปิดรับทั้งวัน)</button>
+          <button type="button" class="action secondary" onclick="adhocClearForm()">ล้างฟอร์ม</button>
+        </div>
+        <div class="hint">ช่องที่<b>เว้นว่าง</b> = ใช้โควต้าประจำตามเดิม · ใส่ <b>0</b> = วันนั้นขอประเภทนั้นไม่ได้เลย</div>
+
+        <div class="row" style="margin-top:10px;">
+          <label>หมายเหตุ:</label>
+          <input type="text" id="adhocNote" style="flex:1;min-width:220px;" placeholder="เช่น ตรวจ HA ทั้งโรงพยาบาล (พนักงานจะเห็นข้อความนี้)">
+          <button class="action" onclick="saveAdhoc()">บันทึกโควต้าเฉพาะกิจ</button>
+        </div>
+      </div>
+
+      <div id="adhocList">กำลังโหลด...</div>
+    </div>
+
+
+    <!-- USERS PANEL -->
+    <div class="panel" id="panel-users">
+      <div class="card">
+        <div class="row">
+          <button class="action secondary" onclick="loadUsers()">โหลดรายชื่อพนักงาน</button>
+        </div>
+        <table class="userTable" id="usersTable"><tbody></tbody></table>
+        <div class="hint">แก้ตำแหน่ง/ระดับแล้วระบบบันทึกทันทีเมื่อเปลี่ยนค่าในช่อง</div>
+      </div>
+    </div>
+
+    <!-- EXPORT PANEL -->
+    <div class="panel" id="panel-export">
+      <div class="card">
+        <div class="row">
+          <label>เดือน:</label>
+          <input type="month" id="exportMonth">
+          <button class="action" onclick="doExport()">ดึงรายการคำขอทั้งเดือน</button>
+          <button class="action secondary" id="downloadBtn" style="display:none" onclick="downloadCsv()">ดาวน์โหลด CSV</button>
+        </div>
+        <div id="exportResult"></div>
+      </div>
+    </div>
+
+    <!-- MANAGE PANEL: admin เพิ่ม/แก้ไข/ยกเลิกคำขอแทนพนักงาน -->
+    <div class="panel" id="panel-manage">
+      <div class="card">
+        <div class="row">
+          <label>พนักงาน:</label>
+          <select id="mgEmployee" style="min-width:230px;"><option value="">กำลังโหลดรายชื่อ...</option></select>
+          <label>เดือน:</label>
+          <input type="month" id="mgMonth">
+          <button class="action secondary" onclick="loadManage()">Refresh</button>
+        </div>
+        <div class="hint" id="mgHint">เลือกพนักงานและเดือน แล้วกด "Refresh" — คลิกปุ่มจัดการในตารางเพื่อ "เลือกไว้" ก่อน (ปุ่มจะเปลี่ยนเป็นสีส้ม) เลือกได้หลายวันพร้อมกัน แล้วค่อยกด "บันทึกการเปลี่ยนแปลงทั้งหมด" ครั้งเดียวตอนเลือกครบ ระบบนี้ไม่ติดล็อกเดดไลน์ แก้ไขได้แม้เลยกำหนดของพนักงานแล้ว — ถ้าวันไหนโควต้าประเภทนั้นเต็มแล้ว (ตัวเลขจะขึ้นสีแดง) ปุ่มของประเภทนั้นจะกดไม่ได้ ต้องไปยกเลิกคำขอของคนอื่นในวันนั้นให้ไม่เต็มก่อนถึงจะเลือกให้พนักงานคนนี้ได้</div>
+        <div id="mgPendingBar"></div>
+      </div>
+      <div id="mgTableWrap"></div>
+    </div>
+
+    <!-- PATTERN PANEL: ตั้งค่ากรอบอัตรากำลังประจำวัน (ต่อเดือน) -->
+    <div class="panel" id="panel-pattern">
+      <div class="card">
+        <div class="row">
+          <label>กลุ่ม:</label>
+          <select id="patGroup" onchange="loadPattern()">
+            <option value="RN">RN</option>
+            <option value="PNNA">PN/NA (รวมกัน)</option>
+          </select>
+          <label>เดือน:</label>
+          <input type="month" id="patMonth">
+          <button class="action secondary" onclick="loadPattern()">Refresh</button>
+          <button class="action secondary" onclick="copyPatternPrev()">คัดลอกจากเดือนก่อนหน้า</button>
+          <button class="action" onclick="savePattern()">บันทึก Pattern เดือนนี้</button>
+        </div>
+        <div class="hint">แต่ละแถว = เวลาเข้า-ออกของพนักงาน 1 คนในวันนั้น เช่น "คนที่ 1: 7.00–17.00" — ถ้ามีคนอื่นทำเวลาเดียวกันอีก ให้กดปุ่ม "+ เพิ่มคน" แล้วกรอกช่วงเวลาเดิมซ้ำได้เลย (นับเป็นคนละแถว/คนละคน) แก้ไขได้ทุกเดือน เพราะจำนวนคนแต่ละเดือนไม่เท่ากัน ใช้รูปแบบเวลาแบบ "7.00" หรือ "7:00" ก็ได้</div>
+        <div class="hint">เฉพาะกลุ่ม RN — ท้ายแต่ละวันมีช่อง "ต้องมีคนขึ้น CP อย่างน้อย ___ คน" ถ้ากรอกไว้มากกว่า 0 ตัวสร้างตารางร่างจะจัดคนไป CP ให้ครบตามจำนวนนี้อัตโนมัติ (เอาคนที่ขอ CP เองมาก่อน แล้วเลือกคนที่ขึ้นเวรสะสมน้อยที่สุดมาเติมให้ครบ พร้อมแจ้งเตือนให้ตรวจสอบ) ถ้าเว้นว่างหรือใส่ 0 ไว้ ระบบจะยึดตามคำขอ CP ของพนักงานเองเหมือนเดิม (แค่เตือนถ้าวันนั้นไม่มีใครขอ CP เลย) — ควรตั้งเลขนี้ให้สอดคล้องกับ "CPSlots" (เพดานจำนวนคนขอ CP ได้) ในแท็บโควต้าต่อวันด้วย ไม่ให้ขัดกันเอง</div>
+      </div>
+      <div id="patternBlocks">กำลังโหลด...</div>
+
+      <div class="card">
+        <h3 style="font-size:14px;margin:0 0 10px;color:var(--teal-dark);">วันหยุดนักขัตฤกษ์ของเดือนนี้</h3>
+        <div id="holidayRows"></div>
+        <button type="button" class="action secondary" style="margin-top:6px;" onclick="addHolidayRow()">+ เพิ่มวันหยุด</button>
+        <button type="button" class="action" style="margin-top:6px;" onclick="saveHolidays()">บันทึกวันหยุดนักขัตฤกษ์</button>
+        <div class="hint">วันที่ตั้งไว้ตรงนี้ ตัวสร้างตารางร่างจะใช้ Pattern แบบวันอาทิตย์ในการคำนวณของวันนั้น (ปรับจำนวนคนเองได้ในตารางร่างถ้าไม่ตรงกับความเป็นจริง)</div>
+      </div>
+
+      <div class="card">
+        <h3 style="font-size:14px;margin:0 0 10px;color:var(--teal-dark);">ชั่วโมงบังคับของเดือนนี้</h3>
+        <div class="row">
+          <label>RN:</label><input type="number" id="mhRN" min="0" style="width:70px;">
+          <label>PN:</label><input type="number" id="mhPN" min="0" style="width:70px;">
+          <label>NA:</label><input type="number" id="mhNA" min="0" style="width:70px;">
+          <button class="action" onclick="saveMandatoryHours()">บันทึก</button>
+        </div>
+        <div class="hint">เก็บไว้ใช้คำนวณชั่วโมงรวม/OT ในเฟสถัดไป ตอนนี้ตัวสร้างตารางร่างยังไม่ได้ใช้ตัวเลขนี้คำนวณอัตโนมัติ</div>
+      </div>
+    </div>
+
+    <!-- SCHEDULE PANEL: สร้างตารางร่างจากคำขอ + Pattern แล้วให้ Admin ตรวจ/แก้ก่อนบันทึกจริง -->
+    <div class="panel" id="panel-schedule">
+      <div class="card">
+        <div class="row">
+          <label>กลุ่ม:</label>
+          <select id="schGroup" onchange="schAutoLoadKey=''; schAutoLoadSaved_();">
+            <option value="RN">RN (รวมหัวหน้าแผนก)</option>
+            <option value="PNNA">PN/NA (รวมกัน)</option>
+          </select>
+          <label>เดือน:</label>
+          <input type="month" id="schMonth">
+          <button class="action" onclick="generateSchedule()">สร้างตารางร่าง</button>
+          <button class="action secondary" onclick="loadSavedSchedule()">โหลดตารางที่บันทึกไว้</button>
+          <button class="action secondary" id="schSaveBtn" style="display:none;" onclick="saveSchedule()">บันทึกตารางเวรนี้</button>
+          <button class="action secondary" id="schCsvBtn" style="display:none;" onclick="downloadScheduleCsv()">ดาวน์โหลด CSV</button>
+          <button class="action secondary" id="schGridBtn" style="display:none;" onclick="exportScheduleGrid()">เปิดตาราง Excel (พนักงาน x วันที่)</button>
+        </div>
+        <div class="hint">สร้างจากคำขอที่อนุมัติแล้ว + Pattern อัตรากำลังของเดือนนี้ — เป็นแค่ "ร่าง" อัตโนมัติ ยังไม่ครอบคลุมทุกกติกา (เช่น การเกลี่ยชั่วโมงรวมแบบละเอียด) กรุณาตรวจสอบทุกจุดที่ระบบแจ้งเตือน และสลับคนในช่อง dropdown ได้ตามต้องการ ก่อนกด "บันทึกตารางเวรนี้"</div>
+        <div class="hint">ปุ่ม "เปิดตาราง Excel (พนักงาน x วันที่)" จะสร้างชีตใหม่ในสเปรดชีตนี้ รูปแบบแถว=รายชื่อพนักงาน (2 แถวย่อยต่อคน บน=เวลาเข้า ล่าง=เวลาออก) คอลัมน์=วันที่ 1 ถึงสิ้นเดือน เหมือนฟอร์แมตตารางเวรเดิมของ รพ. — เปิดแล้วไปที่เมนู File &gt; Download &gt; Microsoft Excel (.xlsx) เพื่อได้ไฟล์ Excel ได้เลย (สร้างจากข้อมูลล่าสุดที่เห็นบนจอ ไม่ต้องกดบันทึกตารางเวรก่อนก็ได้)</div>
+      </div>
+      <div id="schTableWrap"></div>
+      <div id="schAlerts"></div>
+    </div>
+  </div>
+
+  <div class="schSummaryBox" id="schSummaryBox" style="display:none;">
+    <div class="ssHead" onclick="document.getElementById('schSummaryBox').classList.toggle('collapsed')">
+      <span>📊 สรุปเวรสะสม (ร่างนี้)</span><span>▾</span>
+    </div>
+    <div class="ssBody" id="schSummaryBody"></div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+  <div class="mdl-bg" id="mdlBg" onclick="if(event.target===this) closeMdl()">
+    <div class="mdl" id="mdlBox">
+      <div class="mdl-icon" id="mdlIcon">✅</div>
+      <div class="mdl-title" id="mdlTitle">สำเร็จ</div>
+      <div class="mdl-msg" id="mdlMsg"></div>
+      <button class="mdl-ok" id="mdlOk" onclick="closeMdl()">ตกลง</button>
+    </div>
+  </div>
+
+
+<script>
+  // ===== เชื่อมสลับไปหน้า "ขอเวรหยุดของฉัน" โดยไม่ต้องกลับหน้าหลักก่อน (ใช้ URL เดิม + ?page=...) =====
+  var SHIFT_BASE_URL = '<?!= ScriptApp.getService().getUrl() ?>';
+  function goShiftRequest(){ window.top.location.href = SHIFT_BASE_URL + '?page=shiftrequest'; }
+
+  // โควต้าตั้งเป็น "กลุ่ม": RN แยกของตัวเอง, PN กับ NA นับรวมกัน, หัวหน้าแผนกแยกโควต้าของตัวเองอีกกลุ่ม (ไม่ปนกับ RN ปกติ)
+  const QUOTA_GROUPS = [{key:'RN', label:'RN'}, {key:'PNNA', label:'PN/NA (รวมกัน)'}, {key:'HEAD', label:'หัวหน้าแผนก'}];
+  const WD_TH = ['อา','จ','อ','พ','พฤ','ศ','ส'];
+  let lastExportRows = [];
+  let lastExportNotes = [];
+
+  function pad2(n){ return String(n).padStart(2,'0'); }
+  function thisMonthStr(){ const d=new Date(); return d.getFullYear()+'-'+pad2(d.getMonth()+1); }
+
+  // ===== ปฏิทินเลือกเดือนแบบกำหนดเอง (แทน <input type="month"> เดิมทุกช่องในหน้านี้) =====
+  // ใช้แทนปฏิทินเบราว์เซอร์มาตรฐานที่ต้องเลื่อนหาปีทีละปี — ปีอยู่บนสุดพร้อมลูกศรซ้าย-ขวา และเดือนทั้ง 12 เป็นกริดด้านล่าง
+  // ไม่กระทบโค้ดเดิมที่อ่าน/เขียน document.getElementById(id).value เลย เพราะ input เดิมยังอยู่ (แค่ซ่อนเป็น type=hidden)
+  const MP_TH_MONTHS_SHORT = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+  const MP_STATE = {}; // fieldId -> { viewYear }
+  function mpEnhance(fieldId){
+    const orig = document.getElementById(fieldId);
+    if(!orig || orig.dataset.mpDone) return;
+    orig.dataset.mpDone = '1';
+    const initVal = orig.value || thisMonthStr();
+    const html = '<span class="monthpick" id="'+fieldId+'_wrap">'
+      + '<button type="button" class="monthpick-btn" id="'+fieldId+'_btn">📅 <span id="'+fieldId+'_label">เลือกเดือน</span><span class="car">▾</span></button>'
+      + '<div class="monthpick-pop" id="'+fieldId+'_pop">'
+      +   '<div class="mp-yearrow">'
+      +     '<button type="button" onclick="mpChangeYear(\''+fieldId+'\',-1)">‹</button>'
+      +     '<div class="mp-ylabel" id="'+fieldId+'_ylabel">-</div>'
+      +     '<button type="button" onclick="mpChangeYear(\''+fieldId+'\',1)">›</button>'
+      +   '</div>'
+      +   '<div class="mp-grid" id="'+fieldId+'_grid"></div>'
+      + '</div>'
+      + '</span>';
+    orig.insertAdjacentHTML('afterend', html);
+    orig.type = 'hidden';
+    orig.value = initVal;
+    document.getElementById(fieldId+'_btn').addEventListener('click', function(e){ e.stopPropagation(); mpToggle(fieldId); });
+    MP_STATE[fieldId] = { viewYear: Number(initVal.split('-')[0]) };
+    mpUpdateLabel(fieldId);
+  }
+  function mpUpdateLabel(fieldId){
+    const v = document.getElementById(fieldId).value;
+    const [y,m] = v.split('-').map(Number);
+    document.getElementById(fieldId+'_label').textContent = MP_TH_MONTHS_SHORT[m-1]+' '+y;
+  }
+  function mpToggle(fieldId){
+    const wrap = document.getElementById(fieldId+'_wrap');
+    if(wrap.classList.contains('open')){ mpCloseAll(); return; }
+    mpCloseAll();
+    const v = document.getElementById(fieldId).value;
+    MP_STATE[fieldId].viewYear = Number(v.split('-')[0]) || new Date().getFullYear();
+    mpRenderGrid(fieldId);
+    wrap.classList.add('open');
+    document.getElementById(fieldId+'_pop').classList.add('show');
+  }
+  function mpCloseAll(){
+    document.querySelectorAll('.monthpick.open').forEach(w=>{
+      w.classList.remove('open');
+      const pop = w.querySelector('.monthpick-pop'); if(pop) pop.classList.remove('show');
+    });
+  }
+  function mpChangeYear(fieldId, delta){
+    MP_STATE[fieldId].viewYear += delta;
+    mpRenderGrid(fieldId);
+  }
+  function mpRenderGrid(fieldId){
+    const st = MP_STATE[fieldId];
+    document.getElementById(fieldId+'_ylabel').textContent = st.viewYear;
+    const grid = document.getElementById(fieldId+'_grid');
+    grid.innerHTML = '';
+    const curVal = document.getElementById(fieldId).value;
+    const [curY, curM] = curVal.split('-').map(Number);
+    const now = new Date();
+    MP_TH_MONTHS_SHORT.forEach((label, idx)=>{
+      const mo = idx+1;
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      let cls = 'mp-month';
+      if(st.viewYear===curY && mo===curM) cls += ' active';
+      else if(st.viewYear===now.getFullYear() && mo===(now.getMonth()+1)) cls += ' today-mo';
+      btn.className = cls;
+      btn.textContent = label;
+      btn.onclick = ()=> mpSelectMonth(fieldId, st.viewYear, mo);
+      grid.appendChild(btn);
+    });
+  }
+  function mpSelectMonth(fieldId, y, m){
+    document.getElementById(fieldId).value = y+'-'+pad2(m);
+    mpUpdateLabel(fieldId);
+    mpCloseAll();
+  }
+  document.addEventListener('click', function(e){
+    const openWrap = document.querySelector('.monthpick.open');
+    if(openWrap && !openWrap.contains(e.target)) mpCloseAll();
+  });
+
+  function showToast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2600); }
+  // Pop-up แจ้งผลกลางจอ — ค้างไว้จนกว่าจะกดตกลง / กด Esc / คลิกนอกกล่อง
+  // showDone('ข้อความ')        → สีเขียว หัวข้อ "สำเร็จ"
+  // showDone('ข้อความ', false) → สีแดง  หัวข้อ "ไม่สำเร็จ"
+  function showDone(msg, ok){
+    const isOk = (ok !== false);
+    document.getElementById('mdlBox').className = 'mdl' + (isOk ? '' : ' fail');
+    document.getElementById('mdlIcon').textContent = isOk ? '✅' : '⚠️';
+    document.getElementById('mdlTitle').textContent = isOk ? 'สำเร็จ' : 'ไม่สำเร็จ';
+    document.getElementById('mdlMsg').textContent = msg || '';
+    document.getElementById('mdlBg').classList.add('show');
+    setTimeout(function(){ try{ document.getElementById('mdlOk').focus(); }catch(e){} }, 30);
+  }
+  function closeMdl(){ document.getElementById('mdlBg').classList.remove('show'); }
+  document.addEventListener('keydown', function(e){
+    if(e.key === 'Escape'){ closeMdl(); }
+  });
+
+  function escHtml(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+  let schAutoLoadKey = '';
+  function switchTab(name){
+    document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active', t.dataset.tab===name));
+    document.querySelectorAll('.panel').forEach(p=>p.classList.toggle('active', p.id==='panel-'+name));
+    if(name === 'schedule') schAutoLoadSaved_();
+  }
+
+  // เข้าแท็บตารางเวรเมื่อไหร่ ถ้าเคยบันทึกไว้จะโหลดของเดิมขึ้นมาให้เลย
+  // ผู้ใช้จึงไม่ต้องกด "สร้างตารางร่าง" ซึ่งจะทับงานที่แก้ไว้
+  function schAutoLoadSaved_(){
+    const month = document.getElementById('schMonth').value;
+    const group = document.getElementById('schGroup').value;
+    if(!month) return;
+    const key = month + '|' + group;
+    if(schAutoLoadKey === key) return;  // โหลดไปแล้ว ไม่ต้องซ้ำ
+    schAutoLoadKey = key;
+    loadSavedSchedule();
+  }
+
+  // ---------- QUOTA ----------
+  function loadQuota(){
+    const month = document.getElementById('quotaMonth').value;
+    if(!month){ showToast('กรุณาเลือกเดือน'); return; }
+    document.getElementById('quotaTables').innerHTML = 'กำลังโหลด...';
+    google.script.run.withSuccessHandler(renderQuota).withFailureHandler(onErr).Shift_getQuotaSettings(month);
+  }
+  function renderQuota(res){
+    if(!res.ok){ document.getElementById('quotaTables').innerHTML = res.message||'เกิดข้อผิดพลาด'; return; }
+    document.getElementById('quotaHint').textContent = res.hasData ? 'มีการตั้งค่าของเดือนนี้อยู่แล้ว' : 'เดือนนี้ยังไม่มีการตั้งค่า — กรอกใหม่หรือกด "คัดลอกจากเดือนก่อนหน้า"';
+    const container = document.getElementById('quotaTables');
+    container.innerHTML = '';
+    QUOTA_GROUPS.forEach(g=>{
+      const block = document.createElement('div'); block.className='pos-block';
+      block.innerHTML = '<h3>'+g.label+'</h3>';
+      const table = document.createElement('table');
+      const showCP = (g.key==='RN' || g.key==='HEAD');
+      const showER = (g.key==='PNNA');
+      let thead = '<tr><th>วัน</th>'+WD_TH.map(w=>'<th>'+w+'</th>').join('')+'</tr>';
+      let rowMax = '<tr><td>Max Off (X)</td>';
+      let rowShort = '<tr><td>เวรสั้น</td>';
+      let rowCP = '<tr><td>ขึ้น CP</td>';
+      let rowER = '<tr><td>แผนกอื่น</td>';
+      let rowLate = '<tr><td>สาย</td>';
+      for(let wd=0; wd<7; wd++){
+        const r = res.rows.find(x=>x.position===g.key && x.weekday===wd) || {maxOff:0, shortSlots:1, cpSlots:0, lateSlots:0, erSlots:0};
+        rowMax += '<td><input type="number" min="0" data-pos="'+g.key+'" data-wd="'+wd+'" data-field="maxOff" value="'+r.maxOff+'"></td>';
+        rowShort += '<td><input type="number" min="0" data-pos="'+g.key+'" data-wd="'+wd+'" data-field="shortSlots" value="'+r.shortSlots+'"></td>';
+        if(showCP) rowCP += '<td><input type="number" min="0" data-pos="'+g.key+'" data-wd="'+wd+'" data-field="cpSlots" value="'+(r.cpSlots||0)+'"></td>';
+        if(showER) rowER += '<td><input type="number" min="0" data-pos="'+g.key+'" data-wd="'+wd+'" data-field="erSlots" value="'+(r.erSlots||0)+'"></td>';
+        rowLate += '<td><input type="number" min="0" data-pos="'+g.key+'" data-wd="'+wd+'" data-field="lateSlots" value="'+(r.lateSlots||0)+'"></td>';
+      }
+      rowMax += '</tr>'; rowShort += '</tr>'; rowCP += '</tr>'; rowER += '</tr>'; rowLate += '</tr>';
+      table.innerHTML = thead + rowMax + rowShort + (showCP ? rowCP : '') + (showER ? rowER : '') + rowLate;
+      block.appendChild(table);
+      if(showCP){
+        const note = document.createElement('div'); note.className='hint';
+        note.textContent = 'ขึ้น CP: จำนวนคนสูงสุดที่ขอไปขึ้นเวร CP ได้ต่อวัน (เปิดให้เฉพาะ RN และหัวหน้าแผนก, ไม่กระทบโควต้า Max Off/เวรสั้น)';
+        block.appendChild(note);
+      }
+      if(showER){
+        const noteER = document.createElement('div'); noteER.className='hint';
+        noteER.textContent = 'แผนกอื่น: จำนวนคนสูงสุดที่ขอไปช่วยแผนกอื่นได้ต่อวัน (เปิดให้เฉพาะ PN/NA) — ⚠ คำขอแผนกอื่น 1 คน จะกินโควต้า Max Off (X) ไป 1 ที่ด้วย เพราะคนที่ไปได้ต้องเป็นคนที่หยุดจาก OPD1';
+        block.appendChild(noteER);
+      }
+      const noteLate = document.createElement('div'); noteLate.className='hint';
+      noteLate.textContent = 'สาย: จำนวนคนสูงสุดที่ขอขึ้นเวรเข้างานสายที่สุดได้ต่อวัน (เปิดทุกตำแหน่ง ไม่กระทบโควต้า Max Off/เวรสั้น/CP/ER)';
+      block.appendChild(noteLate);
+      if(g.key==='HEAD'){
+        const noteHead = document.createElement('div'); noteHead.className='hint';
+        noteHead.textContent = 'หัวหน้าแผนก: โควต้าแยกต่างหาก ไม่ปนกับโควต้า RN ทั่วไป และคำขอของหัวหน้าแผนกจะไม่แสดงให้พนักงานตำแหน่งอื่นเห็นในหน้าขอเวรหยุด';
+        block.appendChild(noteHead);
+      }
+      container.appendChild(block);
+    });
+  }
+  function copyPrev(){
+    const month = document.getElementById('quotaMonth').value;
+    if(!month){ showToast('กรุณาเลือกเดือน'); return; }
+    google.script.run.withSuccessHandler(res=>{
+      if(!res.ok){ showToast(res.message); return; }
+            showDone('คัดลอกค่าจากเดือน ' + res.copiedFrom + ' มาเรียบร้อยแล้ว\n\nระบบบันทึกให้อัตโนมัติแล้ว ไม่ต้องกดบันทึกซ้ำ');
+      loadQuota();
+    }).withFailureHandler(onErr).Shift_copyQuotaFromPreviousMonth(month);
+  }
+  function saveQuota(){
+    const month = document.getElementById('quotaMonth').value;
+    if(!month){ showToast('กรุณาเลือกเดือน'); return; }
+    const rows = [];
+    document.querySelectorAll('#quotaTables input').forEach(inp=>{
+      const pos = inp.dataset.pos, wd = Number(inp.dataset.wd), field = inp.dataset.field;
+      let row = rows.find(r=>r.position===pos && r.weekday===wd);
+      if(!row){ row = {position:pos, weekday:wd, maxOff:0, shortSlots:0, cpSlots:0, lateSlots:0, erSlots:0}; rows.push(row); }
+      row[field] = Number(inp.value)||0;
+    });
+    google.script.run.withSuccessHandler(res=>{
+            showDone(res.ok ? 'บันทึกโควต้าของเดือนนี้เรียบร้อยแล้ว' : (res.message||'บันทึกไม่สำเร็จ'), res.ok);
+    }).withFailureHandler(onErr).Shift_saveQuotaSettings(month, rows);
+  }
+
+  // ---------- USERS ----------
+  function loadUsers(){
+    document.querySelector('#usersTable tbody').innerHTML = '<tr><td>กำลังโหลด...</td></tr>';
+    google.script.run.withSuccessHandler(renderUsers).withFailureHandler(onErr).Shift_getAllUsersPosition();
+  }
+  function renderUsers(res){
+    if(!res.ok){ document.querySelector('#usersTable tbody').innerHTML = '<tr><td>'+(res.message||'เกิดข้อผิดพลาด')+'</td></tr>'; return; }
+    const thead = '<tr><th>ชื่อ</th><th>อีเมล</th><th>แผนก</th><th>ตำแหน่ง</th><th>ระดับ</th><th>รหัสพนักงาน</th></tr>';
+    let body = '';
+    res.users.forEach(u=>{
+      body += '<tr>'
+        + '<td>'+u.name+'</td>'
+        + '<td>'+u.email+'</td>'
+        + '<td>'+u.department+'</td>'
+        + '<td><select onchange="updateUser(\''+u.email+'\',this)">'
+            + ['','RN','PN','NA','หัวหน้าแผนก'].map(p=>'<option value="'+p+'"'+(p===u.position?' selected':'')+'>'+(p||'-')+'</option>').join('')
+          + '</select></td>'
+        + '<td><select onchange="updateUser(\''+u.email+'\',this)">'
+            + ['','Junior','Senior'].map(l=>'<option value="'+l+'"'+(l===u.level?' selected':'')+'>'+(l||'-')+'</option>').join('')
+          + '</select></td>'
+        + '<td><input type="text" style="width:90px;" value="'+escHtml(u.code||'')+'" placeholder="เช่น 54150" onchange="updateUser(\''+u.email+'\',this)"></td>'
+        + '</tr>';
+    });
+    document.querySelector('#usersTable tbody').innerHTML = thead + body;
+  }
+  function updateUser(email, changedEl){
+    const row = changedEl.closest('tr');
+    const position = row.children[3].querySelector('select').value;
+    const level = row.children[4].querySelector('select').value;
+    const code = row.children[5].querySelector('input').value.trim();
+    google.script.run.withSuccessHandler(res=>{
+      showToast(res.ok ? 'บันทึกแล้ว: '+email : (res.message||'บันทึกไม่สำเร็จ'));
+    }).withFailureHandler(onErr).Shift_updateUserPosition(email, position, level, code);
+  }
+
+  // ---------- EXPORT ----------
+  function doExport(){
+    const month = document.getElementById('exportMonth').value;
+    if(!month){ showToast('กรุณาเลือกเดือน'); return; }
+    document.getElementById('exportResult').innerHTML = 'กำลังโหลด...';
+    google.script.run.withSuccessHandler(res=>{
+      if(!res.ok){ document.getElementById('exportResult').innerHTML = res.message||'เกิดข้อผิดพลาด'; return; }
+      lastExportRows = res.rows;
+      lastExportNotes = res.notes || [];
+      if(res.rows.length===0 && lastExportNotes.length===0){
+        document.getElementById('exportResult').innerHTML = 'ไม่มีคำขอ/หมายเหตุในเดือนนี้';
+        document.getElementById('downloadBtn').style.display='none';
+        return;
+      }
+      let html = '';
+      if(res.rows.length){
+        html += '<table><tr><th>วันที่</th><th>วัน</th><th>ตำแหน่ง</th><th>ระดับ</th><th>ชื่อ</th><th>อีเมล</th><th>ประเภท</th><th>เวลาที่ขอ</th></tr>';
+        res.rows.forEach(r=>{
+          const reqTime = r.requestedAt ? new Date(r.requestedAt).toLocaleString('th-TH') : '-';
+          html += '<tr><td>'+escHtml(r.date)+'</td><td>'+escHtml(r.weekday)+'</td><td>'+escHtml(r.position)+'</td><td>'+escHtml(r.level)+'</td><td>'+escHtml(r.name)+'</td><td>'+escHtml(r.email)+'</td><td>'+escHtml(r.type)+'</td><td style="white-space:nowrap;">'+reqTime+'</td></tr>';
+        });
+        html += '</table>';
+      } else {
+        html += '<div class="hint">ไม่มีคำขอเวรหยุดในเดือนนี้</div>';
+      }
+      if(lastExportNotes.length){
+        html += '<h3 style="margin:16px 0 8px;font-size:14px;color:var(--teal-dark);">📝 หมายเหตุจากพนักงาน ('+lastExportNotes.length+' คน)</h3>';
+        html += '<table><tr><th>ชื่อ</th><th>ตำแหน่ง</th><th>อีเมล</th><th>หมายเหตุ</th></tr>';
+        lastExportNotes.forEach(n=>{
+          html += '<tr><td>'+escHtml(n.name)+'</td><td>'+escHtml(n.position)+'</td><td>'+escHtml(n.email)+'</td><td style="text-align:left;white-space:pre-wrap;">'+escHtml(n.note)+'</td></tr>';
+        });
+        html += '</table>';
+      }
+      document.getElementById('exportResult').innerHTML = html;
+      document.getElementById('downloadBtn').style.display='inline-block';
+    }).withFailureHandler(onErr).Shift_exportMonthlyRequests(month);
+  }
+  function downloadCsv(){
+    if(!lastExportRows.length && !lastExportNotes.length) return;
+    const headers = ['วันที่','วัน','ตำแหน่ง','ระดับ','ชื่อ','อีเมล','ประเภท','เวลาที่ขอ'];
+    let csv = '\uFEFF' + headers.join(',') + '\n';
+    lastExportRows.forEach(r=>{
+      const reqTime = r.requestedAt ? new Date(r.requestedAt).toLocaleString('th-TH') : '-';
+      csv += [r.date,r.weekday,r.position,r.level,r.name,r.email,r.type,reqTime].map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',') + '\n';
+    });
+    if(lastExportNotes.length){
+      csv += '\n' + ['หมายเหตุจากพนักงาน'].map(v=>'"'+v+'"').join(',') + '\n';
+      csv += ['ชื่อ','ตำแหน่ง','อีเมล','หมายเหตุ'].join(',') + '\n';
+      lastExportNotes.forEach(n=>{
+        csv += [n.name,n.position,n.email,n.note].map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',') + '\n';
+      });
+    }
+    const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'off_requests_'+document.getElementById('exportMonth').value+'.csv';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  }
+
+  function onErr(err){ showToast('เกิดข้อผิดพลาด: '+(err.message||err)); }
+
+  // ---------- MANAGE (admin เพิ่ม/แก้ไข/ยกเลิกคำขอแทนพนักงาน) ----------
+  function loadManageEmployees(){
+    google.script.run.withSuccessHandler(function(res){
+      const sel = document.getElementById('mgEmployee');
+      if(!res.ok){ sel.innerHTML = '<option value="">'+(res.message||'โหลดรายชื่อไม่สำเร็จ')+'</option>'; return; }
+      const withPos = res.users.filter(u=>u.position);
+      sel.innerHTML = '<option value="">— เลือกพนักงาน —</option>' + withPos
+        .map(u=>'<option value="'+u.email+'">'+u.name+' ('+u.position+(u.level?(' '+u.level):'')+')</option>').join('');
+      if(!withPos.length) sel.innerHTML = '<option value="">— ยังไม่มีพนักงานที่ตั้งตำแหน่งไว้ —</option>';
+    }).withFailureHandler(onErr).Shift_admin_getEmployees();
+  }
+  const MG_TYPE_LABEL = { Off:'หยุด (R)', ShortShift:'เวรสั้น', CP:'ขึ้น CP', Late:'สาย', ER:'แผนกอื่น (R*)' };
+  let mgRes = null;           // ผลลัพธ์ล่าสุดจากเซิร์ฟเวอร์ (สถานะ/โควต้าปัจจุบัน)
+  let pendingChanges = {};    // { 'YYYY-MM-DD': {action:'set', type:'Off'} } หรือ { action:'cancel' } — ยังไม่ได้บันทึกจนกว่าจะกด "บันทึกการเปลี่ยนแปลงทั้งหมด"
+
+  function gsCall(fnName, args){
+    return new Promise((resolve, reject)=>{
+      google.script.run
+        .withSuccessHandler(function(v){ console.log('[gsCall] success fn='+fnName+' value=', v); resolve(v); })
+        .withFailureHandler(function(e){ console.log('[gsCall] FAILURE fn='+fnName+' error=', e); reject(e); })
+        [fnName].apply(null, args||[]);
+    });
+  }
+
+  async function loadManage(){
+    const email = document.getElementById('mgEmployee').value;
+    const month = document.getElementById('mgMonth').value;
+    if(!email){ showToast('กรุณาเลือกพนักงาน'); return; }
+    if(!month){ showToast('กรุณาเลือกเดือน'); return; }
+    const pendingCount = Object.keys(pendingChanges).length;
+    if(pendingCount && !confirm('คุณมีการเปลี่ยนแปลงที่ยังไม่บันทึก '+pendingCount+' รายการ ต้องการละทิ้งและโหลดใหม่หรือไม่?')) return;
+    pendingChanges = {};
+    document.getElementById('mgTableWrap').innerHTML = 'กำลังโหลด...';
+    document.getElementById('mgPendingBar').innerHTML = '';
+    try{
+      const res = await gsCall('Shift_admin_getEmployeeMonth', [email, month]);
+      if(!res.ok){ document.getElementById('mgTableWrap').innerHTML = res.message||'เกิดข้อผิดพลาด'; return; }
+      mgRes = res;
+      document.getElementById('mgHint').textContent = res.employee.name+' · '+res.employee.department+' · ตำแหน่ง '+res.employee.position
+        + (res.employee.level?(' ('+res.employee.level+')'):'')
+        + (res.isLocked ? ' — ⚠ เดือนนี้เลยเดดไลน์ของพนักงานแล้ว แต่ Admin ยังแก้ไขแทนได้ตามปกติ' : '');
+      renderManageTable();
+    } catch(err){ onErr(err); }
+  }
+
+  function renderManageTable(){
+    const res = mgRes;
+    if(!res) return;
+    const canCP = !!res.canCP;
+    const canER = !!res.canER;
+    let html = '<table><tr><th>วันที่</th><th>วัน</th><th>สถานะปัจจุบัน</th><th>โควต้า Off</th><th>โควต้าเวรสั้น</th>'
+      + (canCP ? '<th>โควต้า CP</th>' : '') + (canER ? '<th>โควต้าแผนกอื่น</th>' : '') + '<th>โควต้าสาย</th><th>ที่จะบันทึก</th><th>จัดการ</th></tr>';
+    res.days.forEach(d=>{
+      const cur = d.current ? '<b>'+MG_TYPE_LABEL[d.current]+'</b>' : '<span style="color:var(--muted)">-</span>';
+      const pending = pendingChanges[d.date];
+      let pendingCell = '<span style="color:var(--muted)">-</span>';
+      if(pending){
+        pendingCell = pending.action==='cancel'
+          ? '<span class="pending-cancel">จะยกเลิก</span>'
+          : '<span class="pending-set">จะตั้งเป็น '+MG_TYPE_LABEL[pending.type]+'</span>';
+      }
+      const isOffStaged = !!(pending && pending.action==='set' && pending.type==='Off');
+      const isShortStaged = !!(pending && pending.action==='set' && pending.type==='ShortShift');
+      const isCPStaged = !!(pending && pending.action==='set' && pending.type==='CP');
+      const isERStaged = !!(pending && pending.action==='set' && pending.type==='ER');
+      const isLateStaged = !!(pending && pending.action==='set' && pending.type==='Late');
+      const isCancelStaged = !!(pending && pending.action==='cancel');
+      const canCancel = !!(d.current || (pending && pending.action==='set'));
+      // โควต้าเต็มหรือยัง — ไม่นับ "ที่ของตัวเอง" ถ้าตอนนี้พนักงานคนนี้ถือประเภทนั้นอยู่แล้ว (จะได้ไม่บล็อกตัวเอง)
+      // offCount จากเซิร์ฟเวอร์รวมคำขอแผนกอื่นไว้แล้ว (ใช้โควต้าเดียวกัน)
+      // ถ้าพนักงานคนนี้ถืออยู่ ไม่ว่าเป็น Off หรือแผนกอื่น ต้องหักที่ของตัวเองออกทั้งคู่
+      const offEff = d.offCount - ((d.current==='Off' || d.current==='ER') ? 1 : 0);
+      const shortEff = d.shortCount - (d.current==='ShortShift' ? 1 : 0);
+      const cpEff = d.cpCount - (d.current==='CP' ? 1 : 0);
+      const erEff = d.erCount - (d.current==='ER' ? 1 : 0);
+      const lateEff = d.lateCount - (d.current==='Late' ? 1 : 0);
+      const offFull = offEff >= d.maxOff;
+      const shortFull = shortEff >= d.shortSlots;
+      const cpFull = canCP && (cpEff >= d.cpSlots);
+      const erFull = canER && ((erEff >= d.erSlots) || (offEff >= d.maxOff));
+      const lateFull = lateEff >= d.lateSlots;
+      const fullTip = 'title="โควต้าเต็มแล้ว — ต้องยกเลิกคำขอของคนอื่นในวันนี้ก่อนถึงจะเลือกได้"';
+      html += '<tr>'
+        + '<td>'+d.date+'</td><td>'+WD_TH[d.weekday]+'</td><td>'+cur+'</td>'
+        + '<td'+(offFull?' style="color:var(--red);font-weight:600;"':'')+'>'+d.offCount+'/'+d.maxOff+'</td>'
+        + '<td'+(shortFull?' style="color:var(--red);font-weight:600;"':'')+'>'+d.shortCount+'/'+d.shortSlots+'</td>'
+        + (canCP ? '<td'+(cpFull?' style="color:var(--red);font-weight:600;"':'')+'>'+d.cpCount+'/'+d.cpSlots+'</td>' : '')
+        + (canER ? '<td'+(erFull?' style="color:var(--red);font-weight:600;"':'')+'>'+d.erCount+'/'+d.erSlots+'</td>' : '')
+        + '<td'+(lateFull?' style="color:var(--red);font-weight:600;"':'')+'>'+d.lateCount+'/'+d.lateSlots+'</td>'
+        + '<td>'+pendingCell+'</td>'
+        + '<td style="white-space:nowrap;">'
+        +   '<button class="action '+(isOffStaged?'staged':'secondary')+'" style="padding:4px 8px;font-size:11.5px;" '+((offFull&&!isOffStaged)?('disabled '+fullTip):'')+' onclick="stageSet(\''+d.date+'\',\'Off\')">ตั้ง Off</button> '
+        +   '<button class="action '+(isShortStaged?'staged':'secondary')+'" style="padding:4px 8px;font-size:11.5px;" '+((shortFull&&!isShortStaged)?('disabled '+fullTip):'')+' onclick="stageSet(\''+d.date+'\',\'ShortShift\')">ตั้งเวรสั้น</button> '
+        +   (canCP ? '<button class="action '+(isCPStaged?'staged':'secondary')+'" style="padding:4px 8px;font-size:11.5px;" '+((cpFull&&!isCPStaged)?('disabled '+fullTip):'')+' onclick="stageSet(\''+d.date+'\',\'CP\')">ตั้ง CP</button> ' : '')
+        +   (canER ? '<button class="action '+(isERStaged?'staged':'secondary')+'" style="padding:4px 8px;font-size:11.5px;" '+((erFull&&!isERStaged)?('disabled '+fullTip):'')+' onclick="stageSet(\''+d.date+'\',\'ER\')">ตั้งแผนกอื่น</button> ' : '')
+        +   '<button class="action '+(isLateStaged?'staged':'secondary')+'" style="padding:4px 8px;font-size:11.5px;" '+((lateFull&&!isLateStaged)?('disabled '+fullTip):'')+' onclick="stageSet(\''+d.date+'\',\'Late\')">ตั้งสาย</button> '
+        +   '<button class="action '+(isCancelStaged?'staged':'secondary')+'" style="padding:4px 8px;font-size:11.5px;" onclick="stageCancel(\''+d.date+'\')" '+(canCancel?'':'disabled')+'>ยกเลิก</button>'
+        + '</td></tr>';
+    });
+    html += '</table>';
+    document.getElementById('mgTableWrap').innerHTML = html;
+    updatePendingBar();
+  }
+
+  // คลิกปุ่ม "ตั้ง Off/เวรสั้น/CP" แค่ "เลือกไว้" ในเครื่อง (ปุ่มเปลี่ยนเป็นสีส้ม) ยังไม่บันทึกลงระบบจนกว่าจะกด "บันทึกการเปลี่ยนแปลงทั้งหมด"
+  function stageSet(dateStr, type){
+    const d = mgRes.days.find(x=>x.date===dateStr);
+    if(!d) return;
+    const pending = pendingChanges[dateStr];
+    const alreadyStagedSame = pending && pending.action==='set' && pending.type===type;
+    const alreadyCurrentSame = !pending && d.current === type;
+    if(alreadyStagedSame || alreadyCurrentSame){
+      delete pendingChanges[dateStr]; // คลิกซ้ำ = ยกเลิกการเลือก
+    } else {
+      pendingChanges[dateStr] = {action:'set', type: type};
+    }
+    renderManageTable();
+  }
+  function stageCancel(dateStr){
+    const d = mgRes.days.find(x=>x.date===dateStr);
+    if(!d) return;
+    const pending = pendingChanges[dateStr];
+    if(pending && pending.action==='cancel'){
+      delete pendingChanges[dateStr]; // คลิกซ้ำ = ยกเลิกการเลือก
+    } else if(pending && pending.action==='set'){
+      delete pendingChanges[dateStr]; // มีแค่ตั้งค่าที่ยังไม่บันทึก — เอาออกจากคิวพอ ไม่ต้องยิงยกเลิกไปเซิร์ฟเวอร์
+    } else if(d.current){
+      pendingChanges[dateStr] = {action:'cancel'};
+    }
+    renderManageTable();
+  }
+
+  function updatePendingBar(){
+    const bar = document.getElementById('mgPendingBar');
+    const n = Object.keys(pendingChanges).length;
+    if(!n){ bar.innerHTML = ''; bar.classList.remove('pendingbar'); return; }
+    bar.classList.add('pendingbar');
+    bar.innerHTML = '<span class="pcount">🟠 มีการเปลี่ยนแปลงที่ยังไม่บันทึก '+n+' รายการ</span>'
+      + '<button class="action" onclick="saveAllPending()">บันทึกการเปลี่ยนแปลงทั้งหมด</button>'
+      + '<button class="action secondary" onclick="discardPending()">ล้างการเลือกทั้งหมด</button>';
+  }
+
+  function discardPending(){
+    if(!Object.keys(pendingChanges).length) return;
+    if(!confirm('ยกเลิกรายการที่ยังไม่บันทึกทั้งหมด (ปุ่มที่เลือกสีส้มไว้) ใช่หรือไม่?')) return;
+    pendingChanges = {};
+    renderManageTable();
+  }
+
+  async function saveAllPending(){
+    const email = document.getElementById('mgEmployee').value;
+    const month = document.getElementById('mgMonth').value;
+    const dates = Object.keys(pendingChanges);
+    if(!dates.length) return;
+    const bar = document.getElementById('mgPendingBar');
+    bar.innerHTML = '<span class="pcount">กำลังบันทึก...</span>';
+    let ok = 0, fail = 0;
+    for(const dateStr of dates){
+      const change = pendingChanges[dateStr];
+      try{
+        let res;
+        if(change.action === 'cancel'){
+          res = await gsCall('Shift_admin_cancelRequest', [email, dateStr]);
+        } else {
+          res = await gsCall('Shift_admin_setRequest', [email, dateStr, change.type, false]);
+          if(res && !res.ok && res.alarm){
+            if(confirm(res.message)){
+              res = await gsCall('Shift_admin_setRequest', [email, dateStr, change.type, true]);
+            }
+          }
+        }
+        if(res && res.ok){ ok++; delete pendingChanges[dateStr]; } else { fail++; }
+      } catch(err){ fail++; }
+    }
+    // โหลดสถานะ/โควต้าล่าสุดจากเซิร์ฟเวอร์มาแสดง แต่ไม่ล้างรายการที่ยังบันทึกไม่สำเร็จ (ถ้ามี) ให้ยังค้างไว้ให้ลองใหม่ได้
+    try{
+      const res2 = await gsCall('Shift_admin_getEmployeeMonth', [email, month]);
+      if(res2.ok) mgRes = res2;
+    } catch(err){ /* เงียบไว้ ไม่บล็อกการแสดงผล */ }
+    renderManageTable();
+    showToast('บันทึกสำเร็จ '+ok+' รายการ' + (fail ? (' · ยังไม่สำเร็จ '+fail+' รายการ (ยังเลือกค้างไว้ ลองกดบันทึกอีกครั้ง)') : ''));
+  }
+
+  // ---------- PATTERN อัตรากำลัง (ตั้งค่าต่อเดือน ต่อกลุ่ม) ----------
+  const WEEKDAY_FULL = ['อาทิตย์','จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์'];
+  let patternData = null;
+  let patternCPData = null; // จำนวน CP ที่ต้องมีต่อวัน (ตั้งได้เฉพาะกลุ่ม RN)
+
+  async function loadPattern(){
+    const month = document.getElementById('patMonth').value;
+    const group = document.getElementById('patGroup').value;
+    if(!month){ showToast('กรุณาเลือกเดือน'); return; }
+    document.getElementById('patternBlocks').innerHTML = 'กำลังโหลด...';
+    try{
+      // หมายเหตุ: เรียกฟังก์ชัน "...JSON" ที่ฝั่งเซิร์ฟเวอร์คืนค่าเป็น string (ไม่ใช่ object ตรงๆ) แล้ว JSON.parse เองที่นี่
+      // เพราะ google.script.run มีบั๊กที่ยืนยันแล้ว: เรียกฟังก์ชันเดิมที่คืน object/array ซับซ้อนเป็นครั้งที่ 2 ขึ้นไป
+      // ในหน้าเดียวกัน (เช่น เปลี่ยนเดือนแล้วโหลดใหม่) success handler จะได้ null แทนค่าจริง ทั้งที่ server คืนค่าถูกต้อง
+      const patternRaw = await gsCall('Shift_getPatternSettingsJSON', [month, group]);
+      try{ patternData = patternRaw ? JSON.parse(patternRaw) : null; } catch(parseErr){ patternData = null; }
+      if(!patternData || !patternData.ok){
+        const raw = (function(){ try{ return JSON.stringify(patternData); } catch(e){ return String(patternData); } })();
+        document.getElementById('patternBlocks').innerHTML = ((patternData && patternData.message) || 'โหลด Pattern ไม่สำเร็จ')
+          + '<div class="hint" style="margin-top:6px;">[debug] typeof=' + typeof patternData + ' raw=' + escHtml(raw) + '</div>';
+        return;
+      }
+      // ช่อง CP ต่อวันเป็นฟีเจอร์เสริม — ถ้าโหลดพลาด (เช่น ยังไม่ได้ deploy ฟังก์ชันนี้) ไม่ให้ทั้งหน้าเด้ง error แค่ปล่อยให้ช่อง CP ว่างไว้ก่อน
+      try{
+        if(group === 'RN'){
+          const cpRaw = await gsCall('Shift_getPatternCPSettingsJSON', [month, group]);
+          patternCPData = cpRaw ? JSON.parse(cpRaw) : {ok:true, byKey:{}};
+        } else {
+          patternCPData = {ok:true, byKey:{}};
+        }
+        if(!patternCPData || !patternCPData.ok) patternCPData = {ok:true, byKey:{}};
+      } catch(cpErr){ patternCPData = {ok:true, byKey:{}}; }
+      renderPatternBlocks();
+    } catch(err){ onErr(err); }
+    loadHolidays();
+    loadMandatoryHours();
+  }
+  function renderPatternBlocks(){
+    const group = document.getElementById('patGroup').value;
+    const container = document.getElementById('patternBlocks');
+    container.innerHTML = '';
+    const entries = [];
+    for(let wd=0; wd<7; wd++){
+      if(group==='PNNA' && wd===1){
+        entries.push({wd:1, parity:'odd', label:'จันทร์ (สัปดาห์คี่ 1,3,5)'});
+        entries.push({wd:1, parity:'even', label:'จันทร์ (สัปดาห์คู่ 2,4)'});
+      } else {
+        entries.push({wd:wd, parity:'all', label:WEEKDAY_FULL[wd]});
+      }
+    }
+    entries.forEach(entry=>{
+      const key = entry.wd+':'+entry.parity;
+      const slots = (patternData.byKey && patternData.byKey[key]) || [];
+      // ขยายแถวเก่าที่อาจมี count>1 (จากช่วงที่เคยลองใช้ฟอร์แมตช่วงเวลา+จำนวนคน) กลับเป็น 1 แถว = 1 คนเสมอ เพื่อให้ตรงกับฟอร์มนี้
+      const perPerson = [];
+      slots.forEach(s=>{ const n = Math.max(1, Number(s.count)||1); for(let i=0;i<n;i++) perPerson.push({start:s.start, end:s.end}); });
+      const totalCount = perPerson.length;
+      const cpRequired = (group === 'RN' && patternCPData && patternCPData.byKey) ? (patternCPData.byKey[entry.wd+':all'] || 0) : 0;
+      const block = document.createElement('div');
+      block.className='card'; block.dataset.wd=entry.wd; block.dataset.parity=entry.parity;
+      block.innerHTML = '<div class="row" style="justify-content:space-between;margin-bottom:8px;">'
+        + '<b style="color:var(--teal-dark);">'+entry.label+'</b>'
+        + '<span class="hint" style="margin:0;" data-count>รวม '+totalCount+' คน</span></div>'
+        + '<div class="slotRows"></div>'
+        + '<button type="button" class="action secondary" style="padding:5px 10px;font-size:12px;" onclick="addSlotRow(this)">+ เพิ่มคน</button>'
+        + (group==='RN' ? ('<div class="row" style="margin-top:10px;gap:6px;border-top:1px solid #eee;padding-top:8px;">'
+            + '<label style="font-size:12.5px;color:var(--muted);">ต้องมีคนขึ้น CP อย่างน้อย</label>'
+            + '<input type="number" class="cpRequired" min="0" step="1" style="width:60px;" value="'+cpRequired+'">'
+            + '<span style="font-size:12.5px;color:var(--muted);">คน (0 = ไม่บังคับ ปล่อยตามคำขอเอง)</span></div>') : '');
+      const rowsWrap = block.querySelector('.slotRows');
+      if(perPerson.length){ perPerson.forEach(s=> rowsWrap.appendChild(buildSlotRow(s.start, s.end))); }
+      block.addEventListener('input', ()=>updateBlockCount(block));
+      container.appendChild(block);
+    });
+  }
+  function buildSlotRow(start, end){
+    const row = document.createElement('div');
+    row.className='row'; row.style.marginBottom='6px'; row.style.gap='6px';
+    row.innerHTML = '<input type="text" class="slotStart" placeholder="เช่น 7.00" style="width:90px;" value="'+escHtml(start||'')+'">'
+      + '<span>–</span>'
+      + '<input type="text" class="slotEnd" placeholder="เช่น 17.00" style="width:90px;" value="'+escHtml(end||'')+'">'
+      + '<button type="button" class="action secondary slotDelBtn" style="padding:4px 9px;font-size:11.5px;">ลบ</button>';
+    row.querySelector('.slotDelBtn').addEventListener('click', function(){
+      const block = row.closest('.card');
+      row.remove();
+      if(block) updateBlockCount(block);
+    });
+    return row;
+  }
+  function updateBlockCount(block){
+    let total = 0;
+    block.querySelectorAll('.slotRows .row').forEach(row=>{
+      const start = row.querySelector('.slotStart').value.trim();
+      const end = row.querySelector('.slotEnd').value.trim();
+      if(start && end) total += 1;
+    });
+    const badge = block.querySelector('[data-count]');
+    if(badge) badge.textContent = 'รวม '+total+' คน';
+  }
+  function addSlotRow(btn){
+    const block = btn.closest('.card');
+    block.querySelector('.slotRows').appendChild(buildSlotRow('',''));
+    updateBlockCount(block);
+  }
+  async function savePattern(){
+    const month = document.getElementById('patMonth').value;
+    const group = document.getElementById('patGroup').value;
+    if(!month){ showToast('กรุณาเลือกเดือน'); return; }
+    const weekdaySlots = [];
+    const weekdayRequired = [];
+    document.querySelectorAll('#patternBlocks .card').forEach(block=>{
+      const wd = Number(block.dataset.wd), parity = block.dataset.parity;
+      const slots = [];
+      block.querySelectorAll('.slotRows .row').forEach(row=>{
+        const start = row.querySelector('.slotStart').value.trim();
+        const end = row.querySelector('.slotEnd').value.trim();
+        if(start && end) slots.push({start:start, end:end, count:1});
+      });
+      weekdaySlots.push({weekday:wd, weekParity:parity, slots:slots});
+      const cpInput = block.querySelector('.cpRequired');
+      if(cpInput){ weekdayRequired.push({weekday:wd, weekParity:'all', required: Math.max(0, Number(cpInput.value)||0)}); }
+    });
+    try{
+      const res = await gsCall('Shift_savePatternSettings', [month, group, weekdaySlots]);
+      if(group === 'RN'){ await gsCall('Shift_savePatternCPSettings', [month, group, weekdayRequired]); }
+            showDone(res.ok ? 'บันทึก Pattern อัตรากำลังของเดือนนี้เรียบร้อยแล้ว' : (res.message||'บันทึกไม่สำเร็จ'), res.ok);
+    } catch(err){ onErr(err); }
+  }
+  async function copyPatternPrev(){
+    const month = document.getElementById('patMonth').value;
+    const group = document.getElementById('patGroup').value;
+    if(!month){ showToast('กรุณาเลือกเดือน'); return; }
+    try{
+      const res = await gsCall('Shift_copyPatternFromPreviousMonth', [month, group]);
+      if(!res.ok){ showToast(res.message); return; }
+      if(group === 'RN'){ await gsCall('Shift_copyPatternCPFromPreviousMonth', [month, group]); }
+            showDone('คัดลอกค่าจากเดือน ' + res.copiedFrom + ' มาเรียบร้อยแล้ว\n\nระบบบันทึกให้อัตโนมัติแล้ว ไม่ต้องกดบันทึกซ้ำ');
+      loadPattern();
+    } catch(err){ onErr(err); }
+  }
+
+  // ----- วันหยุดนักขัตฤกษ์ -----
+  function loadHolidays(){
+    const month = document.getElementById('patMonth').value;
+    if(!month) return;
+    google.script.run.withSuccessHandler(res=>{
+      const wrap = document.getElementById('holidayRows');
+      wrap.innerHTML = '';
+      if(res.ok) res.holidays.forEach(h=> wrap.appendChild(buildHolidayRow(h.date, h.label)));
+    }).withFailureHandler(onErr).Shift_getHolidays(month);
+  }
+  function buildHolidayRow(date, label){
+    const row = document.createElement('div');
+    row.className='row'; row.style.marginBottom='6px'; row.style.gap='6px';
+    row.innerHTML = '<input type="date" class="holDate" value="'+escHtml(date||'')+'">'
+      + '<input type="text" class="holLabel" placeholder="ชื่อวันหยุด" value="'+escHtml(label||'')+'" style="width:180px;">'
+      + '<button type="button" class="action secondary" style="padding:4px 9px;font-size:11.5px;" onclick="this.parentElement.remove()">ลบ</button>';
+    return row;
+  }
+  function addHolidayRow(){ document.getElementById('holidayRows').appendChild(buildHolidayRow('','')); }
+  function saveHolidays(){
+    const month = document.getElementById('patMonth').value;
+    if(!month){ showToast('กรุณาเลือกเดือน'); return; }
+    const holidays = [];
+    document.querySelectorAll('#holidayRows .row').forEach(row=>{
+      const date = row.querySelector('.holDate').value;
+      const label = row.querySelector('.holLabel').value.trim();
+      if(date) holidays.push({date:date, label:label});
+    });
+    google.script.run.withSuccessHandler(res=>{
+      showToast(res.ok ? 'บันทึกวันหยุดนักขัตฤกษ์เรียบร้อย' : (res.message||'บันทึกไม่สำเร็จ'));
+    }).withFailureHandler(onErr).Shift_saveHolidays(month, holidays);
+  }
+
+  // ----- ชั่วโมงบังคับ -----
+  function loadMandatoryHours(){
+    const month = document.getElementById('patMonth').value;
+    if(!month) return;
+    google.script.run.withSuccessHandler(res=>{
+      if(!res.ok) return;
+      document.getElementById('mhRN').value = res.hours.RN||0;
+      document.getElementById('mhPN').value = res.hours.PN||0;
+      document.getElementById('mhNA').value = res.hours.NA||0;
+    }).withFailureHandler(onErr).Shift_getMandatoryHours(month);
+  }
+  function saveMandatoryHours(){
+    const month = document.getElementById('patMonth').value;
+    if(!month){ showToast('กรุณาเลือกเดือน'); return; }
+    const hours = { RN:Number(document.getElementById('mhRN').value)||0, PN:Number(document.getElementById('mhPN').value)||0, NA:Number(document.getElementById('mhNA').value)||0 };
+    google.script.run.withSuccessHandler(res=>{
+      showToast(res.ok ? 'บันทึกชั่วโมงบังคับเรียบร้อย' : (res.message||'บันทึกไม่สำเร็จ'));
+    }).withFailureHandler(onErr).Shift_saveMandatoryHours(month, hours);
+  }
+
+  // ---------- สร้าง/ตรวจตารางเวร ----------
+  let schResult = null;
+  let schEmployees = [];
+  // เดือน/กลุ่มนี้เคยบันทึกลงชีตครบทั้งเดือนแล้วหรือยัง
+  // ถ้ายัง การแก้ครั้งแรกจะบันทึกทั้งเดือนให้ก่อน แล้วครั้งต่อ ๆ ไปค่อยบันทึกทีละวัน (เร็วกว่ามาก)
+  let schSavedWholeMonth = false;
+  const schSaveTimers = {};
+  const SCH_SENIOR_CODES = ['57084', '59007', '59031'];
+
+  function scheduleGroupMatches_(position, group){
+    // กลุ่ม RN ตอนนี้รวมหัวหน้าแผนกด้วย (ต้องตรงกับ Shift_scheduleGroupEmployees_ ฝั่งเซิร์ฟเวอร์ใน ShiftScheduleEngine.gs เป๊ะๆ
+    // ไม่งั้นดรอปดาวน์เลือกคนจะไม่มีตัวเลือกหัวหน้าแผนกให้จับคู่ค่าที่เซิร์ฟเวอร์จัดมาให้ได้ — จะโชว์ผิดเป็น "ว่าง" ทั้งที่จริงมีคนอยู่)
+    if(group==='RN') return position==='RN' || position==='หัวหน้าแผนก';
+    if(group==='HEAD') return position==='หัวหน้าแผนก';
+    return position==='PN' || position==='NA';
+  }
+  async function loadScheduleEmployees(group){
+    const res = await gsCall('Shift_admin_getEmployees', []);
+    schEmployees = (res.ok ? res.users : []).filter(u=>scheduleGroupMatches_(u.position, group));
+  }
+  function buildEmpSelectHtml(dateStr, slotIndex, selectedEmail){
+    let opts = '<option value="">— ว่าง —</option>';
+    schEmployees.forEach(u=>{
+      opts += '<option value="'+u.email+'"'+(u.email.toLowerCase()===String(selectedEmail||'').toLowerCase()?' selected':'')+'>'+escHtml(u.name)+'</option>';
+    });
+    return '<select class="schAssignSel" data-date="'+dateStr+'" data-slot="'+slotIndex+'" style="min-width:180px;">'+opts+'</select>';
+  }
+
+    async function generateSchedule(){
+    const month = document.getElementById('schMonth').value;
+    const group = document.getElementById('schGroup').value;
+    if(!month){ showToast('กรุณาเลือกเดือน'); return; }
+
+    // กันเผลอกดทับงานที่แก้ไว้แล้ว
+    try{
+      const saved = await gsCall('Shift_getSavedSchedule', [month, group]);
+      if(saved && saved.ok && saved.rows && saved.rows.length){
+        const ok = confirm('⚠️ เดือน/กลุ่มนี้มีตารางที่บันทึกไว้แล้ว ' + saved.rows.length + ' รายการ\n\n'
+          + 'กด "ตกลง" = สร้างร่างใหม่ทับของเดิม (การแก้ไขที่ทำไว้จะหายไป)\n\n'
+          + 'กด "ยกเลิก" = ไม่สร้างใหม่ แล้วกดปุ่ม "โหลดตารางที่บันทึกไว้" เพื่อทำงานต่อจากที่ค้างไว้');
+        if(!ok) return;
+      }
+    } catch(e){ /* เช็คไม่ได้ก็สร้างต่อตามปกติ */ }
+
+    document.getElementById('schTableWrap').innerHTML = 'กำลังสร้างตารางร่าง...';
+    document.getElementById('schAlerts').innerHTML = '';
+    document.getElementById('schSaveBtn').style.display = 'none';
+    document.getElementById('schCsvBtn').style.display = 'none';
+    document.getElementById('schGridBtn').style.display = 'none';
+    schResult = null; schSavedWholeMonth = false;
+    document.getElementById('schSummaryBox').style.display = 'none';
+    try{
+      await loadScheduleEmployees(group);
+      const res = await gsCall('Shift_generateDraftSchedule', [month, group]);
+      if(!res.ok){ document.getElementById('schTableWrap').innerHTML = res.message||'เกิดข้อผิดพลาด'; return; }
+      schResult = res;
+      renderScheduleResult();
+    } catch(err){ onErr(err); }
+  }
+
+  async function loadSavedSchedule(){
+    const month = document.getElementById('schMonth').value;
+    const group = document.getElementById('schGroup').value;
+    if(!month){ showToast('กรุณาเลือกเดือน'); return; }
+    document.getElementById('schTableWrap').innerHTML = 'กำลังโหลด...';
+    document.getElementById('schAlerts').innerHTML = '';
+    document.getElementById('schSaveBtn').style.display = 'none';
+    document.getElementById('schCsvBtn').style.display = 'none';
+    document.getElementById('schGridBtn').style.display = 'none';
+    schResult = null; document.getElementById('schSummaryBox').style.display = 'none';
+    try{
+      await loadScheduleEmployees(group);
+      const res = await gsCall('Shift_getSavedSchedule', [month, group]);
+      if(!res.ok){ document.getElementById('schTableWrap').innerHTML = res.message||'เกิดข้อผิดพลาด'; return; }
+      if(!res.rows.length){ document.getElementById('schTableWrap').innerHTML = '<div class="hint">ยังไม่เคยบันทึกตารางเวรของเดือน/กลุ่มนี้ไว้ — กด "สร้างตารางร่าง" ก่อน</div>'; return; }
+      const byDate = {};
+      res.rows.forEach(r=>{
+        if(!byDate[r.date]) byDate[r.date] = { date:r.date, weekday:r.weekday, weekdayLabel:WD_TH[r.weekday], isHoliday:false, isWeekend:(r.weekday===0||r.weekday===6), slots:[], offNames:[], cpErNames:[] };
+        byDate[r.date].slots.push({ slotIndex:r.slotIndex, start:r.start, end:r.end, email:r.email, name:r.name, position:r.position, note:r.note, isCP:!!r.isCP });
+        // เก็บเวลาบันทึกล่าสุดของวันนั้นไว้ เพื่อโชว์ต่อหลังรีเฟรชหน้าจอ
+        if(r.savedAtMs && r.savedAtMs > (byDate[r.date].savedAtMs||0)) byDate[r.date].savedAtMs = r.savedAtMs;
+      });
+      // เรียงให้ช่อง CP อยู่ก่อน OPD1 เสมอ (เหมือนตอนสร้างร่างครั้งแรก)
+      Object.keys(byDate).forEach(k=>{
+        byDate[k].slots.sort((a,b)=> (b.isCP?1:0) - (a.isCP?1:0));
+      });
+      const days = Object.keys(byDate).sort().map(k=>byDate[k]);
+      schResult = { ok:true, month:month, group:group, days:days, alerts:[], personTotals:[] };
+      schSavedWholeMonth = true; // โหลดมาจากที่บันทึกไว้แล้ว แก้ทีหลังจึงบันทึกทีละวันได้เลย
+      renderScheduleResult();
+      showToast('โหลดตารางที่บันทึกไว้แล้ว (แก้ไข/บันทึกทับได้ตามปกติ)');
+    } catch(err){ onErr(err); }
+  }
+
+    function renderScheduleResult(){
+    const res = schResult;
+    let headHtml = '';
+    if(res.alerts && res.alerts.length){
+      headHtml = '<div class="card" style="border-color:#f0c16b;background:#fffaf0;">'
+        + '<b style="color:#9a6400;">📋 ข้อสังเกตตอนสร้างร่าง ('+res.alerts.length+' ข้อ)</b>'
+        + '<div style="font-size:11.5px;color:var(--muted);margin:4px 0 8px;">รายการนี้เป็นภาพ ณ ตอนกดสร้างร่าง จะไม่เปลี่ยนตามการแก้ไข — ดูรายการที่ยังค้างจริงจากกล่องด้านล่าง</div>'
+        + '<ul style="margin:0;padding-left:18px;font-size:12.5px;color:#9a6400;line-height:1.7;">'
+        + res.alerts.map(a=>'<li>'+escHtml(a)+'</li>').join('')
+        + '</ul></div>';
+    }
+    document.getElementById('schAlerts').innerHTML = headHtml + '<div id="schLiveAlerts"></div>';
+
+    let html = '';
+    res.days.forEach(d=>{
+      // เสาร์-อาทิตย์/วันหยุด เปลี่ยนจากพื้นหลังสีส้ม มาเป็นป้ายเล็กแทน
+      // พื้นหลังสีแดงอ่อนสงวนไว้ใช้บอก "วันนี้มีปัญหาต้องแก้" เท่านั้น
+      const dayTag = d.isHoliday
+        ? '<span style="font-size:11px;font-weight:700;color:#b3261e;background:#fdecea;padding:2px 9px;border-radius:999px;">🔴 วันหยุดนักขัตฤกษ์</span>'
+        : ((d.weekday===0||d.weekday===6)
+            ? '<span style="font-size:11px;font-weight:600;color:#6b7c7e;background:#eef2f2;padding:2px 9px;border-radius:999px;">เสาร์-อาทิตย์</span>'
+            : '');
+      html += '<div class="card schDayCard" data-day="'+escHtml(d.date)+'" style="padding:10px 14px;">'
+        + '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px;">'
+        +   '<span style="font-weight:700;color:var(--teal-dark);">'+escHtml(d.date)+' ('+escHtml(d.weekdayLabel)+')</span>'
+        +   dayTag
+        +   '<span class="schDayStatus" id="schStat-'+escHtml(d.date)+'" style="font-size:11.5px;font-weight:600;color:#1b7a4b;">'
+        +     (d.savedAtMs ? ('✓ บันทึกแล้ว ' + new Date(d.savedAtMs).toLocaleString('th-TH')) : '')
+        +   '</span>'
+        +   (d.slots.some(s=>String(s.note||'').indexOf('แก้ไขโดยผู้ดูแล') !== -1)
+              ? '<span style="font-size:11px;font-weight:700;color:#0b7a5a;background:#e6f6f0;padding:2px 9px;border-radius:999px;">✏️ มีการแก้ไข</span>' : '')
+        + '</div>';
+      d.slots.forEach(s=>{
+        const slotLabel = s.isCP ? 'CP' : (s.start ? (s.start+'–'+s.end) : '(ไม่มีเวรวันนี้)');
+        const labelStyle = s.isCP
+          ? 'min-width:110px;font-size:11.5px;font-weight:700;color:#4338ca;background:#eef2ff;padding:2px 6px;border-radius:4px;display:inline-block;'
+          : 'min-width:110px;font-size:12.5px;color:var(--muted);';
+        html += '<div class="row" style="margin-bottom:5px;gap:8px;">'
+          + '<span style="'+labelStyle+'">'+escHtml(slotLabel)+'</span>'
+          + buildEmpSelectHtml(d.date, s.slotIndex, s.email)
+          + '<span class="schNote" style="font-size:11.5px;color:var(--red);">'+escHtml(s.note||'')+'</span>'
+          + '</div>';
+      });
+      html += '<div class="schDayIssue" style="display:none;margin-top:8px;padding:6px 10px;border-radius:8px;background:#fdecea;font-size:12px;font-weight:600;color:var(--red);"></div>';
+      if(d.offNames && d.offNames.length) html += '<div class="hint">🏠 ขอหยุด (R): '+escHtml(d.offNames.join(', '))+'</div>';
+      if(d.cpErNames && d.cpErNames.length) html += '<div class="hint" style="color:#00695c;font-weight:600;">🔄 ไปช่วยแผนกอื่น (R*): '+escHtml(d.cpErNames.join(', '))+'</div>';
+      html += '</div>';
+    });
+    document.getElementById('schTableWrap').innerHTML = html;
+    document.getElementById('schSaveBtn').style.display = 'inline-block';
+    document.getElementById('schCsvBtn').style.display = 'inline-block';
+    document.getElementById('schGridBtn').style.display = 'inline-block';
+    renderScheduleSummary_();
+    renderLiveAlerts_();
+  }
+
+// ---------- ตรวจปัญหาที่ยังค้างอยู่จริง (คำนวณใหม่ทุกครั้งที่แก้ไข) ----------
+  function schT2M_(t){
+    if(!t) return 0;
+    const p = String(t).replace(/\./g, ':').split(':');
+    return (Number(p[0])||0)*60 + (Number(p[1])||0);
+  }
+  function schHeadEmail_(){
+    const h = schEmployees.find(u=>u.position==='หัวหน้าแผนก');
+    return h ? String(h.email).toLowerCase() : '';
+  }
+  function schSeniorEmails_(){
+    return schEmployees.filter(u=>SCH_SENIOR_CODES.indexOf(String(u.code||''))!==-1)
+      .map(u=>String(u.email).toLowerCase());
+  }
+
+  function computeLiveIssues_(){
+    if(!schResult) return { perDay: [], summary: [] };
+    const group = schResult.group;
+    const headEmail = schHeadEmail_();
+    const seniors = schSeniorEmails_();
+    const names = {}, workDays = {}, streak = {}, maxStreak = {};
+    schEmployees.forEach(u=>{
+      const k = String(u.email).toLowerCase();
+      names[k] = u.name; workDays[k] = 0; streak[k] = 0; maxStreak[k] = 0;
+    });
+
+    const perDay = [];
+    schResult.days.forEach(d=>{
+      const seen = {};
+      let emptyCount = 0, cpCount = 0;
+      d.slots.forEach(s=>{
+        if(!s.email){ if(!s.isCP) emptyCount++; return; }
+        const k = String(s.email).toLowerCase();
+        if(!seen[k]) seen[k] = [];
+        seen[k].push(s);
+        if(s.isCP) cpCount++;
+      });
+      Object.keys(seen).forEach(k=>{
+        if(seen[k].length > 1){
+          perDay.push({ date: d.date, msg: (seen[k][0].name || k) + ' ถูกจัดซ้ำ ' + seen[k].length + ' ช่องในวันเดียวกัน' });
+        }
+      });
+      if(emptyCount > 0) perDay.push({ date: d.date, msg: 'ยังมีช่องเวรว่าง ' + emptyCount + ' ช่อง (ยังไม่ได้เลือกคน)' });
+      if(group === 'RN' && cpCount === 0) perDay.push({ date: d.date, msg: 'ยังไม่มีคนขึ้น CP' });
+
+      const isWeekend = (d.weekday === 0 || d.weekday === 6);
+      if(group === 'RN' && headEmail && !isWeekend && !d.isHoliday){
+        const headGot = d.slots.some(s=>!s.isCP && String(s.email||'').toLowerCase() === headEmail);
+        if(!headGot) perDay.push({ date: d.date, msg: 'หัวหน้าแผนกยังไม่ได้ถูกจัดเวร (จันทร์-ศุกร์ต้องอยู่คุมเวร)' });
+      }
+      if(group === 'PNNA' && seniors.length){
+        const need820 = d.slots.filter(s=>!s.isCP && s.start && schT2M_(s.start) <= 8*60 && schT2M_(s.end) >= 20*60);
+        if(need820.length){
+          const covered = need820.some(s=>seniors.indexOf(String(s.email||'').toLowerCase()) !== -1);
+          if(!covered) perDay.push({ date: d.date, msg: 'ไม่มี PN/NA Senior คุมเวร 8-20 น.' });
+        }
+      }
+      Object.keys(workDays).forEach(k=>{
+        const worked = d.slots.some(s=>String(s.email||'').toLowerCase() === k);
+        if(worked){ workDays[k]++; streak[k]++; if(streak[k] > maxStreak[k]) maxStreak[k] = streak[k]; }
+        else streak[k] = 0;
+      });
+    });
+
+    const summary = [];
+    const keys = Object.keys(workDays);
+    if(keys.length > 1){
+      const sorted = keys.slice().sort((a,b)=>workDays[a]-workDays[b]);
+      const lo = sorted[0], hi = sorted[sorted.length-1];
+      if(workDays[hi] - workDays[lo] > 2){
+        summary.push('จำนวนวันทำงานห่างกัน ' + (workDays[hi]-workDays[lo]) + ' วัน — มากสุด ' + names[hi] + ' ' + workDays[hi]
+          + ' วัน / น้อยสุด ' + names[lo] + ' ' + workDays[lo] + ' วัน');
+      }
+    }
+    const longs = keys.filter(k=>maxStreak[k] > 6);
+    if(longs.length) summary.push('ทำงานติดกันเกิน 6 วัน: ' + longs.map(k=>names[k]+' ('+maxStreak[k]+' วันติด)').join(', '));
+
+    return { perDay: perDay, summary: summary };
+  }
+
+  // ทาสีการ์ดรายวันตามปัญหาที่ยังค้างอยู่จริง — แก้เสร็จปุ๊บ สีหายปั๊บ
+  function schPaintDays_(issues){
+    const byDate = {};
+    ((issues && issues.perDay) || []).forEach(function(x){
+      if(!byDate[x.date]) byDate[x.date] = [];
+      byDate[x.date].push(x.msg);
+    });
+    document.querySelectorAll('.schDayCard').forEach(function(card){
+      const list = byDate[card.dataset.day];
+      const issueEl = card.querySelector('.schDayIssue');
+      if(list && list.length){
+        card.style.background = '#fff5f4';
+        card.style.borderColor = '#e8a49c';
+        if(issueEl){ issueEl.style.display = 'block'; issueEl.textContent = '⚠ ' + list.join('  ·  '); }
+      } else {
+        card.style.background = '';
+        card.style.borderColor = '';
+        if(issueEl){ issueEl.style.display = 'none'; issueEl.textContent = ''; }
+      }
+    });
+  }
+  function renderLiveAlerts_(){
+    const box = document.getElementById('schLiveAlerts');
+    if(!box) return;
+        const r = computeLiveIssues_();
+    schPaintDays_(r);   // ทาสีการ์ดรายวันใหม่ทุกครั้ง
+    const total = r.perDay.length + r.summary.length;
+    if(!total){
+      box.innerHTML = '<div class="card" style="border-color:#8fd6b0;background:#f2fbf6;">'
+        + '<b style="color:#1b7a4b;">✓ ตรวจแล้ว ไม่พบจุดที่ต้องแก้</b>'
+        + '<div style="font-size:12px;color:var(--muted);margin-top:4px;">ทุกช่องเวรมีคนครบ ไม่มีใครถูกจัดซ้ำ และไม่ขัดเงื่อนไขที่ระบบตรวจได้</div></div>';
+      return;
+    }
+    box.innerHTML = '<div class="card" style="border-color:var(--red);background:#fff5f4;">'
+      + '<b style="color:var(--red);">⚠ ยังมี '+total+' จุดที่ต้องแก้</b>'
+      + '<div style="font-size:11.5px;color:var(--muted);margin:4px 0 8px;">รายการนี้อัปเดตอัตโนมัติทุกครั้งที่แก้ไข — แก้ครบแล้วกล่องนี้จะกลายเป็นสีเขียว</div>'
+      + '<ul style="margin:0;padding-left:18px;font-size:12.5px;color:var(--red);line-height:1.7;">'
+      + r.perDay.map(x=>'<li><b>'+escHtml(x.date)+'</b> — '+escHtml(x.msg)+'</li>').join('')
+      + r.summary.map(x=>'<li>'+escHtml(x)+'</li>').join('')
+      + '</ul></div>';
+  }
+
+  // ล้างหมายเหตุเดิมของช่องที่เพิ่งถูกแก้ (เช่น "ระบบจัดอัตโนมัติ — ยังไม่มีคำขอจริง")
+  // เพราะเมื่อผู้ดูแลเลือกคนเองแล้ว หมายเหตุเดิมไม่ตรงกับความจริงอีกต่อไป
+  function schClearNoteFor_(sel){
+    if(!schResult) return;
+    const dateStr = sel.dataset.date, slotIdx = sel.dataset.slot;
+    const day = schResult.days.find(d=>d.date === dateStr);
+    if(!day) return;
+    const slot = day.slots.find(s=>String(s.slotIndex) === slotIdx);
+    if(!slot) return;
+    slot.note = sel.value ? '✏️ แก้ไขโดยผู้ดูแล' : '';
+    const noteEl = sel.parentElement.querySelector('.schNote');
+    if(noteEl){
+      noteEl.textContent = slot.note;
+      noteEl.style.color = slot.note ? '#0b7a5a' : 'var(--red)';
+    }
+  }
+
+  // บันทึกวันที่ถูกแก้ลงชีตให้อัตโนมัติ (หน่วง 0.6 วิ กันกดรัว ๆ แล้วยิงซ้ำ)
+  function schAutoSaveDay_(dateStr){
+    if(!dateStr || !schResult) return;
+    const month = document.getElementById('schMonth').value;
+    const group = document.getElementById('schGroup').value;
+    const day = schResult.days.find(d=>d.date === dateStr);
+    if(!day) return;
+    const stat = document.getElementById('schStat-'+dateStr);
+    if(stat){ stat.textContent = '⏳ กำลังบันทึก...'; stat.style.color = 'var(--amber)'; }
+
+    clearTimeout(schSaveTimers[dateStr]);
+    schSaveTimers[dateStr] = setTimeout(function(){
+      function done(res){
+        if(!stat) return;
+        if(res && res.ok){
+          day.savedAtMs = Date.now();   // จำไว้ เผื่อมีการวาดการ์ดใหม่ในหน้าเดียวกัน
+          stat.textContent = '✓ บันทึกแล้ว ' + (res.savedAt || '');
+          stat.style.color = '#1b7a4b';
+        } else {
+          stat.textContent = '⚠ บันทึกไม่สำเร็จ ' + ((res && res.message) || '');
+          stat.style.color = 'var(--red)';
+        }
+      }
+      function fail(err){
+        if(stat){ stat.textContent = '⚠ บันทึกไม่สำเร็จ'; stat.style.color = 'var(--red)'; }
+      }
+      if(!schSavedWholeMonth){
+        // ยังไม่เคยบันทึกทั้งเดือน → บันทึกทั้งเดือนให้ครั้งเดียวก่อน ครั้งต่อไปค่อยบันทึกทีละวัน
+        if(stat) stat.textContent = '⏳ บันทึกตารางทั้งเดือนครั้งแรก...';
+        google.script.run.withSuccessHandler(function(res){
+          if(res && res.ok) schSavedWholeMonth = true;
+          done(res && res.ok ? { ok:true, savedAt:new Date().toLocaleTimeString('th-TH') } : res);
+        }).withFailureHandler(fail).Shift_saveGeneratedSchedule(month, group, schResult.days);
+      } else {
+        google.script.run.withSuccessHandler(done).withFailureHandler(fail)
+          .Shift_saveScheduleDay(month, group, day);
+      }
+    }, 600);
+  }
+
+  function syncScheduleFromDropdowns_(){
+    if(!schResult) return;
+    document.querySelectorAll('.schAssignSel').forEach(sel=>{
+      const dateStr = sel.dataset.date, slotIdx = sel.dataset.slot; // เทียบเป็น string เสมอ เพราะช่อง CP ใช้ index แบบ "cp1","cp2",...
+      const day = schResult.days.find(d=>d.date===dateStr);
+      if(!day) return;
+      const slot = day.slots.find(s=>String(s.slotIndex)===slotIdx);
+      if(!slot) return;
+      const email = sel.value;
+      const emp = schEmployees.find(u=>u.email===email);
+      slot.email = email; slot.name = emp ? emp.name : ''; slot.position = emp ? emp.position : '';
+    });
+  }
+
+  // ---------- กล่องลอยสรุปเวรสะสม (CP / เวรสั้น / เวร 7 น. / Off / ชม.รวม) ของทั้งร่างนี้ ----------
+  // นับจาก schResult.days ปัจจุบัน (หลัง syncScheduleFromDropdowns_ แล้ว) ต่อพนักงาน 1 คนต่อ 1 แถว
+  // cp = จำนวนช่อง CP ที่ได้รับ, short = จำนวนครั้งที่ note มีคำว่า "เวรสั้น", seven = จำนวนช่อง OPD1 ที่เวลาเริ่ม <= 7:00 น.
+  // off = จำนวนวัน "ที่ไม่มีชื่อคนนี้ในช่องไหนเลย" ของทั้งเดือนนี้ (ไม่ว่าจะเพราะขอหยุดเอง หรือระบบจัดไม่ถึง ก็นับเป็น Off เหมือนกันหมด)
+  // hours = รวมชั่วโมง OPD1 (จากเวลาเข้า-ออกจริง) + ชั่วโมง CP (นับเวรละ 12 ชม.) เหมือนคอลัมน์ "รวมชม. ทั้งหมด" ในตาราง Excel
+  function computeScheduleSummary_(){
+    const counts = {}; // email(lower) -> {name, cp, short, seven, off, total, opd1Min, hours, _presentDates:Set}
+    schEmployees.forEach(u=>{ counts[u.email.toLowerCase()] = { name:u.name, cp:0, short:0, seven:0, off:0, total:0, opd1Min:0, hours:0, _presentDates:{} }; });
+    if(!schResult) return counts;
+    const totalDays = schResult.days.length;
+    schResult.days.forEach(d=>{
+      d.slots.forEach(s=>{
+        if(!s.email) return;
+        const key = s.email.toLowerCase();
+        if(!counts[key]) counts[key] = { name:s.name||key, cp:0, short:0, seven:0, off:0, total:0, opd1Min:0, hours:0, _presentDates:{} }; // เผื่อคนที่ไม่อยู่ใน schEmployees แล้ว (เช่นเปลี่ยนกลุ่ม) ก็ยังนับให้เห็น
+        counts[key].total++;
+        counts[key]._presentDates[d.date] = true;
+        if(s.isCP) counts[key].cp++;
+        else {
+          if(s.note && s.note.indexOf('เวรสั้น') !== -1) counts[key].short++;
+          if(s.start && Shift_timeToMinutes_client_(s.start) <= 7*60) counts[key].seven++;
+          if(s.start && s.end){
+            let sMin = Shift_timeToMinutes_client_(s.start);
+            let eMin = Shift_timeToMinutes_client_(s.end);
+            if(eMin <= sMin) eMin += 24*60; // เผื่อเวรข้ามคืน
+            counts[key].opd1Min += (eMin - sMin);
+          }
+        }
+      });
+    });
+    Object.keys(counts).forEach(key=>{
+      const presentCount = Object.keys(counts[key]._presentDates).length;
+      counts[key].off = Math.max(0, totalDays - presentCount);
+      const opd1Hours = Math.round((counts[key].opd1Min/60) * 10) / 10;
+      counts[key].hours = Math.round((opd1Hours + counts[key].cp*12) * 10) / 10;
+    });
+    return counts;
+  }
+  function Shift_timeToMinutes_client_(t){
+    // t = "HH:MM" — ใช้ฝั่ง client เฉยๆ สำหรับนับสรุป ไม่เกี่ยวกับ Shift_timeToMinutes_ ฝั่งเซิร์ฟเวอร์
+    if(!t) return 0;
+    const parts = String(t).split(':');
+    return (Number(parts[0])||0)*60 + (Number(parts[1])||0);
+  }
+  function renderScheduleSummary_(){
+    const box = document.getElementById('schSummaryBox');
+    const body = document.getElementById('schSummaryBody');
+    if(!schResult){ box.style.display = 'none'; return; }
+    box.style.display = 'block';
+    const counts = computeScheduleSummary_();
+    const rows = Object.keys(counts).map(k=>counts[k]).sort((a,b)=>{
+      if(a.cp !== b.cp) return a.cp - b.cp; // คนที่ได้ CP น้อยสุดขึ้นก่อน ช่วยให้เห็นความไม่เท่ากันไว
+      return a.name.localeCompare(b.name, 'th');
+    });
+    const minCp = rows.length ? Math.min.apply(null, rows.map(r=>r.cp)) : 0;
+    const maxCp = rows.length ? Math.max.apply(null, rows.map(r=>r.cp)) : 0;
+    const minOff = rows.length ? Math.min.apply(null, rows.map(r=>r.off)) : 0;
+    const maxOff = rows.length ? Math.max.apply(null, rows.map(r=>r.off)) : 0;
+    let html = '<table><thead><tr><th style="text-align:left;">ชื่อ</th><th class="num">CP</th><th class="num">สั้น</th><th class="num">7น.</th><th class="num">Off</th><th class="num">ชม.รวม</th></tr></thead><tbody>';
+    rows.forEach(r=>{
+      const lowRow = (maxCp > minCp && r.cp === minCp) ? ' class="ssLow"' : '';
+      const offCell = (maxOff > minOff && r.off === maxOff) ? '<td class="num off ssOffHigh">'+r.off+'</td>' : '<td class="num off">'+r.off+'</td>';
+      html += '<tr'+lowRow+'><td style="text-align:left;">'+escHtml(r.name)+'</td>'
+        + '<td class="num cp">'+r.cp+'</td><td class="num">'+r.short+'</td><td class="num">'+r.seven+'</td>'+offCell+'<td class="num hours">'+r.hours+'</td></tr>';
+    });
+    html += '</tbody></table><div class="ssHint">อัปเดตสดตามการเลือกในตาราง — แถวสีแดง = CP น้อยสุด, ตัวเลข Off สีส้ม = หยุดเยอะสุด (นับวันที่ไม่มีชื่ออยู่ในช่องไหนเลยของเดือนนี้ = Off ทั้งหมด), ชม.รวม = ชั่วโมง OPD1 จริง + CP (เวรละ 12 ชม.)</div>';
+    body.innerHTML = html;
+  }
+  // อัปเดตกล่องสรุปทันทีทุกครั้งที่แก้ dropdown เลือกคนในตาราง (delegate event ไว้ที่ container เดียว ไม่ต้องผูกใหม่ทุกครั้งที่ render)
+  document.getElementById('schTableWrap').addEventListener('change', function(e){
+    if(e.target && e.target.classList && e.target.classList.contains('schAssignSel')){
+      syncScheduleFromDropdowns_();   // อัปเดตข้อมูลในหน่วยความจำ
+      schClearNoteFor_(e.target);     // ล้างหมายเหตุเดิมที่ไม่ตรงแล้ว
+      renderScheduleSummary_();       // อัปเดตกล่องสรุปเวรสะสมมุมขวาล่าง
+      renderLiveAlerts_();            // อัปเดตรายการ "ยังต้องแก้" → ข้อที่แก้แล้วจะหายไป
+      schAutoSaveDay_(e.target.dataset.date); // บันทึกวันนั้นลงชีตอัตโนมัติ
+    }
+  });
+
+  // เช็คว่ามีคนคนเดียวกันถูกจัดซ้ำ 2 ช่องขึ้นไปในวันเดียวกันหรือไม่ (เช่น มือแก้ dropdown เอง แล้วเผลอเลือกคนเดิมทั้งช่อง CP และ OPD1)
+  // คืนค่า array ข้อความปัญหาที่เจอ (ว่าง = ไม่มีปัญหา)
+  function findDuplicateAssignments_(){
+    const problems = [];
+    if(!schResult) return problems;
+    schResult.days.forEach(d=>{
+      const seen = {};
+      d.slots.forEach(s=>{
+        if(!s.email) return;
+        const key = s.email.toLowerCase();
+        if(!seen[key]) seen[key] = [];
+        seen[key].push(s);
+      });
+      Object.keys(seen).forEach(key=>{
+        if(seen[key].length > 1){
+          const name = seen[key][0].name || key;
+          problems.push(d.date+': '+name+' ถูกจัดซ้ำ '+seen[key].length+' ช่องในวันเดียวกัน');
+        }
+      });
+    });
+    return problems;
+  }
+
+  function exportScheduleGrid(){
+    if(!schResult){ showToast('ยังไม่มีตารางให้ export'); return; }
+    syncScheduleFromDropdowns_();
+    const month = document.getElementById('schMonth').value;
+    const group = document.getElementById('schGroup').value;
+    showToast('กำลังสร้างตาราง Excel...');
+    google.script.run.withSuccessHandler(res=>{
+      if(!res.ok){ showToast(res.message||'สร้างไม่สำเร็จ'); return; }
+      showToast('สร้างตารางเรียบร้อย กำลังเปิด...');
+      window.open(res.url, '_blank');
+    }).withFailureHandler(onErr).Shift_exportScheduleGridSheet(month, group, schResult.days);
+  }
+
+  function saveSchedule(){
+    const month = document.getElementById('schMonth').value;
+    const group = document.getElementById('schGroup').value;
+    if(!schResult){ showToast('ยังไม่มีตารางร่างให้บันทึก'); return; }
+    syncScheduleFromDropdowns_();
+    const dups = findDuplicateAssignments_();
+    if(dups.length){
+      alert('บันทึกไม่ได้ — พบคนถูกจัดซ้ำวันเดียวกัน (เช่น เลือกคนเดิมทั้งช่อง CP และ OPD1 โดยไม่ตั้งใจ) กรุณาแก้ก่อนบันทึก:\n\n'+dups.join('\n'));
+      return;
+    }
+    google.script.run.withSuccessHandler(res=>{
+      if(res && res.ok){
+        schSavedWholeMonth = true;
+        document.querySelectorAll('.schDayStatus').forEach(function(el){
+          el.textContent = '✓ บันทึกแล้ว';
+          el.style.color = '#1b7a4b';
+        });
+        const issues = computeLiveIssues_();
+        const n = issues.perDay.length + issues.summary.length;
+        showDone('บันทึกตารางเวรของเดือนนี้เรียบร้อยแล้ว'
+          + (n ? ('\n\n⚠️ หมายเหตุ: ยังมี ' + n + ' จุดที่ระบบแจ้งว่าควรตรวจสอบ\n(ดูรายละเอียดในกล่องสีแดงด้านบน)') : '\n\n✓ ตรวจแล้วไม่พบจุดที่ต้องแก้'));
+      } else {
+        showDone((res && res.message) || 'บันทึกไม่สำเร็จ', false);
+      }
+    }).withFailureHandler(onErr).Shift_saveGeneratedSchedule(month, group, schResult.days);
+  }
+
+  function downloadScheduleCsv(){
+    if(!schResult) return;
+    let csv = '\uFEFF' + ['วันที่','วัน','เวลา','ชื่อ','ตำแหน่ง','หมายเหตุ'].join(',') + '\n';
+    schResult.days.forEach(d=>{
+      d.slots.forEach(s=>{
+        const timeCol = s.isCP ? 'CP' : (s.start?(s.start+'-'+s.end):'');
+        csv += [d.date, d.weekdayLabel, timeCol, s.name||'', s.position||'', s.note||''].map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',') + '\n';
+      });
+    });
+    const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'schedule_'+document.getElementById('schGroup').value+'_'+document.getElementById('schMonth').value+'.csv';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  }
+
+// ---------- ADHOC: โควต้าเฉพาะกิจรายวัน ----------
+  const ADHOC_GROUP_LABEL = { RN:'RN', PNNA:'PN/NA', HEAD:'หัวหน้าแผนก' };
+
+  function adhocFillZero(){
+    ['adhocOff','adhocShort','adhocCP','adhocLate','adhocER'].forEach(id=>{ document.getElementById(id).value = 0; });
+  }
+  function adhocClearForm(){
+    ['adhocOff','adhocShort','adhocCP','adhocLate','adhocER','adhocNote'].forEach(id=>{ document.getElementById(id).value = ''; });
+  }
+
+  function adhocDateList(){
+    const from = document.getElementById('adhocFrom').value;
+    const to = document.getElementById('adhocTo').value || from;
+    if(!from) return [];
+    if(to < from) return null; // ช่วงวันที่กลับหัว
+    const out = [];
+    const cur = new Date(from + 'T00:00:00');
+    const end = new Date(to + 'T00:00:00');
+    let guard = 0;
+    while(cur <= end && guard++ < 366){
+      out.push(cur.getFullYear()+'-'+pad2(cur.getMonth()+1)+'-'+pad2(cur.getDate()));
+      cur.setDate(cur.getDate()+1);
+    }
+    return out;
+  }
+
+  function adhocVal(id){
+    const v = document.getElementById(id).value;
+    return (v === '' || v === null) ? '' : Math.max(0, Number(v)||0);
+  }
+
+  function loadAdhoc(){
+    const month = document.getElementById('adhocMonth').value;
+    if(!month){ showToast('กรุณาเลือกเดือน'); return; }
+    document.getElementById('adhocList').innerHTML = 'กำลังโหลด...';
+    google.script.run.withSuccessHandler(renderAdhoc).withFailureHandler(onErr).Shift_getQuotaOverrides(month);
+  }
+
+  function renderAdhoc(res){
+    const box = document.getElementById('adhocList');
+    if(!res || !res.ok){ box.innerHTML = '<div class="card">'+escHtml((res&&res.message)||'โหลดไม่สำเร็จ')+'</div>'; return; }
+    if(!res.items.length){
+      box.innerHTML = '<div class="card"><div class="hint" style="margin:0;">เดือนนี้ยังไม่มีการตั้งโควต้าเฉพาะกิจ — ทุกวันใช้โควต้าประจำตามปกติ</div></div>';
+      return;
+    }
+    const cell = (raw, eff)=> (raw === '' || raw === null)
+      ? '<span style="color:var(--muted);">ปกติ ('+eff+')</span>'
+      : '<b style="color:'+(Number(raw)===0?'var(--red)':'var(--amber)')+';">'+raw+'</b>';
+
+    let html = '<div class="card"><h3 style="font-size:14px;margin:0 0 10px;color:var(--teal-dark);">📋 รายการที่ตั้งไว้ ('+res.items.length+')</h3>'
+      + '<table><tr><th>วันที่</th><th>วัน</th><th>กลุ่ม</th><th>Off</th><th>เวรสั้น</th><th>CP</th><th>สาย</th><th>แผนกอื่น</th><th>หมายเหตุ</th><th>สถานะ</th><th></th></tr>';
+    res.items.forEach(it=>{
+      let warn = '<span style="color:#2e7d32;">✓ ปกติ</span>';
+      if(it.conflicts && it.conflicts.length){
+        warn = '<span style="color:var(--red);font-weight:700;">⚠ เกินโควต้า</span><div style="font-size:11px;color:var(--red);text-align:left;margin-top:3px;">'
+          + it.conflicts.map(c=> escHtml(c.typeLabel)+' '+c.count+'/'+c.max+' คน: '+escHtml(c.names.join(', '))).join('<br>')
+          + '</div>';
+      }
+      html += '<tr>'
+        + '<td>'+escHtml(it.date)+'</td><td>'+escHtml(it.weekdayLabel)+'</td>'
+        + '<td>'+escHtml(it.groupLabel)+'</td>'
+        + '<td>'+cell(it.maxOff, it.effective.maxOff)+'</td>'
+        + '<td>'+cell(it.shortSlots, it.effective.shortSlots)+'</td>'
+        + '<td>'+cell(it.cpSlots, it.effective.cpSlots)+'</td>'
+        + '<td>'+cell(it.lateSlots, it.effective.lateSlots)+'</td>'
+        + '<td>'+cell(it.erSlots, it.effective.erSlots)+'</td>'
+        + '<td style="text-align:left;font-size:11.5px;">'+escHtml(it.note||'-')+'</td>'
+        + '<td>'+warn+'</td>'
+        + '<td><button class="action secondary" style="padding:4px 9px;font-size:11.5px;" onclick="deleteAdhoc(\''+it.date+'\',\''+it.group+'\')">ลบ</button></td>'
+        + '</tr>';
+    });
+    html += '</table>'
+      + '<div class="hint">ตัวเลข <b style="color:var(--red);">แดง</b> = ปิดรับ (0 คน) · <b style="color:var(--amber);">ส้ม</b> = ปรับจำนวน · "ปกติ" = ช่องนั้นไม่ได้ตั้งเฉพาะกิจ ใช้โควต้าประจำ (ตัวเลขในวงเล็บคือค่าที่ใช้จริง)</div>'
+      + '<div class="hint">⚠ เกินโควต้า = มีพนักงานขอไว้ก่อนหน้าแล้วเกินโควต้าใหม่ — ระบบไม่ลบคำขอให้ กรุณาไปคุยกับพนักงานแล้วยกเลิกเองที่แท็บ "แก้ไขคำขอแทนพนักงาน"</div>'
+      + '</div>';
+    box.innerHTML = html;
+  }
+
+  function saveAdhoc(){
+    const dates = adhocDateList();
+    if(dates === null){ showToast('วันที่สิ้นสุดต้องไม่น้อยกว่าวันที่เริ่ม'); return; }
+    if(!dates || !dates.length){ showToast('กรุณาเลือกวันที่'); return; }
+
+    const groups = Array.from(document.querySelectorAll('.adhocGrp:checked')).map(c=>c.value);
+    if(!groups.length){ showToast('กรุณาเลือกกลุ่มอย่างน้อย 1 กลุ่ม'); return; }
+
+    const v = {
+      maxOff: adhocVal('adhocOff'), shortSlots: adhocVal('adhocShort'),
+      cpSlots: adhocVal('adhocCP'), lateSlots: adhocVal('adhocLate'), erSlots: adhocVal('adhocER')
+    };
+    if([v.maxOff,v.shortSlots,v.cpSlots,v.lateSlots,v.erSlots].every(x=>x==='')){
+      showToast('กรุณากรอกอย่างน้อย 1 ช่อง (หรือกด "ใส่ 0 ทุกช่อง")'); return;
+    }
+
+    const note = document.getElementById('adhocNote').value.trim();
+    const items = [];
+    dates.forEach(d=> groups.forEach(g=> items.push(Object.assign({date:d, group:g, note:note}, v))));
+
+    if(!confirm('ยืนยันตั้งโควต้าเฉพาะกิจ '+dates.length+' วัน x '+groups.length+' กลุ่ม = '+items.length+' รายการ?')) return;
+
+    showToast('กำลังบันทึก...');
+    google.script.run.withSuccessHandler(res=>{
+      if(!res || !res.ok){ showToast((res&&res.message)||'บันทึกไม่สำเร็จ'); return; }
+      showToast(res.message);
+      if(res.conflicts && res.conflicts.length){
+        alert('⚠ บันทึกแล้ว แต่พบคำขอเดิมที่เกินโควต้าใหม่ (ระบบไม่ได้ลบให้)\n\n'
+          + res.conflicts.map(c=> c.date+' · '+c.groupLabel+' · '+c.typeLabel+' : มี '+c.count+' คน เกินโควต้าใหม่ '+c.max+' คน\n   → '+c.names.join(', ')).join('\n\n')
+          + '\n\nกรุณาไปยกเลิกคำขอที่แท็บ "แก้ไขคำขอแทนพนักงาน"');
+      }
+      const m = dates[0].slice(0,7);
+      if(document.getElementById('adhocMonth').value !== m){
+        document.getElementById('adhocMonth').value = m;
+        if(typeof mpUpdateLabel === 'function') mpUpdateLabel('adhocMonth');
+      }
+      adhocClearForm();
+      loadAdhoc();
+    }).withFailureHandler(onErr).Shift_saveQuotaOverrides(items);
+  }
+
+  function deleteAdhoc(dateStr, group){
+    if(!confirm('ลบโควต้าเฉพาะกิจของ '+dateStr+' กลุ่ม '+(ADHOC_GROUP_LABEL[group]||group)+' ?\nวันนั้นจะกลับไปใช้โควต้าประจำตามเดิม')) return;
+    google.script.run.withSuccessHandler(res=>{
+      showToast((res&&res.message)||'ลบไม่สำเร็จ');
+      loadAdhoc();
+    }).withFailureHandler(onErr).Shift_deleteQuotaOverride(dateStr, group);
+  }
+
+  // init — เรียกจากแผงรหัสผ่านด้านล่างแทน (หลังใส่รหัสถูกต้อง)
+  function startApp(){
+    document.getElementById('quotaMonth').value = thisMonthStr();
+    document.getElementById('exportMonth').value = thisMonthStr();
+    document.getElementById('mgMonth').value = thisMonthStr();
+    document.getElementById('patMonth').value = thisMonthStr();
+    document.getElementById('schMonth').value = thisMonthStr();
+    document.getElementById('adhocMonth').value = thisMonthStr();
+    ['quotaMonth','exportMonth','mgMonth','patMonth','schMonth','adhocMonth'].forEach(mpEnhance);
+    loadManageEmployees();
+    loadQuota();
+    loadPattern();
+    loadAdhoc();
+  }
+</script>
+
+<script>
+(function () {
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', startApp);
+  } else {
+    startApp();
+  }
+})();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,4105 @@
+<!DOCTYPE html>
+<html>
+<head>
+<base target="_top">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ระบบสะสมการเรียนรู้พนักงาน</title>
+<style>
+  :root{
+    --primary:#2563eb; --primary-dark:#1d4ed8; --bg:#f4f6fb; --card:#ffffff;
+    --text:#1f2937; --muted:#6b7280; --border:#e5e7eb;
+    --green:#16a34a; --red:#dc2626; --amber:#d97706;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:'Segoe UI','Tahoma','Noto Sans Thai',sans-serif;background:var(--bg);color:var(--text);}
+  .app{max-width:1000px;margin:0 auto;padding:24px 16px 60px;}
+  header.topbar{display:flex;justify-content:space-between;align-items:center;padding:14px 24px;background:var(--card);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:10;}
+  header.topbar .brand{display:flex;align-items:center;gap:10px;font-weight:700;color:var(--primary-dark);}
+  header.topbar .brand .logo{width:32px;height:32px;border-radius:8px;background:var(--primary);display:flex;align-items:center;justify-content:center;color:#fff;font-size:16px;}
+  header.topbar .user-info{font-size:14px;color:var(--muted);}
+  .tabs{display:flex;gap:6px;margin:20px 0;border-bottom:1px solid var(--border);}
+  .tab{padding:10px 16px;cursor:pointer;font-size:14px;color:var(--muted);border-bottom:2px solid transparent;}
+  .tab.active{color:var(--primary-dark);border-bottom-color:var(--primary);font-weight:600;}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill, minmax(260px,1fr));gap:16px;}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:18px;}
+  .card h3{margin:0 0 6px;font-size:15px;}
+  .card p.desc{color:var(--muted);font-size:13px;margin:0 0 12px;line-height:1.5;}
+  .card .meta{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-bottom:12px;}
+  .badge{display:inline-block;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600;white-space:nowrap;}
+  .badge.done{background:#dcfce7;color:var(--green);}
+  .badge.new{background:#e5e7eb;color:var(--muted);}
+  .badge.fail{background:#fef3c7;color:var(--amber);}
+  .category-block{margin-bottom:28px;}
+  .category-title{font-size:13px;font-weight:700;color:var(--muted);margin:0 0 10px;text-transform:uppercase;letter-spacing:.04em;padding-bottom:6px;border-bottom:1px solid var(--border);}
+  .btn-sm{padding:7px 14px;border-radius:7px;border:1px solid var(--primary);background:#fff;color:var(--primary);font-size:13px;cursor:pointer;font-weight:600;}
+  .btn-sm:hover{background:var(--primary);color:#fff;}
+  .btn-sm:disabled{opacity:.5;cursor:not-allowed;}
+  .btn-sm.full{width:100%;}
+  .btn-primary{padding:10px 18px;background:var(--primary);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;}
+  .btn-primary:hover{background:var(--primary-dark);}
+  .content-box{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:26px;max-width:720px;margin:0 auto;}
+  .content-box h2{font-size:19px;margin:0 0 4px;}
+  .content-box .type-tag{font-size:12px;color:var(--muted);margin-bottom:18px;}
+  .content-text{max-height:360px;overflow-y:auto;border:1px solid var(--border);border-radius:10px;padding:16px 18px;background:var(--bg);line-height:1.8;font-size:14px;margin-bottom:14px;}
+  .content-text h4{margin:14px 0 4px;font-size:14.5px;color:var(--primary-dark);}
+  .content-text p{margin:0 0 10px;}
+  .gate-status{display:flex;align-items:center;gap:8px;font-size:13px;padding:10px 14px;border-radius:8px;background:#fef3c7;color:var(--amber);margin-bottom:16px;font-weight:600;}
+  .gate-status.ok{background:#dcfce7;color:var(--green);}
+  video{width:100%;border-radius:10px;margin-bottom:12px;background:#000;}
+  .watch-progress{height:8px;background:var(--bg);border-radius:5px;overflow:hidden;margin-bottom:6px;border:1px solid var(--border);}
+  .watch-progress .fill{height:100%;background:var(--primary);width:0%;transition:width .2s;}
+  .watch-label{font-size:12px;color:var(--muted);margin-bottom:16px;}
+  .content-actions{display:flex;justify-content:space-between;margin-top:4px;}
+  .quiz-box{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:24px;max-width:640px;margin:0 auto;}
+  .quiz-progress{font-size:12px;color:var(--muted);margin-bottom:16px;}
+  .question{font-size:16px;font-weight:600;margin-bottom:16px;line-height:1.5;}
+  .option{display:block;padding:12px 14px;border:1px solid var(--border);border-radius:8px;margin-bottom:10px;cursor:pointer;font-size:14px;}
+  .option:hover{border-color:var(--primary);}
+  .option.selected{border-color:var(--primary);background:#eff6ff;font-weight:600;}
+  .quiz-actions{display:flex;justify-content:space-between;margin-top:20px;}
+  .result-box{text-align:center;padding:20px;}
+  .result-score{font-size:44px;font-weight:800;color:var(--primary);margin:10px 0;}
+  .result-pass{color:var(--green);}
+  .result-fail{color:var(--red);}
+  .sig-pad-wrap{border:1px solid var(--border);border-radius:10px;overflow:hidden;display:flex;justify-content:center;background:#fff;touch-action:none;}
+  #sigPad{touch-action:none;cursor:crosshair;display:block;background:#fff;}
+  .sig-thumb{width:64px;height:auto;border:1px solid var(--border);border-radius:6px;background:#fff;cursor:pointer;padding:2px;}
+  .sig-missing{font-size:12px;color:var(--muted);}
+  table{width:100%;border-collapse:collapse;background:var(--card);border-radius:12px;overflow:hidden;border:1px solid var(--border);}
+  th,td{padding:12px 14px;text-align:left;font-size:13.5px;border-bottom:1px solid var(--border);}
+  th{background:var(--bg);color:var(--muted);font-weight:600;font-size:12px;text-transform:uppercase;}
+  tr:last-child td{border-bottom:none;}
+  .pass-tag{color:var(--green);font-weight:700;}
+  .fail-tag{color:var(--red);font-weight:700;}
+  .wrong-row td{background:#fafafa;}
+  .wrong-item{padding:10px 12px;border-left:3px solid var(--red);background:#fef2f2;border-radius:6px;margin-bottom:8px;font-size:13px;line-height:1.6;}
+  .wrong-item.ok-item{border-left-color:var(--green);background:#f0fdf4;}
+  .wrong-q{font-weight:600;margin-bottom:4px;}
+  .section-title{font-size:18px;font-weight:700;margin:6px 0 4px;}
+  .section-sub{color:var(--muted);font-size:13px;margin:0 0 18px;}
+  .stat-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:22px;}
+  .stat{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;}
+  .stat .num{font-size:24px;font-weight:800;color:var(--primary-dark);}
+  .stat .lbl{font-size:12px;color:var(--muted);margin-top:2px;}
+  .hidden{display:none !important;}
+  .center-msg{text-align:center;padding:60px 20px;color:var(--muted);}
+  .spinner{width:26px;height:26px;border:3px solid var(--border);border-top-color:var(--primary);border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 12px;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+  .points-hero{display:flex;align-items:center;justify-content:space-between;background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;border-radius:14px;padding:22px 26px;margin-bottom:20px;flex-wrap:wrap;gap:14px;}
+
+  .points-hero .big{font-size:38px;font-weight:800;}
+
+  .points-hero .lbl{font-size:13px;opacity:.85;}
+
+  .points-bar{height:10px;background:rgba(255,255,255,.3);border-radius:6px;overflow:hidden;width:220px;margin-top:8px;}
+
+  .points-bar .fill{height:100%;background:#fff;transition:width .3s;}
+
+  .points-banner{padding:12px 16px;border-radius:10px;font-size:13px;margin-bottom:16px;font-weight:600;}
+
+  .points-banner.pending{background:#fef3c7;color:#92400e;}
+
+  .points-banner.fulfilled{background:#dcfce7;color:#166534;}
+
+  .points-terms{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:16px 18px;font-size:13px;line-height:1.9;color:var(--text);margin-top:22px;}
+
+  .points-terms h4{margin:0 0 8px;font-size:14px;}
+
+  .points-terms ul{margin:0;padding-left:20px;}
+
+/* ===== ปุ่ม "สะสมแต้ม" (กล่องแต้มบนหัวหน้าจอ) และ "ขอเวรหยุด" — สีสันสดใส ขนาดเท่ากัน ===== */
+
+.points-widget{display:none;flex-direction:column;align-items:center;justify-content:center;
+  background:linear-gradient(135deg,#f59e0b,#f97316);border:none;border-radius:12px;
+  padding:8px 16px;min-width:96px;min-height:58px;
+  box-shadow:0 4px 14px rgba(249,115,22,.4);}
+
+  .points-widget.show{display:flex;}
+
+  .points-widget-num{font-size:21px;font-weight:800;color:#fff;line-height:1.1;}
+
+  .points-widget-lbl{font-size:10.5px;color:#fff;opacity:.92;margin:2px 0 6px;font-weight:600;}
+
+  .points-widget-btn{border:none;background:#fff;color:#c2410c;font-size:11px;font-weight:800;padding:4px 12px;border-radius:6px;cursor:pointer;white-space:nowrap;}
+
+  .points-widget-btn:hover{background:#fff7ed;}
+
+  .points-widget-btn:disabled{background:rgba(255,255,255,.55);color:#9a3412;cursor:not-allowed;}
+
+.btn-shift{display:inline-flex;align-items:center;justify-content:center;
+  min-height:58px;padding:8px 20px;border-radius:12px;border:none;
+  background:linear-gradient(135deg,#8b5cf6,#6366f1);color:#fff;
+  font-size:14px;font-weight:800;cursor:pointer;white-space:nowrap;
+  box-shadow:0 4px 14px rgba(99,102,241,.4);transition:transform .12s,box-shadow .12s;}
+
+.btn-shift:hover{background:linear-gradient(135deg,#7c3aed,#4f46e5);box-shadow:0 5px 16px rgba(99,102,241,.55);}
+
+.btn-shift:active{transform:scale(.97);}
+
+ .courses-layout{display:flex;gap:28px;align-items:flex-start;}
+
+  .category-sidebar{flex:0 0 180px;display:flex;flex-direction:column;gap:10px;position:sticky;top:80px;}
+
+  .category-sidebar .cat-item{padding:13px 20px;border-radius:26px;font-size:14px;color:var(--muted);cursor:pointer;font-weight:700;background:#f1f5f9;text-align:center;transition:background .15s,color .15s;}
+
+  .category-sidebar .cat-item:hover{background:#152e4a;}
+.category-sidebar .cat-item{background:#2b547e !important;color:#fff !important;}
+
+ 
+    .category-sidebar .cat-item.active{background:#6e7f80!important;color:#fff !important;}
+  
+
+
+  .courses-main{flex:1;min-width:0;}
+
+  @media (max-width:720px){
+
+    .courses-layout{flex-direction:column;gap:14px;}
+
+    .category-sidebar{flex-direction:row;flex-wrap:wrap;position:static;width:100%;
+
+                      align-items:flex-start;height:auto;gap:8px;}
+
+    .category-sidebar .cat-item{flex:0 0 auto;width:auto;align-self:flex-start;
+
+                                height:auto;padding:9px 18px;font-size:13px;
+
+                                border-radius:20px;white-space:nowrap;}
+
+  }
+
+
+
+  footer.note{margin-top:40px;font-size:12px;color:var(--muted);text-align:center;line-height:1.6;}
+
+  /* ===== แคปซูลหมวดหมู่: สีสันสดใส ===== */
+
+.category-sidebar .cat-item{transition:background .18s,color .18s,box-shadow .18s,transform .12s;border:none;}
+
+.category-sidebar .cat-item:active{transform:scale(.96);}
+
+.category-sidebar .cat-item:nth-child(6n+1){background:#eef2ff;color:#4338ca;}
+
+.category-sidebar .cat-item:nth-child(6n+2){background:#ecfdf5;color:#047857;}
+
+.category-sidebar .cat-item:nth-child(6n+3){background:#fff7ed;color:#c2410c;}
+
+.category-sidebar .cat-item:nth-child(6n+4){background:#fdf2f8;color:#be185d;}
+
+.category-sidebar .cat-item:nth-child(6n+5){background:#ecfeff;color:#0e7490;}
+
+.category-sidebar .cat-item:nth-child(6n+6){background:#fefce8;color:#a16207;}
+
+.category-sidebar .cat-item:nth-child(6n+1).active{background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;box-shadow:0 4px 14px rgba(99,102,241,.45);}
+
+.category-sidebar .cat-item:nth-child(6n+2).active{background:linear-gradient(135deg,#10b981,#34d399);color:#fff;box-shadow:0 4px 14px rgba(16,185,129,.45);}
+
+.category-sidebar .cat-item:nth-child(6n+3).active{background:linear-gradient(135deg,#f97316,#fb923c);color:#fff;box-shadow:0 4px 14px rgba(249,115,22,.45);}
+
+.category-sidebar .cat-item:nth-child(6n+4).active{background:linear-gradient(135deg,#ec4899,#f472b6);color:#fff;box-shadow:0 4px 14px rgba(236,72,153,.45);}
+
+.category-sidebar .cat-item:nth-child(6n+5).active{background:linear-gradient(135deg,#06b6d4,#22d3ee);color:#fff;box-shadow:0 4px 14px rgba(6,182,212,.45);}
+
+.category-sidebar .cat-item:nth-child(6n+6).active{background:linear-gradient(135deg,#eab308,#facc15);color:#fff;box-shadow:0 4px 14px rgba(234,179,8,.45);}
+
+/* ===== มือถือ: แถบหมวดหมู่ลอยอยู่บนสุด เลื่อนซ้าย-ขวาได้ ===== */
+
+@media (max-width:720px){
+
+  .category-sidebar.cat-top{
+
+    display:flex;flex-direction:row;flex-wrap:nowrap;overflow-x:auto;
+
+    gap:8px;width:100%;margin:4px 0 14px;padding:2px 2px 8px;position:static;height:auto;
+
+    -webkit-overflow-scrolling:touch;scrollbar-width:none;
+
+  }
+
+  .category-sidebar.cat-top::-webkit-scrollbar{display:none;}
+
+  .category-sidebar.cat-top .cat-item{
+
+    flex:0 0 auto;width:auto;height:auto;align-self:flex-start;
+
+    padding:10px 20px;font-size:13.5px;border-radius:22px;white-space:nowrap;
+
+  }
+
+}
+
+/* ===== กล่อง/แคปซูลแจ้งเตือนบทความค้างอ่าน ===== */
+
+.read-alarm{
+
+  display:none;align-items:center;justify-content:center;gap:8px;
+
+  width:100%;margin:6px 0 12px;padding:12px 18px;border-radius:26px;
+
+  font-size:14px;font-weight:800;text-align:center;letter-spacing:.01em;
+
+  border:none;user-select:none;
+
+}
+
+.read-alarm.alarm-on{
+
+  background:linear-gradient(135deg,#ec4899,#f472b6);color:#fff;cursor:pointer;
+
+  animation:alarmBlink 1.1s ease-in-out infinite;
+
+}
+
+.read-alarm.alarm-off{
+
+  background:#fce7f3;color:#9d174d;cursor:default;
+
+  box-shadow:0 2px 8px rgba(236,72,153,.18);
+
+}
+
+@keyframes alarmBlink{
+
+  0%,100%{opacity:1;   box-shadow:0 0 0 0    rgba(236,72,153,.55);}
+
+  50%    {opacity:.62; box-shadow:0 0 0 12px rgba(236,72,153,0);}
+
+}
+
+@media (prefers-reduced-motion:reduce){ .read-alarm.alarm-on{animation:none;} }
+
+/* คอมพิวเตอร์ : เป็นกล่องข้อความชิดขวา อยู่ใต้กล่องแต้มสะสม */
+
+@media (min-width:721px){
+
+  .read-alarm{
+
+    width:auto;max-width:280px;margin:0 0 16px auto;
+
+    padding:11px 22px;border-radius:14px;font-size:13.5px;
+
+  }
+
+}
+/* ===== แผงพิมพ์กระดาษคำตอบ ===== */
+
+.exam-panel{background:#fff;border:1px solid var(--border);border-radius:12px;padding:16px 18px;margin:16px 0}
+
+.exam-panel h4{margin:0 0 3px;font-size:15px}
+
+.exam-panel .sub{margin:0 0 14px;font-size:12.5px;color:var(--muted)}
+
+.exam-row{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-bottom:12px}
+
+.exam-f{display:flex;flex-direction:column;gap:4px;min-width:190px;flex:1}
+
+.exam-f label{font-size:11.5px;color:var(--muted);font-weight:600}
+
+.exam-f select{padding:9px 11px;border:1px solid var(--border);border-radius:8px;font-size:13px;
+
+  font-family:inherit;background:#fff;color:var(--text)}
+
+.exam-f select:disabled{background:#f1f5f9;color:#94a3b8}
+
+.exam-chk{display:flex;align-items:center;gap:7px;font-size:12.5px;color:var(--muted)}
+
+.exam-acts{display:flex;gap:9px;flex-wrap:wrap}
+
+.exam-note{font-size:11.5px;color:var(--muted);margin-top:10px;line-height:1.7}
+
+/* ===== หน้าต่างแสดงกระดาษคำตอบ ===== */
+
+.exam-overlay{position:fixed;inset:0;background:rgba(15,23,42,.55);z-index:900;
+
+  display:none;justify-content:center;align-items:flex-start;overflow-y:auto;padding:22px 12px}
+
+.exam-overlay.open{display:flex}
+
+.exam-sheetbox{background:#fff;border-radius:12px;width:100%;max-width:820px;padding:0 0 20px}
+
+.exam-bar{position:sticky;top:0;background:#fff;border-bottom:1px solid var(--border);
+
+  padding:13px 18px;display:flex;gap:9px;justify-content:space-between;align-items:center;
+
+  border-radius:12px 12px 0 0;flex-wrap:wrap;z-index:2}
+
+.exam-bar b{font-size:14px}
+
+/* ===== กระดาษคำตอบ ===== */
+
+.paper{padding:26px 30px;border-bottom:8px solid #f1f5f9}
+
+.paper:last-child{border-bottom:none}
+
+.paper-head{border-bottom:2px solid #1f2937;padding-bottom:10px;margin-bottom:14px}
+
+.paper-head .sys{font-size:11.5px;color:var(--muted);letter-spacing:.03em}
+
+.paper-head h2{margin:3px 0 0;font-size:16.5px;line-height:1.45}
+
+.paper-info{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px 18px;
+
+  font-size:13px;margin-bottom:16px}
+
+.paper-info div span{color:var(--muted)}
+
+.paper-score{display:inline-block;padding:5px 15px;border-radius:20px;font-weight:700;font-size:13.5px}
+
+.paper-score.p{background:#dcfce7;color:#15803d}
+
+.paper-score.f{background:#fee2e2;color:#b91c1c}
+
+.qitem{border:1px solid var(--border);border-left-width:4px;border-radius:9px;padding:12px 14px;margin-bottom:10px;
+
+  page-break-inside:avoid;break-inside:avoid}
+
+.qitem.ok{border-left-color:#16a34a;background:#f6fdf8}
+
+.qitem.no{border-left-color:#dc2626;background:#fffafa}
+
+.qitem .qh{font-weight:700;font-size:13.5px;line-height:1.6;margin-bottom:7px}
+
+.qitem .ln{font-size:13px;line-height:1.75;margin:2px 0;white-space:pre-line}
+
+.qitem .ln b{font-weight:700}
+
+.tag-ok{color:#15803d;font-weight:700}
+
+.tag-no{color:#b91c1c;font-weight:700}
+
+.paper-sign{margin-top:20px;padding-top:14px;border-top:1px dashed var(--border);
+
+  display:flex;justify-content:space-between;align-items:flex-end;gap:20px;flex-wrap:wrap}
+
+.paper-sign img{max-width:220px;max-height:80px;display:block}
+
+.sign-line{font-size:12.5px;color:var(--muted);text-align:center;min-width:230px}
+
+.sign-line .rule{border-bottom:1px solid #94a3b8;height:34px;margin-bottom:5px}
+
+@media print{
+
+  body{background:#fff !important}
+
+  body > *{display:none !important}
+
+  .exam-overlay.open{display:block !important;position:static !important;background:#fff !important;
+
+    padding:0 !important;overflow:visible !important}
+
+  .exam-overlay.open .exam-sheetbox{max-width:none !important;box-shadow:none !important;padding:0 !important}
+
+  .exam-bar{display:none !important}
+
+  .paper{page-break-after:always;border-bottom:none;padding:0 0 10px}
+
+  .paper:last-child{page-break-after:auto}
+
+}
+
+@page{ size:A4; margin:1.5cm 1cm 1cm 1.5cm; }
+
+/* ===== ย่อขนาดฟอนต์กระดาษคำตอบ 24% ===== */
+/* วางต่อท้าย CSS เดิม */
+.paper{padding:20px 23px}
+.paper-head h2{font-size:12.5px}
+.paper-head .sys{font-size:8.5px}
+.paper-info{font-size:10px}
+.paper-score{font-size:10.5px}
+.qitem .qh{font-size:10.5px}
+.qitem .ln{font-size:10px}
+.qitem{padding:9px 10.5px;margin-bottom:7.5px}
+.paper-info{gap:6px 18px;margin-bottom:12px}
+.paper-sign{margin-top:15px;padding-top:10.5px}
+.paper-sign img{max-width:167px;max-height:61px}
+
+/* ===== แถบพิมพ์กระดาษคำตอบของพนักงาน ===== */
+
+.my-exam-bar{display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;
+
+  background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px;padding:14px 18px;margin-bottom:18px}
+
+.my-exam-bar b{font-size:14.5px;color:#1d4ed8}
+
+.my-exam-bar span{font-size:12.5px;color:#64748b}
+
+.my-exam-bar button{white-space:nowrap}
+
+.my-exam-sel{padding:9px 12px;border:1px solid #bfdbfe;border-radius:8px;font-size:13px;
+
+  font-family:inherit;background:#fff;color:#1f2937;max-width:260px}
+
+@media (max-width:520px){ .my-exam-sel{max-width:100%;width:100%} }
+
+</style>
+</head>
+<body>
+
+<div id="loadingScreen" class="center-msg">
+  <div class="spinner"></div>
+  กำลังตรวจสอบสิทธิ์ผู้ใช้งาน...
+</div>
+<div id="errorScreen" class="hidden center-msg"></div>
+
+<div id="mainApp" class="hidden">
+  <header class="topbar">
+
+    <div class="brand"><div class="logo">L</div> ระบบสะสมการเรียนรู้พนักงาน</div>
+
+    <div style="display:flex;align-items:center;gap:16px;">
+
+      <div class="user-info" id="currentUserName">-</div>
+
+      <div class="points-widget" id="pointsWidget">
+
+        <div class="points-widget-num" id="pointsWidgetNum">-</div>
+
+        <div class="points-widget-lbl">แต้มสะสม</div>
+
+        <button class="points-widget-btn" id="pointsWidgetBtn" disabled onclick="doRedeemPoints()">🎁 แลกแต้ม</button>
+
+      </div>
+<button class="btn-sm" id="viewToggleBtn" onclick="toggleViewMode()">📱 มุมมองมือถือ</button><button class="btn-sm btn-kpigame" onclick="goKpiGame()">🎮 เกม KPI</button>
+<button class="btn-sm btn-shift" onclick="goShiftRequest()">📅 ขอเวรหยุด</button>
+      <button id="backToAdminBtn" class="btn-sm hidden" onclick="backToAdminDashboard()">← กลับไปแผงควบคุม Admin</button>
+
+
+    </div>
+
+  </header>
+
+  <div class="app">
+    <div id="previewBanner" class="hidden" style="background:#fef3c7;color:#92400e;padding:10px 16px;border-radius:8px;font-size:13px;margin-bottom:16px;font-weight:600;">
+      👀 นี่คือมุมมองตัวอย่างที่พนักงานทั่วไปจะเห็น (แสดงด้วยบัญชี Admin ของคุณเอง หน้าตา/ฟังก์ชันเหมือนกันทุกประการกับที่พนักงานใช้งานจริง)
+    </div>
+    <div class="tabs">
+
+      <div class="tab active" data-tab="dashboard" onclick="switchTab('dashboard')">ภาพรวม</div>
+
+      <div class="tab" data-tab="history" onclick="switchTab('history')">ประวัติย้อนหลัง</div>
+
+      <div class="tab" data-tab="points" onclick="switchTab('points')">🎁 แต้มสะสม</div>
+
+    </div>
+
+
+    <div id="tab-dashboard">
+
+      <div class="section-title">สวัสดี, <span id="dashUserName"></span></div>
+
+      <p class="section-sub">สรุปความคืบหน้าการเรียนรู้และผลสอบของคุณ (ข้อมูลนี้ดูได้จากทุกอุปกรณ์ที่ล็อกอินด้วยบัญชีเดียวกัน)</p>
+      <div class="stat-row">
+        <div class="stat"><div class="num" id="statPassed">-</div><div class="lbl" data-short="ผ่านแล้ว">บทเรียนที่ผ่านแล้ว</div></div>
+        <div class="stat"><div class="num" id="statNotPassed">-</div><div class="lbl" data-short="ยังไม่ผ่าน">บทเรียนที่ยังไม่ผ่าน</div></div>
+        <div class="stat"><div class="num" id="statNotStarted">-</div><div class="lbl" data-short="ยังไม่เรียน">บทเรียนที่ยังไม่เข้าเรียน</div></div>
+        <div class="stat"><div class="num" id="statQuizzes">-</div><div class="lbl" data-short="ครั้งที่สอบ">ครั้งที่ทำข้อสอบ</div></div>
+        <div class="stat"><div class="num" id="statAvg">-</div><div class="lbl" data-short="เฉลี่ย">คะแนนเฉลี่ย</div></div>
+      </div>
+      <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Mitr:wght@400;500;600">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai+Looped:wght@400;500;600">
+
+<style>
+/* ===== โครงกล่องอันดับเกม ชั่วโมงเรียนรู้ และปุ่มเกม KPI ===== */
+.btn-kpigame{display:inline-flex;align-items:center;justify-content:center;
+  min-height:58px;padding:8px 20px;border-radius:12px;border:none;
+  background:linear-gradient(135deg,#ec4899,#8b5cf6);color:#fff;
+  font-size:14px;font-weight:800;cursor:pointer;white-space:nowrap;
+  box-shadow:0 4px 14px rgba(236,72,153,.4);transition:transform .12s,box-shadow .12s;}
+.btn-kpigame:active{transform:scale(.97);}
+
+.kpi-row{display:grid;gap:16px;grid-template-columns:1fr;margin:0 0 22px;}
+@media(min-width:820px){.kpi-row{grid-template-columns:minmax(0,1fr) minmax(300px,.9fr);}}
+.kpi-hours{background:linear-gradient(135deg,#059669,#10b981);color:#fff;border-radius:14px;padding:18px 20px;}
+.kpi-hours .lbl{font-size:12.5px;opacity:.9;}
+.kpi-hours .big{font-size:36px;font-weight:800;line-height:1.1;}
+.kpi-hours .brk{margin-top:10px;font-size:13px;opacity:.95;line-height:1.8;}
+.kpi-lb{background:#fff;border:1px solid var(--border);border-radius:14px;padding:16px 18px;}
+.kpi-lb h4{margin:0 0 2px;font-size:15px;}
+.kpi-lb .sub{margin:0 0 12px;color:var(--muted);font-size:12.5px;}
+.kpi-lb ol{list-style:none;margin:0;padding:0;}
+.kpi-lb li{display:grid;grid-template-columns:30px 1fr auto;gap:10px;align-items:center;padding:8px 6px;border-bottom:1px solid var(--border);border-radius:8px;}
+.kpi-lb li:last-child{border-bottom:none;}
+.kpi-lb li.me{background:#eff6ff;box-shadow:inset 0 0 0 1.5px #bfdbfe;}
+.kpi-lb .rk{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;background:#f1f5f9;color:var(--muted);}
+.kpi-lb .rk.m1{background:linear-gradient(135deg,#fbbf24,#f59e0b);color:#fff;}
+.kpi-lb .rk.m2{background:linear-gradient(135deg,#cbd5e1,#94a3b8);color:#fff;}
+.kpi-lb .rk.m3{background:linear-gradient(135deg,#d8a26a,#b45309);color:#fff;}
+.kpi-lb .nm{font-size:13.5px;font-weight:600;overflow-wrap:anywhere;display:block;}
+.kpi-lb .dp{font-size:11px;color:var(--muted);display:block;}
+.kpi-lb .sc{font-size:15px;font-weight:800;color:var(--primary-dark);white-space:nowrap;}
+.kpi-lb .cta{display:block;width:100%;margin-top:12px;padding:10px;border:none;border-radius:10px;
+  background:linear-gradient(135deg,#ec4899,#8b5cf6);color:#fff;font-weight:800;font-size:13.5px;cursor:pointer;font-family:inherit;}
+
+.kpi-dx{
+  background:#fff; border:2px solid var(--border,#F7DCE7); border-radius:22px;
+  padding:16px 18px; box-shadow:0 2px 0 #F3D3E1;
+}
+.kpi-dx .dx-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.kpi-dx h4{margin:0;font-size:15px}
+.kpi-dx .dx-sel{
+  border:2px solid var(--border,#F7DCE7); border-radius:999px; padding:4px 12px;
+  font-size:12.5px; color:#7C5F77; background:#FFF6FA; font-family:inherit; cursor:pointer;
+}
+.kpi-dx .dx-item{display:grid;grid-template-columns:26px 1fr;gap:9px;align-items:start;margin-bottom:11px}
+.kpi-dx .dx-rk{
+  width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-size:12px;font-weight:700;color:#5B3B55;background:#F3ECF6;
+}
+.kpi-dx .dx-item:nth-child(1) .dx-rk{background:#FFDCE9;color:#98063F}
+.kpi-dx .dx-item:nth-child(2) .dx-rk{background:#E4E0FC;color:#3E32A0}
+.kpi-dx .dx-item:nth-child(3) .dx-rk{background:#D6EEFA;color:#0A5A80}
+.kpi-dx .dx-item:nth-child(4) .dx-rk{background:#D2F2E7;color:#0A6A4F}
+.kpi-dx .dx-item:nth-child(5) .dx-rk{background:#FFEFCF;color:#8A5600}
+.kpi-dx .dx-nm{font-size:13px;font-weight:600;line-height:1.4;overflow-wrap:anywhere}
+.kpi-dx .dx-bar{height:11px;border-radius:999px;background:#FBEFF5;margin:5px 0 3px;overflow:hidden}
+.kpi-dx .dx-fill{display:block;height:100%;border-radius:999px}
+.kpi-dx .dx-item:nth-child(1) .dx-fill{background:linear-gradient(90deg,#F79AC0,#E9538A)}
+.kpi-dx .dx-item:nth-child(2) .dx-fill{background:linear-gradient(90deg,#B6ACF3,#7466DE)}
+.kpi-dx .dx-item:nth-child(3) .dx-fill{background:linear-gradient(90deg,#8FCDEA,#2E9BCB)}
+.kpi-dx .dx-item:nth-child(4) .dx-fill{background:linear-gradient(90deg,#8AD9BE,#17B98A)}
+.kpi-dx .dx-item:nth-child(5) .dx-fill{background:linear-gradient(90deg,#F6CE86,#E7A32B)}
+.kpi-dx .dx-meta{font-size:11.5px;color:#9B7F96;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.kpi-dx .dx-meta b{color:#3D2439;font-size:12.5px}
+.kpi-dx .dx-up{color:#C0392F;font-weight:600}
+.kpi-dx .dx-dn{color:#0A6A4F;font-weight:600}
+.kpi-dx .dx-foot{margin-top:12px;padding-top:10px;border-top:2px dotted var(--border,#F7DCE7);font-size:11.5px;color:#9B7F96;line-height:1.7}
+@media(min-width:820px){
+  .kpi-row{align-items:start}
+  .kpi-row .kpi-lb{grid-column:1;grid-row:1}
+  .kpi-row .kpi-hours{grid-column:1;grid-row:2}
+  .kpi-row .kpi-dx{grid-column:2;grid-row:1 / span 2}
+}
+
+/* ===== ธีมสีสันสดใส ระบบสะสมการเรียนรู้พนักงาน OPD1 ===== */
+
+:root{
+  --primary:#7466DE; --primary-dark:#3E32A0;
+  --bg:#FFF6FA; --card:#FFFFFF;
+  --text:#3D2439; --muted:#7C5F77; --border:#F7DCE7;
+  --green:#0E9B72; --red:#DC4159; --amber:#CE8005;
+  --pink:#E9538A; --pink-soft:#FFDCE9;
+  --violet:#7466DE; --violet-soft:#E4E0FC;
+  --blue-soft:#D6EEFA; --sun-soft:#FFEFCF; --good-soft:#D2F2E7;
+  --sunken:#FFF0F6; --ink-3:#AB90A6;
+  --display:"Mitr","Segoe UI","Tahoma",system-ui,sans-serif;
+  --bodyfont:"IBM Plex Sans Thai Looped","Noto Sans Thai","Segoe UI","Tahoma",system-ui,sans-serif;
+  --shadow-s:0 2px 0 #F3D3E1;
+}
+
+body{
+  font-family:var(--bodyfont);
+  background:linear-gradient(180deg,#FFF6FA 0%,#FDF2F8 45%,#F3F1FF 100%);
+  background-attachment:fixed;
+  color:var(--text); line-height:1.7;
+}
+
+h1,h2,h3,h4,
+.section-title,.card h3,.question,.content-box h2,.category-title,
+.stat .num,.result-score,.points-hero .big,.points-widget-num,
+.exam-panel h4,.my-exam-bar b,.paper-head h2{
+  font-family:var(--display); font-weight:500; letter-spacing:0;
+}
+
+/* ---------- แถบด้านบน ---------- */
+header.topbar{
+  background:var(--card); border-bottom:2px solid var(--border);
+  box-shadow:0 2px 0 rgba(233,83,138,.06);
+}
+header.topbar .brand{font-family:var(--display);font-weight:500;color:var(--pink)}
+header.topbar .brand .logo{
+  background:linear-gradient(135deg,#E9538A,#7466DE);
+  border-radius:12px; font-size:0; box-shadow:0 3px 10px rgba(233,83,138,.35);
+  background-image:
+    url("data:image/svg+xml;utf8,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%20100%20100'%3E%3Cpath%20d='M50%2014c-19%200-32%2013-32%2031%200%2017%2013%2030%2032%2030s32-13%2032-30c0-18-13-31-32-31z'%20fill='%23FFD9E6'%20stroke='%23E9538A'%20stroke-width='4'/%3E%3Cpath%20d='M26%2030c4-11%2013-17%2024-17s20%206%2024%2017c-7-5-15-7-24-7s-17%202-24%207z'%20fill='%23FFFFFF'%20stroke='%23E9538A'%20stroke-width='3.4'/%3E%3Cpath%20d='M46%2020h8v4h4v8h-4v4h-8v-4h-4v-8h4z'%20fill='%23E9538A'/%3E%3Ccircle%20cx='39'%20cy='48'%20r='4.4'%20fill='%233D2439'/%3E%3Ccircle%20cx='61'%20cy='48'%20r='4.4'%20fill='%233D2439'/%3E%3Ccircle%20cx='40.6'%20cy='46.4'%20r='1.6'%20fill='%23fff'/%3E%3Ccircle%20cx='62.6'%20cy='46.4'%20r='1.6'%20fill='%23fff'/%3E%3Cpath%20d='M42%2058c2.6%203%2013.4%203%2016%200'%20stroke='%233D2439'%20stroke-width='3.6'%20stroke-linecap='round'%20fill='none'/%3E%3Cellipse%20cx='30'%20cy='55'%20rx='5'%20ry='3.4'%20fill='%23F58BB1'%20opacity='.75'/%3E%3Cellipse%20cx='70'%20cy='55'%20rx='5'%20ry='3.4'%20fill='%23F58BB1'%20opacity='.75'/%3E%3C/svg%3E"),
+    linear-gradient(135deg,#FFE3EE,#EDE9FE);
+  background-repeat:no-repeat; background-position:center; background-size:88%;
+}
+header.topbar .user-info{font-size:13px;color:var(--muted);font-family:var(--bodyfont)}
+
+/* ---------- แท็บ ---------- */
+.tabs{border-bottom:2px solid var(--border);gap:8px;padding-bottom:8px;align-items:center}
+.tab{
+  border-bottom:none; border-radius:999px; padding:9px 20px;
+  font-family:var(--display); font-size:13.5px; color:var(--muted);
+  transition:background .15s,color .15s,transform .12s;
+}
+.tab:hover{background:var(--sunken)}
+.tab.active{
+  background:linear-gradient(135deg,#E9538A,#7466DE); color:#fff;
+  border-bottom-color:transparent; font-weight:500;
+  box-shadow:0 4px 12px rgba(233,83,138,.32);
+}
+
+/* ---------- หัวข้อและมาสคอต ---------- */
+.section-title{font-size:20px;color:var(--text)}
+.section-sub{color:var(--muted);font-size:13.5px}
+#tab-dashboard > .section-title:first-child::before{
+  content:""; display:inline-block; width:44px; height:44px; vertical-align:-13px;
+  margin-inline-end:10px; background-repeat:no-repeat; background-position:center;
+  background-size:contain; filter:drop-shadow(0 4px 0 rgba(233,83,138,.15));
+  background-image:url("data:image/svg+xml;utf8,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%20100%20100'%3E%3Cellipse%20cx='50'%20cy='92'%20rx='30'%20ry='5'%20fill='%23E9538A'%20opacity='.13'/%3E%3Cpath%20d='M50%2014c-19%200-32%2013-32%2031%200%2017%2013%2030%2032%2030s32-13%2032-30c0-18-13-31-32-31z'%20fill='%23FFD9E6'%20stroke='%23E9538A'%20stroke-width='3.5'/%3E%3Cpath%20d='M26%2030c4-11%2013-17%2024-17s20%206%2024%2017c-7-5-15-7-24-7s-17%202-24%207z'%20fill='%23FFFFFF'%20stroke='%23E9538A'%20stroke-width='3'/%3E%3Cpath%20d='M46%2020h8v4h4v8h-4v4h-8v-4h-4v-8h4z'%20fill='%23E9538A'/%3E%3Ccircle%20cx='39'%20cy='48'%20r='4.2'%20fill='%233D2439'/%3E%3Ccircle%20cx='61'%20cy='48'%20r='4.2'%20fill='%233D2439'/%3E%3Ccircle%20cx='40.5'%20cy='46.5'%20r='1.5'%20fill='%23fff'/%3E%3Ccircle%20cx='62.5'%20cy='46.5'%20r='1.5'%20fill='%23fff'/%3E%3Cpath%20d='M42%2058c2.6%203%2013.4%203%2016%200'%20stroke='%233D2439'%20stroke-width='3.4'%20stroke-linecap='round'%20fill='none'/%3E%3Cellipse%20cx='30'%20cy='55'%20rx='5'%20ry='3.4'%20fill='%23F58BB1'%20opacity='.7'/%3E%3Cellipse%20cx='70'%20cy='55'%20rx='5'%20ry='3.4'%20fill='%23F58BB1'%20opacity='.7'/%3E%3C/svg%3E");
+}
+
+/* ---------- กล่องสถิติ 5 ใบ ---------- */
+.stat{border:2px solid var(--border);border-radius:20px;box-shadow:var(--shadow-s)}
+.stat .num{font-size:27px;font-weight:600}
+.stat .lbl{font-size:12.5px;color:var(--muted)}
+.stat-row .stat:nth-child(1){background:var(--good-soft);border-color:#7FD9BC}
+.stat-row .stat:nth-child(1) .num{color:#0A6A4F}
+.stat-row .stat:nth-child(2){background:var(--sun-soft);border-color:#F0C97A}
+.stat-row .stat:nth-child(2) .num{color:#8A5600}
+.stat-row .stat:nth-child(3){background:var(--pink-soft);border-color:#F5A3C0}
+.stat-row .stat:nth-child(3) .num{color:#98063F}
+.stat-row .stat:nth-child(4){background:var(--blue-soft);border-color:#8FCDEA}
+.stat-row .stat:nth-child(4) .num{color:#0A5A80}
+.stat-row .stat:nth-child(5){background:var(--violet-soft);border-color:#B3A9F2}
+.stat-row .stat:nth-child(5) .num{color:#3E32A0}
+
+/* ---------- การ์ดบทเรียน ---------- */
+.card{
+  border:2px solid var(--border); border-radius:20px; box-shadow:var(--shadow-s);
+  transition:transform .14s,box-shadow .14s;
+}
+.card:hover{transform:translateY(-3px);box-shadow:0 4px 0 #F0CBDC,0 12px 24px -16px rgba(61,36,57,.4)}
+.card h3{font-size:15px;line-height:1.45}
+.card p.desc{color:var(--muted)}
+.card .meta{color:var(--ink-3)}
+.category-title{color:var(--pink);border-bottom:2px dotted var(--border);letter-spacing:.02em}
+
+.badge{font-family:var(--display);font-weight:500;padding:3px 11px;border-radius:999px}
+.badge.done{background:var(--good-soft);color:#0A6A4F}
+.badge.new{background:var(--sunken);color:var(--ink-3)}
+.badge.fail{background:var(--sun-soft);color:#8A5600}
+
+/* ---------- ปุ่ม ---------- */
+.btn-sm{
+  font-family:var(--display); border:2px solid var(--border); color:var(--violet);
+  border-radius:999px; padding:8px 16px; transition:transform .12s,background .15s,color .15s;
+}
+.btn-sm:hover{background:linear-gradient(135deg,#E9538A,#7466DE);color:#fff;border-color:transparent;transform:translateY(-2px)}
+.btn-primary{
+  font-family:var(--display); border-radius:999px; padding:10px 22px;
+  background:linear-gradient(135deg,#E9538A,#7466DE);
+  box-shadow:0 4px 14px rgba(116,102,222,.35); transition:transform .12s;
+}
+.btn-primary:hover{background:linear-gradient(135deg,#DB2777,#5B4BD6);transform:translateY(-2px)}
+
+/* ---------- แถบเตือนบทความค้างอ่าน ---------- */
+.read-alarm{font-family:var(--display);font-weight:500;border-radius:999px}
+.read-alarm.alarm-off{background:var(--good-soft);color:#0A6A4F}
+
+/* ---------- กล่องแต้มสะสมบนหัวจอ ---------- */
+.points-widget{
+  background:linear-gradient(135deg,#F2A93C,#E9538A); border-radius:16px;
+  box-shadow:0 4px 14px rgba(233,83,138,.35);
+}
+.points-widget-num{font-family:var(--display);font-weight:600}
+.points-widget-btn{font-family:var(--display);color:#98063F;border-radius:999px}
+.btn-shift{border-radius:14px;font-family:var(--display);background:linear-gradient(135deg,#7466DE,#2196C9);box-shadow:0 4px 14px rgba(116,102,222,.4)}
+.btn-shift:hover{background:linear-gradient(135deg,#5B4BD6,#1580AF)}
+.btn-kpigame{border-radius:14px;font-family:var(--display)}
+
+/* ---------- หมวดหมู่ด้านซ้าย ---------- */
+.category-sidebar .cat-item{
+  font-family:var(--display); font-weight:400; border-radius:999px; padding:11px 20px;
+}
+.category-sidebar .cat-item.active{box-shadow:0 4px 14px rgba(233,83,138,.3)}
+
+/* ---------- ตาราง ---------- */
+table{border:2px solid var(--border);border-radius:18px}
+th{background:var(--sunken);color:var(--muted);font-family:var(--display);font-weight:500;font-size:12px}
+td{color:var(--text)}
+.pass-tag{color:var(--green)} .fail-tag{color:var(--red)}
+.sig-thumb{border:2px solid var(--border);border-radius:8px}
+
+/* ---------- หน้าเนื้อหาบทเรียน ---------- */
+.content-box,.quiz-box{border:2px solid var(--border);border-radius:24px;box-shadow:var(--shadow-s)}
+.content-box h2{font-size:19px}
+.content-text{border:2px solid var(--border);border-radius:16px;background:var(--sunken)}
+.content-text h4{color:var(--pink)}
+.gate-status{border-radius:14px;background:var(--sun-soft);color:#8A5600;font-family:var(--display);font-weight:400}
+.gate-status.ok{background:var(--good-soft);color:#0A6A4F}
+.watch-progress{border:2px solid var(--border);border-radius:999px;background:var(--sunken)}
+.watch-progress .fill{background:linear-gradient(90deg,#E9538A,#7466DE)}
+video{border-radius:16px}
+
+/* ---------- แบบทดสอบ ---------- */
+.quiz-progress{color:var(--ink-3)}
+.question{font-size:17px;font-weight:500;line-height:1.55}
+.option{
+  border:2px solid var(--border); border-radius:16px; background:var(--sunken);
+  font-family:var(--display); font-size:15px; transition:transform .12s,border-color .12s;
+}
+.option:hover{border-color:var(--violet);transform:translateY(-2px)}
+.option.selected{background:var(--violet-soft);border-color:var(--violet);color:var(--primary-dark)}
+.result-score{font-size:46px;font-weight:600;color:var(--violet)}
+.result-pass{color:var(--green)} .result-fail{color:var(--red)}
+.wrong-item{border-radius:14px;border-left-width:5px}
+.wrong-item.ok-item{background:var(--good-soft)}
+
+/* ---------- ลายเซ็น ---------- */
+.sig-pad-wrap{border:2px solid var(--border);border-radius:16px}
+
+/* ---------- แต้มสะสม ---------- */
+.points-hero{background:linear-gradient(135deg,#E9538A,#7466DE);border-radius:22px}
+.points-hero .big{font-weight:600}
+.points-bar{border-radius:999px}
+.points-banner{border-radius:16px;font-family:var(--display);font-weight:400}
+.points-banner.pending{background:var(--sun-soft);color:#8A5600}
+.points-banner.fulfilled{background:var(--good-soft);color:#0A6A4F}
+.points-terms{background:var(--sunken);border:2px solid var(--border);border-radius:18px}
+.points-terms h4{color:var(--pink)}
+
+/* ---------- กล่องอันดับเกม KPI และชั่วโมงเรียนรู้ ---------- */
+.kpi-lb{border:2px solid var(--border);border-radius:22px;box-shadow:var(--shadow-s)}
+.kpi-lb h4{color:var(--text)}
+.kpi-lb li.me{background:var(--violet-soft);box-shadow:inset 0 0 0 2px rgba(116,102,222,.35)}
+.kpi-lb .rk{font-family:var(--display)}
+.kpi-lb .nm{display:block}
+.kpi-lb .dp{display:block}
+.kpi-lb .sc{font-family:var(--display);color:var(--violet)}
+.kpi-lb .cta{border-radius:999px;font-family:var(--display);box-shadow:0 4px 14px rgba(233,83,138,.3)}
+.kpi-hours{
+  border-radius:22px; align-self:start;
+  background:linear-gradient(140deg,#0E9B72,#17B98A);
+  box-shadow:0 10px 24px -16px rgba(14,155,114,.9);
+}
+.kpi-hours .big{font-family:var(--display);font-weight:600}
+
+/* ---------- แผงผู้ดูแลระบบ ---------- */
+.exam-panel{border:2px solid var(--border);border-radius:20px;background:var(--card)}
+.exam-panel h4{color:var(--pink)}
+.exam-f select{border:2px solid var(--border);border-radius:12px;font-family:var(--bodyfont)}
+.my-exam-bar{background:var(--violet-soft);border:2px solid #C9C1F7;border-radius:18px}
+.my-exam-bar b{color:var(--primary-dark)}
+.my-exam-sel{border:2px solid #C9C1F7;border-radius:12px;font-family:var(--bodyfont)}
+
+/* ---------- อื่น ๆ ---------- */
+.spinner{border-color:var(--border);border-top-color:var(--violet)}
+.center-msg{color:var(--ink-3)}
+footer.note{color:var(--ink-3);border-top:2px dotted var(--border);padding-top:16px}
+
+/* ---------- เวลาสั่งพิมพ์กระดาษคำตอบ ให้กลับเป็นขาวดำอ่านง่ายเหมือนเดิม ---------- */
+@media print{
+  body{background:#fff !important}
+  .paper,.paper *{font-family:"IBM Plex Sans Thai Looped","Noto Sans Thai",sans-serif !important}
+}
+
+/* ===== ชุดปรับปุ่มให้สีนุ่มสบายตา ===== */
+
+/* บรรทัดกันชน อย่าลบ เผื่อมีข้อความแปลกปลอมอยู่เหนือขึ้นไปจะได้กลืนบรรทัดนี้แทน */
+.opd1-guard-1{color:inherit}
+.opd1-guard-2{color:inherit}
+
+/* กล่องแต้มสะสมบนหัวจอ เปลี่ยนจากส้มแสดเป็นพีชอ่อน */
+.points-widget{
+  background:linear-gradient(135deg,#FFEEDC,#FFE2EC) !important;
+  border:2px solid #F7CFAF !important;
+  box-shadow:0 2px 0 #F3D6C0 !important;
+}
+.points-widget-num{color:#9A4B0C !important}
+.points-widget-lbl{color:#8B5A32 !important;opacity:1 !important}
+.points-widget-btn{
+  background:#fff !important; color:#A8460F !important;
+  border:2px solid #F7CFAF !important; box-shadow:none !important;
+}
+
+/* ปุ่ม เกม KPI */
+.btn-kpigame{
+  background:linear-gradient(135deg,#FBDCEC,#E8E2FB) !important;
+  color:#8A2B5E !important; border:2px solid #F0BFD8 !important;
+  box-shadow:0 2px 0 #EFCBDE !important;
+}
+.btn-kpigame:hover{background:linear-gradient(135deg,#F8CBE2,#DDD5F8) !important;color:#75204F !important}
+
+/* ปุ่ม ขอเวรหยุด */
+.btn-shift{
+  background:linear-gradient(135deg,#DEEBFB,#D8F1F7) !important;
+  color:#15557A !important; border:2px solid #B2D6EE !important;
+  box-shadow:0 2px 0 #C9E0F1 !important;
+}
+.btn-shift:hover{background:linear-gradient(135deg,#C9DFF8,#C3E9F2) !important;color:#0F4463 !important}
+
+/* ปุ่มเล็กทั่วไป ตอนเอาเมาส์ชี้ */
+.btn-sm:hover{
+  background:linear-gradient(135deg,#FBDCEC,#E8E2FB) !important;
+  color:#8A2B5E !important; border-color:#F0BFD8 !important;
+}
+
+/* ปุ่มเข้าเล่นเกมใต้ตารางอันดับ */
+.kpi-lb .cta{
+  background:linear-gradient(135deg,#FBDCEC,#E8E2FB) !important;
+  color:#8A2B5E !important; border:2px solid #F0BFD8 !important;
+  box-shadow:0 2px 0 #EFCBDE !important;
+}
+.kpi-lb .cta:hover{background:linear-gradient(135deg,#F8CBE2,#DDD5F8) !important}
+
+/* กล่องชั่วโมงเรียนรู้ เปลี่ยนจากเขียวจัดเป็นเขียวมิ้นต์ */
+.kpi-hours{
+  background:linear-gradient(140deg,#D8F2E8,#E7F7F0) !important;
+  color:#0A6A4F !important; border:2px solid #A8E0CD !important;
+  box-shadow:0 2px 0 #C6EADB !important;
+}
+.kpi-hours .lbl{color:#3E8B75 !important;opacity:1 !important}
+.kpi-hours .brk{color:#2F7B65 !important;opacity:1 !important}
+
+/* แท็บที่เลือกอยู่ */
+.tab.active{
+  background:linear-gradient(135deg,#FBD9E8,#E7E1FB) !important;
+  color:#8A2B5E !important;
+  box-shadow:inset 0 0 0 2px #F1C4DA !important;
+}
+
+/* ปุ่มหลักสีเข้ม ลดความจัดลง */
+.btn-primary{
+  background:linear-gradient(135deg,#DE6A9E,#8B7EDD) !important;
+  box-shadow:0 3px 0 #EBC3D6 !important;
+}
+.btn-primary:hover{background:linear-gradient(135deg,#D4568F,#7C6CD6) !important}
+
+/* แถบแต้มสะสมใหญ่ในแท็บแต้ม */
+.points-hero{background:linear-gradient(135deg,#DE6A9E,#8B7EDD) !important}
+</style>
+
+<div class="kpi-row">
+  <div class="kpi-lb">
+    <h4>🏆 อันดับเกม KPI ประจำเดือนนี้</h4>
+    <p class="sub" id="kpiLbSub">5 อันดับแรกที่ทำคะแนนสูงสุดของแผนก</p>
+    <div id="kpiLbBody"><div class="center-msg" style="padding:18px"><div class="spinner"></div>กำลังโหลด...</div></div>
+    <button class="cta" onclick="goKpiGame()">🎮 เข้าเล่นเกม KPI Challenge</button>
+  </div>
+  <div class="kpi-hours">
+    <div class="lbl">ชั่วโมงการเรียนรู้สะสมของคุณ</div>
+    <div class="big" id="kpiHoursNum">-</div>
+    <div class="brk" id="kpiHoursBrk">กำลังโหลด...</div>
+  </div>
+  <div class="kpi-dx" id="kpiDxBox">
+    <div class="dx-head">
+      <h4>🩺 Top 5 กลุ่มอาการประจำเดือน</h4>
+      <select class="dx-sel" id="dxMonthSel" onchange="loadTopDx(this.value)"></select>
+    </div>
+    <div id="dxBody"><div class="center-msg" style="padding:16px"><div class="spinner"></div>กำลังโหลด...</div></div>
+  </div>
+</div>
+
+<script>
+function goKpiGame(){ window.top.location.href = SHIFT_BASE_URL + '?page=kpigame'; }
+
+function loadKpiWidgets() {
+  google.script.run.withSuccessHandler(function (d) {
+    var box = document.getElementById('kpiLbBody');
+    if (!box) return;
+    document.getElementById('kpiLbSub').textContent =
+      '5 อันดับแรกประจำ' + d.monthLabel + ' · ผู้ร่วมเล่น ' + d.totalPlayers + ' คน';
+    if (!d.top.length) {
+      box.innerHTML = '<div class="center-msg" style="padding:20px">ยังไม่มีใครเล่นในเดือนนี้<br>' +
+                      '<b style="color:var(--primary-dark)">เป็นคนแรกของแผนกเลยไหม</b></div>';
+      return;
+    }
+    var h = '<ol>';
+    d.top.forEach(function (p) {
+      h += '<li class="' + (p.isMe ? 'me' : '') + '">' +
+             '<span class="rk' + (p.rank <= 3 ? ' m' + p.rank : '') + '">' + p.rank + '</span>' +
+             '<span><span class="nm">' + p.name + (p.isMe ? ' (คุณ)' : '') + '</span>' +
+             '<span class="dp">' + (p.dept || '-') + ' · เล่น ' + p.plays + ' ครั้ง</span></span>' +
+             '<span class="sc">' + p.score + '</span>' +
+           '</li>';
+    });
+    h += '</ol>';
+    if (d.me) {
+      h += '<div style="margin-top:10px;font-size:12.5px;color:var(--muted)">อันดับของคุณเดือนนี้ ' +
+           '<b style="color:var(--primary-dark)">ที่ ' + d.me.rank + '</b> จาก ' + d.totalPlayers +
+           ' คน · คะแนนดีที่สุด <b>' + d.me.score + '</b> แต้ม</div>';
+    } else {
+      h += '<div style="margin-top:10px;font-size:12.5px;color:var(--muted)">คุณยังไม่ได้เล่นในเดือนนี้ เริ่มเล่นเพื่อติดอันดับ</div>';
+    }
+    box.innerHTML = h;
+  }).withFailureHandler(function () {
+    var box = document.getElementById('kpiLbBody');
+    if (box) box.innerHTML = '<div class="center-msg" style="padding:18px">ยังไม่มีข้อมูลอันดับ</div>';
+  }).getGameLeaderboard();
+
+  google.script.run.withSuccessHandler(function (h) {
+    var n = document.getElementById('kpiHoursNum');
+    var b = document.getElementById('kpiHoursBrk');
+    if (!n || !b) return;
+    n.textContent = h.totalHours + ' ชม.';
+    b.innerHTML = 'บทเรียนที่สอบผ่าน ' + h.courseCount + ' บท = ' + h.courseHours + ' ชม.<br>' +
+                  'เกม KPI ที่ผ่าน ' + h.gamePassCount + ' ครั้ง = ' + h.gameHours + ' ชม.';
+  }).withFailureHandler(function () {
+    var b = document.getElementById('kpiHoursBrk');
+    if (b) b.textContent = 'ยังไม่มีข้อมูลชั่วโมงการเรียนรู้';
+  }).getMyLearningHours();
+}
+
+function dxEsc(s){
+  var d = document.createElement('div');
+  d.textContent = String(s === null || s === undefined ? '' : s);
+  return d.innerHTML;
+}
+function loadTopDx(mi){
+  var body = document.getElementById('dxBody');
+  if (!body) return;
+  body.innerHTML = '<div class="center-msg" style="padding:16px"><div class="spinner"></div>กำลังโหลด...</div>';
+  var arg = (mi === undefined || mi === null || mi === '') ? null : Number(mi);
+  google.script.run
+    .withSuccessHandler(renderTopDx)
+    .withFailureHandler(function(e){
+      body.innerHTML = '<div class="center-msg" style="padding:16px">โหลดข้อมูลไม่สำเร็จ ' + dxEsc(e && e.message ? e.message : '') + '</div>';
+    })
+    .getTopDiagnosis(arg);
+}
+function renderTopDx(r){
+  var body = document.getElementById('dxBody');
+  var sel  = document.getElementById('dxMonthSel');
+  if (!body) return;
+  if (!r || !r.ok){
+    body.innerHTML = '<div class="center-msg" style="padding:16px">' + dxEsc(r && r.msg ? r.msg : 'ยังไม่มีข้อมูล') + '</div>';
+    return;
+  }
+  if (sel && !sel.options.length){
+    var o = '';
+    for (var i = 0; i < r.months.length; i++){
+      o += '<option value="' + r.months[i].i + '">' + dxEsc(r.months[i].label) + '</option>';
+    }
+    sel.innerHTML = o;
+  }
+  if (sel) sel.value = String(r.monthIndex);
+
+  var h = '';
+  for (var k = 0; k < r.items.length; k++){
+    var it = r.items[k];
+    var trend = '';
+    if (it.diff !== null && it.diff !== undefined && it.diff !== 0){
+      trend = it.diff > 0
+        ? '<span class="dx-up">▲ ' + it.diff + '%</span>'
+        : '<span class="dx-dn">▼ ' + Math.abs(it.diff) + '%</span>';
+    }
+    h += '<div class="dx-item">'
+       +   '<div class="dx-rk">' + it.rank + '</div>'
+       +   '<div>'
+       +     '<div class="dx-nm">' + dxEsc(it.name) + '</div>'
+       +     '<div class="dx-bar"><span class="dx-fill" style="width:' + it.bar + '%"></span></div>'
+       +     '<div class="dx-meta"><b>' + it.n.toLocaleString() + ' ครั้ง</b><span>' + it.pct + '% ของเดือนนี้</span>' + trend + '</div>'
+       +   '</div>'
+       + '</div>';
+  }
+  h += '<div class="dx-foot">'
+     +   'เดือน' + dxEsc(r.monthLabel) + ' มีผู้มารับบริการ ' + r.total.toLocaleString() + ' ครั้ง'
+     +   '<br>5 กลุ่มอาการนี้รวมกันคิดเป็น ' + r.topShare + '% ของทั้งเดือน'
+     +   '<br>สัญลักษณ์ ▲ ▼ คือเทียบกับเดือนก่อนหน้า'
+     + '</div>';
+  body.innerHTML = h;
+}
+
+function kpiBlockInit(){
+  try{ loadKpiWidgets(); }catch(e){}
+  try{ loadTopDx(); }catch(e){}
+}
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', kpiBlockInit);
+} else {
+  kpiBlockInit();
+}
+</script>
+
+      <div class="section-title" style="font-size:15px;">บทเรียนที่แนะนำ</div>
+
+      <div class="courses-layout">
+
+        <div class="category-sidebar" id="dashCategorySidebar"></div>
+
+        <div class="courses-main">
+
+          <div class="grid" id="dashCourseGrid"></div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+    <div id="tab-history" class="hidden">
+      <div class="section-title">ประวัติการเรียนรู้และผลสอบย้อนหลัง</div>
+      <p class="section-sub">คุณเห็นได้เฉพาะประวัติของตัวเองเท่านั้น</p>
+      <table>
+        <thead><tr><th>วันที่</th><th>บทเรียน / แบบทดสอบ</th><th>คะแนน</th><th>ผลลัพธ์</th><th>ลายเซ็น</th><th></th></tr></thead>
+        <tbody id="historyBody"></tbody>
+      </table>
+    </div>
+    <div id="tab-points" class="hidden">
+
+      <div class="section-title">แต้มสะสม</div>
+
+      <p class="section-sub">สะสมแต้มจากการทำแบบทดสอบได้คะแนนเต็ม แลกเป็น LINE credit ได้เมื่อครบ 50 แต้ม</p>
+
+      <div id="pointsBody"><div class="center-msg"><div class="spinner"></div>กำลังโหลด...</div></div>
+
+    </div>
+
+
+    <footer class="note">ข้อมูลของคุณถูกเก็บไว้ในระบบกลางของบริษัท ดูย้อนหลังได้จากทุกเครื่องที่ล็อกอินด้วยบัญชี Google เดียวกัน</footer>
+  </div>
+</div>
+
+<div id="adminScreen" class="hidden">
+  <header class="topbar">
+    <div class="brand"><div class="logo">A</div> แผงควบคุมผู้ดูแลระบบ / HR</div>
+    <div style="display:flex;align-items:center;gap:14px;">
+      <div style="display:flex;gap:8px;">
+        <button class="btn-sm" onclick="previewEmployeeView()">👀 ดูตัวอย่างหน้าจอที่พนักงานเห็น</button>
+        <button class="btn-sm" onclick="goAdminShift()">📅 ตั้งค่าเวรหยุด</button>
+        <button class="btn-sm" onclick="goShiftRequest()">📅 ขอเวรหยุดของฉัน</button><button class="btn-sm" id="viewToggleBtn2" onclick="toggleViewMode()">📱 มุมมองมือถือ</button>
+      </div>
+      <div class="user-info" id="adminUserName">-</div>
+    </div>
+  </header>
+
+  <div class="app">
+    <div class="section-title">ภาพรวมพนักงานทุกแผนก</div>
+    <p class="section-sub">ดูความคืบหน้าการเรียนรู้ ผลสอบ และข้อที่ตอบผิดของพนักงานทุกคน พร้อมดาวน์โหลดรายงานเพื่อวิเคราะห์ต่อ</p>
+    <div style="margin-bottom:10px;display:flex;gap:10px;flex-wrap:wrap;align-items:flex-start;">
+      <button class="btn-primary" onclick="downloadReport()">ดาวน์โหลดรายงาน (CSV)</button>
+    </div>
+    <div style="margin-bottom:16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;background:#f9fafb;border:1px solid var(--border);border-radius:10px;padding:10px 14px;">
+      <span style="font-size:13px;font-weight:600;color:var(--muted);">สร้างแบบฟอร์ม OJT (FR โรงพยาบาล) พร้อมลายเซ็น:</span>
+      <select id="ojtCourseSelect" class="btn-sm" style="cursor:pointer;"></select>
+      <button class="btn-sm" onclick="generateOjtForm()">📝 สร้างแบบฟอร์ม</button>
+    </div>
+    <div id="codeStockBanner" class="hidden" style="margin-bottom:16px;padding:10px 16px;border-radius:10px;font-size:13px;font-weight:700;"></div>
+
+    <div id="redemptionsPanel" class="hidden" style="margin-bottom:16px;background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;padding:14px 16px;">
+
+      <div style="font-size:13px;font-weight:700;color:#9a3412;margin-bottom:10px;">🎁 คำขอแลกแต้มที่รอดำเนินการ</div>
+
+      <table>
+
+        <thead><tr><th>วันที่ขอ</th><th>ชื่อ</th><th>แผนก</th><th>แต้ม</th><th>Serial Number / PIN Code</th><th></th></tr></thead>
+
+        <tbody id="redemptionsBody"></tbody>
+
+      </table>
+
+    </div>
+
+    <table>
+      <thead id="adminTableHead">
+        <tr><th>ชื่อพนักงาน</th><th>แผนก</th><th>บทเรียนที่ผ่าน</th><th>ครั้งที่สอบ</th><th>คะแนนเฉลี่ย</th><th>ข้อที่ตอบผิดสะสม</th><th></th></tr>
+      </thead>
+      <tbody id="adminEmployeeBody"></tbody>
+    </table>
+    <div id="skillPanel" class="skill-panel">
+      <div class="skill-head">
+        <div>
+          <div class="section-title" style="font-size:16px;margin:0">🩺 ความคืบหน้าบทเรียนด้านทักษะ</div>
+          <p class="section-sub" style="margin:2px 0 0">บทหลักและบทย่อยของ EKG และ CPR · กด "ดูบทย่อย" เพื่อดูรายละเอียดรายบท</p>
+        </div>
+        <div class="skill-tools">
+          <input id="skillSearch" type="search" placeholder="ค้นหาชื่อ / แผนก" oninput="renderSkillProgress()">
+          <button class="btn-sm" onclick="loadSkillProgress()">↻ รีเฟรช</button>
+          <button class="btn-sm" onclick="window.open(SHIFT_BASE_URL + '?page=ekg&print=all', '_blank')">🖨️ เนื้อหา EKG</button>
+          <button class="btn-sm" onclick="window.open(SHIFT_BASE_URL + '?page=cpr&print=1', '_blank')">🖨️ เอกสาร CPR</button>
+        </div>
+      </div>
+      <div class="skill-legend">
+        <span><i class="sk-dot passed"></i>ผ่าน / ฝึกครบ</span>
+        <span><i class="sk-dot in_progress"></i>กำลังเรียน</span>
+        <span><i class="sk-dot none"></i>ยังไม่เข้า</span>
+      </div>
+      <div class="table-scroll-wrap" style="max-height:none"><table class="skill-table">
+        <thead id="skillHead"></thead>
+        <tbody id="skillBody"><tr><td>กำลังโหลด…</td></tr></tbody>
+      </table></div>
+    </div>
+    <div id="pointsAdminPanel" class="skill-panel">
+      <div class="skill-head">
+        <div>
+          <div class="section-title" style="font-size:16px;margin:0">🎁 แต้มสะสมของพนักงาน</div>
+          <p class="section-sub" style="margin:2px 0 0">แต้มคงเหลือ แต้มที่เคยได้ แต้มที่แลกไปแล้ว · หัวหน้าแผนก (Role = head) ไม่มีสิทธิสะสมแต้ม</p>
+        </div>
+        <div class="skill-tools">
+          <input id="pointsSearch" type="search" placeholder="ค้นหาชื่อ / แผนก" oninput="renderPointsAdmin()">
+          <button class="btn-sm" onclick="loadPointsAdmin()">↻ โหลด / รีเฟรช</button>
+        </div>
+      </div>
+      <div class="table-scroll-wrap" style="max-height:none"><table class="skill-table">
+        <thead><tr>
+          <th>ชื่อ</th><th>แผนก</th><th>สิทธิสะสม</th><th>แต้มคงเหลือ</th>
+          <th>ได้มาทั้งหมด</th><th>แลกไปแล้ว</th><th>บทที่ได้แต้ม</th><th>ได้แต้มล่าสุด</th>
+        </tr></thead>
+        <tbody id="pointsAdminBody"><tr><td colspan="8">กดปุ่ม ↻ โหลด / รีเฟรช เพื่อดูข้อมูล</td></tr></tbody>
+      </table></div>
+    </div>
+
+    <div id="adminDetailPanel"></div>
+    <footer class="note">มุมมองนี้มองเห็นพนักงานได้ทุกแผนก สำหรับ Admin / HR / หัวหน้างานที่ได้รับสิทธิ์เท่านั้น</footer>
+  </div>
+</div>
+
+<div id="contentScreen" class="hidden">
+  <div class="app"><div class="content-box" id="contentContainer"></div></div>
+</div>
+
+<div id="quizScreen" class="hidden">
+  <div class="app"><div class="quiz-box" id="quizContainer"></div></div>
+</div>
+
+<script>
+let CURRENT_USER = null;
+
+let COURSES = [];
+
+let contentState = null;
+
+let quizState = null;
+
+let SELECTED_CATEGORY = 'ทั้งหมด';
+
+let SELECTED_CATEGORY_DASH = 'ทั้งหมด';
+
+/* ===== เชื่อมไปหน้า "ขอเวรหยุด" ===== */
+var SHIFT_BASE_URL = '<?!= ScriptApp.getService().getUrl() ?>';
+function goShiftRequest(){ window.top.location.href = SHIFT_BASE_URL + '?page=shiftrequest'; }
+function goAdminShift(){ window.top.location.href = SHIFT_BASE_URL + '?page=adminshift'; }
+/* ===== สลับมุมมอง เดสก์ท็อป / มือถือ (จำค่าไว้ในเครื่องของแต่ละคน) ===== */
+var CURRENT_VIEW = '<?= VIEW ?>';
+var VIEW_KEY = 'medlmsViewPref';
+
+function toggleViewMode() {
+  var next = (CURRENT_VIEW === 'mobile') ? 'desktop' : 'mobile';
+  try { localStorage.setItem(VIEW_KEY, next); } catch (e) {}
+  window.top.location.href = SHIFT_BASE_URL + (next === 'mobile' ? '?view=mobile' : '');
+}
+
+(function applyViewPref() {
+  var pref = '';
+  try { pref = localStorage.getItem(VIEW_KEY) || ''; } catch (e) {}
+  if (pref === 'mobile' && CURRENT_VIEW !== 'mobile') {
+    window.top.location.href = SHIFT_BASE_URL + '?view=mobile';
+    return;
+  }
+  var label = (CURRENT_VIEW === 'mobile') ? '🖥️ มุมมองจอกว้าง' : '📱 มุมมองมือถือ';
+  document.addEventListener('DOMContentLoaded', function () {
+    ['viewToggleBtn', 'viewToggleBtn2'].forEach(function (id) {
+      var b = document.getElementById(id);
+      if (b) b.textContent = label;
+    });
+  });
+})();
+
+
+/* ---------- bootstrap ---------- */
+/* startApp() ถูกเรียกจากแผงรหัสผ่านท้ายไฟล์แทน (หลังใส่รหัสถูกต้อง) แทนการรันทันทีตอน DOMContentLoaded */
+function startApp() {
+  google.script.run
+    .withSuccessHandler(onUserLoaded)
+    .withFailureHandler(onLoadError)
+    .getCurrentUser();
+}
+
+function onLoadError(err) {
+  showError('เกิดข้อผิดพลาด: ' + (err && err.message ? err.message : err));
+}
+
+function showError(msg) {
+  document.getElementById('loadingScreen').classList.add('hidden');
+  const el = document.getElementById('errorScreen');
+  el.classList.remove('hidden');
+  el.textContent = msg;
+}
+
+function onUserLoaded(user) {
+  if (!user.ok) { showError(user.message); return; }
+  CURRENT_USER = user;
+  document.getElementById('loadingScreen').classList.add('hidden');
+
+  google.script.run.withSuccessHandler(function (courses) {
+    COURSES = courses;
+    if (user.role === 'admin' || user.role === 'hr') {
+      document.getElementById('adminScreen').classList.remove('hidden');
+      document.getElementById('adminUserName').textContent = user.name + ' (' + user.dept + ') · ' + user.email;
+      renderAdmin();
+    } else {
+      document.getElementById('mainApp').classList.remove('hidden');
+      document.getElementById('currentUserName').textContent = user.name + ' (' + user.dept + ') · ' + user.email;
+      document.getElementById('dashUserName').textContent = user.name;
+      loadMyDataAndRender();
+    }
+  }).withFailureHandler(onLoadError).getCourses();
+}
+
+/* ---------- employee views ---------- */
+let MY_PROGRESS = {};
+let MY_HISTORY = [];
+
+function loadMyDataAndRender() {
+
+  google.script.run.withSuccessHandler(function (p) {
+
+    MY_PROGRESS = p || {};
+
+    google.script.run.withSuccessHandler(function (h) {
+
+      MY_HISTORY = h || [];
+
+      renderAll();
+
+    }).withFailureHandler(onLoadError).getMyHistory();
+
+  }).withFailureHandler(onLoadError).getMyProgress();
+
+  loadPoints();
+
+}
+
+
+
+function switchTab(tab) {
+
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
+
+  ['dashboard', 'history', 'points'].forEach(id => {
+
+    document.getElementById('tab-' + id).classList.toggle('hidden', id !== tab);
+
+  });
+
+  if (tab === 'points') loadPoints();
+
+}
+
+
+
+/* ---------- Admin: preview the employee-facing UI ---------- */
+function previewEmployeeView() {
+  document.getElementById('adminScreen').classList.add('hidden');
+  document.getElementById('mainApp').classList.remove('hidden');
+  document.getElementById('previewBanner').classList.remove('hidden');
+  document.getElementById('backToAdminBtn').classList.remove('hidden');
+  document.getElementById('currentUserName').textContent = CURRENT_USER.name + ' (' + CURRENT_USER.dept + ') · ' + CURRENT_USER.email;
+  document.getElementById('dashUserName').textContent = CURRENT_USER.name;
+  switchTab('dashboard');
+  loadMyDataAndRender();
+}
+
+function backToAdminDashboard() {
+  document.getElementById('mainApp').classList.add('hidden');
+  document.getElementById('previewBanner').classList.add('hidden');
+  document.getElementById('backToAdminBtn').classList.add('hidden');
+  document.getElementById('adminScreen').classList.remove('hidden');
+  renderAdmin();
+}
+
+/* สถานะบทเรียนของผู้เรียน: ผ่านแล้ว / ยังไม่ผ่าน (เข้าเรียนแล้วแต่ยังไม่ผ่านหรือยังไม่ได้สอบ) / ยังไม่เข้าเรียน */
+function courseStatusInfo(c) {
+  const passed = MY_HISTORY.some(h => h.courseId === c.id && h.pass);
+  if (passed) return { key: 'passed', label: 'ผ่านแล้ว', badgeClass: 'done' };
+  const started = !!MY_PROGRESS[c.id] || MY_HISTORY.some(h => h.courseId === c.id);
+  if (started) return { key: 'not_passed', label: 'ยังไม่ผ่าน', badgeClass: 'fail' };
+  return { key: 'not_started', label: 'ยังไม่เข้าเรียน', badgeClass: 'new' };
+}
+
+/* การ์ดบทเรียน: ถ้ามีรูปหลัก (thumbnail) ให้ขึ้นรูปแทนข้อความ desc, ถ้าไม่มีก็ fallback กลับไปใช้ข้อความเหมือนเดิม */
+function courseMediaHTML(c) {
+  if (!c.thumbnail) return `<p class="desc">${c.desc || ''}</p>`;
+  return `<img src="${c.thumbnail}" alt="${c.title}"
+       style="width:100%;height:130px;object-fit:cover;border-radius:8px;margin:0 0 10px;display:block"
+       loading="lazy"
+       onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+     <p class="desc" style="display:none">${c.desc || ''}</p>`;
+}
+
+function courseCardHTML(c) {
+
+  const typeLabel = c.type === 'video' ? '🎬 คลิปวิดีโอ' : '📄 บทความ';
+
+  if (c.locked) {
+
+    // พนักงานเห็นหัวข้อ/คำอธิบาย/วันเผยแพร่ แต่กดเข้าไปอ่านไม่ได้
+
+    const dt = new Date(c.publishAt);
+
+    const dateStr = dt.toLocaleDateString('th-TH', { day: '2-digit', month: '2-digit', year: 'numeric' });
+
+    const timeStr = dt.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+
+    return `
+
+      <div class="card" style="opacity:.9;background:#f8fafc;position:relative;">
+
+        <span style="position:absolute;top:-10px;left:14px;background:#7c3aed;color:#fff;font-size:11px;font-weight:800;letter-spacing:.03em;padding:4px 12px;border-radius:999px;box-shadow:0 2px 6px rgba(124,58,237,.35);">✨ COMING SOON</span>
+
+        <h3 style="margin-top:6px;">🔒 ${c.title}</h3>
+
+        ${courseMediaHTML(c)}
+
+        <div class="meta">
+
+          <span>${typeLabel}</span>
+
+          <span class="badge" style="background:#e0e7ff;color:#3730a3;">🕒 จะเผยแพร่ ${dateStr} ${timeStr} น.</span>
+
+        </div>
+
+        <button class="btn-sm full" disabled>🔒 ยังไม่เปิดให้อ่าน</button>
+
+      </div>`;
+
+  }
+
+  if (c.scheduled) {
+
+    // แอดมินเห็นก่อนถึงเวลา กดเข้าไปตรวจสอบเนื้อหาได้เต็มรูปแบบ
+
+    const dt = new Date(c.publishAt);
+
+    const dateStr = dt.toLocaleDateString('th-TH', { day: '2-digit', month: '2-digit', year: 'numeric' });
+
+    const timeStr = dt.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+
+    return `
+
+      <div class="card" style="position:relative;overflow:visible;margin-top:14px;border-color:#c4b5fd;background:#faf5ff;"><span style="position:absolute;top:-12px;left:16px;z-index:5;background:linear-gradient(135deg,#8b5cf6 0%,#a855f7 100%);color:#fff;font-size:11px;font-weight:800;letter-spacing:.05em;padding:5px 14px;border-radius:999px;box-shadow:0 3px 10px rgba(139,92,246,.45);white-space:nowrap;">✨ COMING SOON</span>
+
+        <h3>${c.title}</h3>
+
+        ${courseMediaHTML(c)}
+
+        <div class="meta">
+
+          <span>${typeLabel} · ${c.questions.length} คำถาม</span>
+
+          <span class="badge" style="background:#ede9fe;color:#5b21b6;">🕒 จะเผยแพร่ ${dateStr} ${timeStr} น.</span>
+
+        </div>
+
+        <button class="btn-sm full" onclick="openContent('${c.id}')">ดูตัวอย่าง (พนักงานยังเปิดอ่านไม่ได้)</button>
+
+      </div>`;
+
+  }
+
+  const status = courseStatusInfo(c);
+
+  const badge = `<span class="badge ${status.badgeClass}">${status.label}</span>`;
+
+  const btnLabel = status.key === 'passed' ? 'ทบทวนเนื้อหา / ทำแบบทดสอบอีกครั้ง'
+
+    : status.key === 'not_passed' ? 'เข้าเรียนต่อ / ทำแบบทดสอบ'
+
+    : 'เริ่มเรียน';
+
+  return `
+
+    <div class="card">
+
+      <h3>${c.title}</h3>
+
+      ${courseMediaHTML(c)}
+
+      <div class="meta"><span>${typeLabel} · ${c.questions.length} คำถาม</span>${badge}</div>
+
+      <button class="btn-sm full" onclick="openContent('${c.id}')">${btnLabel}</button>
+
+    </div>`;
+
+}
+
+
+function renderDashboardCourses() {
+
+  const categories = [...new Set(COURSES.map(c => c.category || 'ทั่วไป'))];
+
+  const allTabs = ['ทั้งหมด', ...categories];
+
+  document.getElementById('dashCategorySidebar').innerHTML = allTabs.map(cat => {
+
+    const isActive = SELECTED_CATEGORY_DASH === cat;
+
+    return `<div class="cat-item ${isActive ? 'active' : ''}" onclick="selectCategoryDash('${String(cat).replace(/'/g,"\\'")}')">${cat}</div>`;
+
+  }).join('');
+   var ekgBase = window.location.href.split('?')[0];
+  var allCats = document.querySelectorAll('#dashCategorySidebar .cat-item');
+  allCats.forEach(function(el) {
+    if (el.textContent.trim() === 'ฝึกทักษะฉุกเฉิน') {
+      el.insertAdjacentHTML('afterend',
+        '<div class="ekg-sub">' +
+        '<a class="ekg-sub-link" href="' + SHIFT_BASE_URL + '?page=ekg" target="_top"><span class="ekg-arrow">↳</span>📖 การอ่าน EKG</a>' +
+        '</div>'
+      );
+    }
+  });
+
+  const items = SELECTED_CATEGORY_DASH === 'ทั้งหมด'
+
+    ? COURSES
+
+    : COURSES.filter(c => (c.category || 'ทั่วไป') === SELECTED_CATEGORY_DASH);
+
+  if (window.renderMobileSubBox) window.renderMobileSubBox();
+  document.getElementById('dashCourseGrid').innerHTML = items.map(courseCardHTML).join('') || '<p class="section-sub">ยังไม่มีเนื้อหาในหมวดนี้</p>';
+  // === การ์ด EKG Reading (แสดงในหมวดฝึกทักษะฉุกเฉินหรือทั้งหมด) ===
+  if (SELECTED_CATEGORY_DASH === 'ทั้งหมด' || SELECTED_CATEGORY_DASH === 'ฝึกทักษะฉุกเฉิน') {
+    document.getElementById('dashCourseGrid').innerHTML += `
+      <div class="card" style="border-color:#f9a8d4;background:#fdf2f8;">
+        <h3>📖 การอ่าน EKG</h3>
+        <p style="font-size:13px;color:#666;">เรียนรู้พื้นฐานการอ่านคลื่นไฟฟ้าหัวใจ: กระดาษ EKG, คลื่น P/QRS/T, นับ HR, จังหวะ, PR, QRS และอ่าน Normal Sinus Rhythm บนกราฟจริง</p>
+        <div class="meta"><span>8 บทเรียน · ฝึกอ่านกราฟจริง</span></div>
+        <button class="btn-sm full" onclick="window.open('' + SHIFT_BASE_URL + '?page=ekg','_blank')">เริ่มเรียน</button>
+      </div>`;
+  }
+}
+
+function selectCategoryDash(cat) {
+
+  SELECTED_CATEGORY_DASH = cat;
+
+  renderDashboardCourses();
+
+}
+
+function renderCoursesTab() {
+
+  const categories = [...new Set(COURSES.map(c => c.category || 'ทั่วไป'))];
+
+  const allTabs = ['ทั้งหมด', ...categories];
+
+  document.getElementById('categorySidebar').innerHTML = allTabs.map(cat => {
+
+    const isActive = SELECTED_CATEGORY === cat;
+
+    return `<div class="cat-item ${isActive ? 'active' : ''}" onclick="selectCategory('${String(cat).replace(/'/g,"\\'")}')">${cat}</div>`;
+
+  }).join('');
+    var allCatItems2 = document.querySelectorAll('#categorySidebar .cat-item');
+  allCatItems2.forEach(function(el) {
+    if (el.textContent.trim() === 'ฝึกทักษะฉุกเฉิน') {
+      if (typeof ekgSub !== 'undefined') el.insertAdjacentHTML('afterend', ekgSub);
+    }
+  });
+
+  const items = SELECTED_CATEGORY === 'ทั้งหมด'
+
+    ? COURSES
+
+    : COURSES.filter(c => (c.category || 'ทั่วไป') === SELECTED_CATEGORY);
+
+  document.getElementById('activeCategoryTitle').textContent = SELECTED_CATEGORY + ' (' + items.length + ' รายการ)';
+
+  document.getElementById('courseGrid').innerHTML = items.map(courseCardHTML).join('') || '<p class="section-sub">ยังไม่มีเนื้อหาในหมวดนี้</p>';
+  if (SELECTED_CATEGORY === 'ทั้งหมด' || SELECTED_CATEGORY === 'ฝึกทักษะฉุกเฉิน') {
+    document.getElementById('courseGrid').innerHTML += `
+      <div class="card" style="border-color:#f9a8d4;background:#fdf2f8;">
+        <h3>📖 การอ่าน EKG</h3>
+        <p style="font-size:13px;color:#666;">เรียนรู้พื้นฐานการอ่านคลื่นไฟฟ้าหัวใจ: กระดาษ EKG, คลื่น P/QRS/T, นับ HR, จังหวะ, PR, QRS และอ่าน Normal Sinus Rhythm บนกราฟจริง</p>
+        <div class="meta"><span>8 บทเรียน · ฝึกอ่านกราฟจริง</span></div>
+        <button class="btn-sm full" onclick="window.open('' + SHIFT_BASE_URL + '?page=ekg','_blank')">เริ่มเรียน</button>
+      </div>`;
+  }
+}
+
+function selectCategory(cat) {
+
+  SELECTED_CATEGORY = cat;
+
+  renderCoursesTab();
+
+}
+
+function renderCourseGridGrouped(containerId) {
+  const categories = [...new Set(COURSES.map(c => c.category || 'ทั่วไป'))];
+  const html = categories.map(cat => {
+    const items = COURSES.filter(c => (c.category || 'ทั่วไป') === cat);
+    return `
+      <div class="category-block">
+        <div class="category-title">${cat}</div>
+        <div class="grid">${items.map(courseCardHTML).join('')}</div>
+      </div>`;
+  }).join('');
+  document.getElementById(containerId).innerHTML = html;
+}
+
+function renderAll() {
+  const passedCount = COURSES.filter(c => courseStatusInfo(c).key === 'passed').length;
+  const notPassedCount = COURSES.filter(c => courseStatusInfo(c).key === 'not_passed').length;
+  const notStartedCount = COURSES.filter(c => courseStatusInfo(c).key === 'not_started').length;
+  const quizCount = MY_HISTORY.length;
+  const avg = quizCount ? Math.round(MY_HISTORY.reduce((s, h) => s + (h.score / h.total * 100), 0) / quizCount) : 0;
+  document.getElementById('statPassed').textContent = passedCount + '/' + COURSES.length;
+  document.getElementById('statNotPassed').textContent = notPassedCount;
+  document.getElementById('statNotStarted').textContent = notStartedCount;
+  document.getElementById('statQuizzes').textContent = quizCount;
+  document.getElementById('statAvg').textContent = avg + '%';
+  var _sr = document.querySelector('.stat-row');
+  if (_sr) _sr.style.setProperty('--pct', (COURSES.length ? Math.round(passedCount / COURSES.length * 100) : 0) + '%');
+    renderDashboardCourses();
+
+
+
+  const rows = [...MY_HISTORY].reverse().map((h, i) => {
+    const rowId = 'myWrong-' + i;
+    const wrongItems = h.details.filter(d => !d.correct);
+    const wrongHTML = wrongItems.length
+      ? wrongItems.map(d => `
+          <div class="wrong-item">
+            <div class="wrong-q">${d.q}</div>
+            <div>คำตอบของคุณ: <strong class="fail-tag">${d.chosenText}</strong></div>
+            <div>คำตอบที่ถูกต้อง: <strong class="pass-tag">${d.correctText}</strong></div>
+          </div>`).join('')
+      : '<div class="wrong-item ok-item">ตอบถูกทุกข้อ</div>';
+    const sigCell = signatureCellHTML(h);
+    return `
+      <tr>
+        <td>${h.date}</td><td>${h.title}</td><td>${h.score}/${h.total}</td>
+        <td class="${h.pass ? 'pass-tag' : 'fail-tag'}">${h.pass ? 'ผ่าน' : 'ไม่ผ่าน'}</td>
+        <td>${sigCell}</td>
+        <td><button class="btn-sm" onclick="toggleRow('${rowId}')">ดูข้อที่ตอบผิด</button></td>
+      </tr>
+      <tr id="${rowId}" class="wrong-row hidden"><td colspan="6">${wrongHTML}</td></tr>`;
+  }).join('');
+  document.getElementById('historyBody').innerHTML = rows || '<tr><td colspan="6">ยังไม่มีประวัติ</td></tr>';
+}
+/* ---------- ระบบสะสมแต้ม (Points) ---------- */
+
+function loadPoints() {
+
+  document.getElementById('pointsBody').innerHTML = '<div class="center-msg"><div class="spinner"></div>กำลังโหลด...</div>';
+
+  google.script.run.withSuccessHandler(renderPoints).withFailureHandler(onLoadError).getMyPoints();
+
+}
+
+function renderPoints(p) {
+ updatePointsWidget(p);
+  const pct = Math.min(100, Math.round((p.balance / p.toRedeem) * 100));
+
+  let banner = '';
+
+  if (p.hasPending) {
+
+    banner = `<div class="points-banner pending">⏳ ขณะนี้รหัส LINE credit ในระบบหมดชั่วคราว คำขอแลกแต้ม ${p.pending.points} แต้มของคุณรอแอดมินเติมรหัสใหม่แล้วจะส่งให้ทันที (ยื่นคำขอเมื่อ ${p.pending.date})</div>`;
+
+  }
+
+   else if (p.fulfilled && (p.fulfilled.serialNumber || p.fulfilled.pinCode)) {
+
+    banner = `<div class="points-banner fulfilled">🎉 แอดมินส่ง LINE credit ให้แล้ว (${p.fulfilled.points} แต้ม เมื่อ ${p.fulfilled.fulfilledDate})
+
+      <div style="margin-top:8px;font-size:13.5px;">
+
+        <div><strong>Serial Number:</strong> ${p.fulfilled.serialNumber || '-'}</div>
+
+        <div><strong>PIN Code:</strong> ${p.fulfilled.pinCode || '-'}</div>
+
+      </div></div>`;
+
+  }
+
+
+  const historyRows = p.history.map(h => `
+
+    <tr><td>${h.date}</td><td>${h.courseTitle}</td><td>อันดับที่ ${h.rank}</td><td>+${h.points} แต้ม</td></tr>`).join('');
+
+  document.getElementById('pointsBody').innerHTML = `
+
+    ${banner}
+
+    <div class="points-hero">
+
+      <div>
+
+        <div class="lbl">แต้มสะสมของคุณ</div>
+
+        <div class="big">${p.balance} <span style="font-size:16px;font-weight:400;">/ ${p.toRedeem} แต้ม</span></div>
+
+        <div class="points-bar"><div class="fill" style="width:${pct}%"></div></div>
+
+      </div>
+
+      <button class="btn-primary" style="background:#fff;color:var(--primary-dark);" ${p.canRedeem ? '' : 'disabled'} onclick="doRedeemPoints()">🎁 แลกแต้ม (30 บาท)</button>
+
+    </div>
+
+    <table>
+
+      <thead><tr><th>วันที่ได้แต้ม</th><th>บทเรียน</th><th>อันดับ</th><th>แต้มที่ได้</th></tr></thead>
+
+      <tbody>${historyRows || '<tr><td colspan="4">ยังไม่มีประวัติแต้มสะสม</td></tr>'}</tbody>
+
+    </table>
+
+    <div class="points-terms">
+
+      <h4>เงื่อนไขการสะสม-แลกแต้ม</h4>
+
+      <ul>
+
+        <li>แต่ละบทเรียนมีโควต้าแค่ 5 คนแรกที่ทำแบบทดสอบได้คะแนนเต็ม 100% เท่านั้นที่ได้แต้ม</li>
+
+        <li>คนที่ได้เต็มเป็นคนแรกได้ 5 แต้ม, คนที่ 2 ได้ 4 แต้ม, คนที่ 3 ได้ 3 แต้ม, คนที่ 4 ได้ 2 แต้ม, คนที่ 5 ได้ 1 แต้ม (นับจากเวลาที่ทำได้เต็มครั้งแรกของแต่ละคน แม้จะทำซ้ำได้หลายรอบก็ตาม)</li>
+
+        <li>คนที่ 6 เป็นต้นไปของบทเรียนเดียวกันจะไม่ได้แต้ม</li>
+
+        <li>บทเรียนหนึ่งให้แต้มได้แค่ครั้งเดียวต่อคน หากต้องการแต้มเพิ่มต้องไปทำบทเรียนเรื่องใหม่</li>
+
+        <li>แต้มสะสมจะไม่ถูกรีเซ็ตเอง จนกว่าจะกดแลกแต้ม</li>
+
+        <li>เมื่อแต้มครบ 50 แต้มแล้ว จะไม่ได้รับแต้มเพิ่มอีกจนกว่าจะกดแลกแต้มก่อน (แต่ยังเข้าเรียน/ทำแบบทดสอบได้ตามปกติ)</li>
+
+        <li>เมื่อกดแลกแต้ม แต้มจะถูกหักเป็น 0 ทันที และแอดมินจะติดต่อกลับพร้อมลิงก์/รายละเอียดเติม LINE credit 30 บาท ผ่านหน้านี้</li>
+
+      </ul>
+
+    </div>`;
+
+}
+function updatePointsWidget(p) {
+
+  const widget = document.getElementById('pointsWidget');
+
+  if (!widget) return;
+
+  widget.classList.add('show');
+
+  document.getElementById('pointsWidgetNum').textContent = p.balance;
+
+  document.getElementById('pointsWidgetBtn').disabled = !p.canRedeem;
+
+}
+
+function doRedeemPoints() {
+
+  if (!confirm('ยืนยันแลกแต้มสะสมเป็น LINE credit 30 บาท? แต้มของคุณจะถูกหักเป็น 0 ทันที')) return;
+
+  document.getElementById('pointsBody').innerHTML = '<div class="center-msg"><div class="spinner"></div>กำลังส่งคำขอ...</div>';
+
+  google.script.run
+
+    .withSuccessHandler(function (res) {
+
+      loadPoints();
+
+      if (res.autoFilled) {
+
+        alert('🎉 แลกแต้มสำเร็จ! ระบบส่งรหัส LINE credit ให้ทันที ดูรายละเอียด Serial Number / PIN Code ได้ที่หน้าแต้มสะสม');
+
+      } else {
+
+        alert('ส่งคำขอแลกแต้มเรียบร้อย ขณะนี้รหัสในระบบหมดชั่วคราว รอแอดมินเติมรหัสใหม่แล้วจะส่งให้ทางหน้านี้');
+
+      }
+
+    })
+
+    .withFailureHandler(function (err) { alert('แลกแต้มไม่สำเร็จ: ' + (err && err.message ? err.message : err)); loadPoints(); })
+
+    .requestRedeem();
+
+}
+
+
+/* ---------- ลายเซ็นอิเล็กทรอนิกส์ (เซ็นหลังผ่านข้อสอบ เพื่อดึงไปใช้ในแบบฟอร์มบันทึกการอบรมประจำเดือน) ---------- */
+function signatureCellHTML(h) {
+  if (!h.pass) return '<span class="sig-missing">-</span>';
+  if (h.hasSignature && h.signatureDataUrl) {
+    return `<img class="sig-thumb" src="${h.signatureDataUrl}" onclick="viewSignature(this.src)" alt="ลายเซ็น (คลิกเพื่อดูขนาดเต็ม)">`;
+  }
+  return `<button class="btn-sm" onclick="signFromHistory('${h.id}','${String(h.title).replace(/'/g,"\\'")}')">เซ็นชื่อยืนยัน</button>`;
+}
+
+function viewSignature(dataUrl) {
+  window.open(dataUrl, '_blank');
+}
+
+function signFromHistory(attemptId, courseTitle) {
+  document.getElementById('mainApp').classList.add('hidden');
+  document.getElementById('quizScreen').classList.remove('hidden');
+  renderSignaturePad(attemptId, courseTitle);
+}
+
+let sigCtx = null;
+let sigDrawing = false;
+let sigHasStroke = false;
+
+function renderSignaturePad(attemptId, courseTitle) {
+  document.getElementById('quizContainer').innerHTML = `
+    <div class="result-box" style="text-align:center;">
+      <div class="result-pass" style="font-size:16px;font-weight:700;">✔ ผ่านเกณฑ์แล้ว — กรุณาเซ็นชื่อยืนยันการผ่านการอบรม</div>
+      <div style="font-size:13px;color:var(--muted);margin:4px 0 16px;">${courseTitle}</div>
+      <div class="sig-pad-wrap"><canvas id="sigPad" width="500" height="170"></canvas></div>
+      <div style="font-size:12px;color:var(--muted);margin:8px 0 18px;">ใช้นิ้วหรือเมาส์วาดลายเซ็นในกรอบด้านบน ระบบจะบันทึกลายเซ็นนี้ไว้ใช้อ้างอิงในแบบฟอร์มบันทึกการอบรมประจำเดือน</div>
+      <div class="quiz-actions">
+        <button class="btn-sm" onclick="clearSignaturePad()">ล้างลายเซ็น</button>
+        <div style="display:flex;gap:8px;">
+          <button class="btn-sm" onclick="skipSignature()">เซ็นภายหลัง</button>
+          <button class="btn-primary" onclick="confirmSignature('${attemptId}')">ยืนยันลายเซ็น</button>
+        </div>
+      </div>
+    </div>`;
+  initSignaturePad();
+}
+
+function initSignaturePad() {
+  const canvas = document.getElementById('sigPad');
+  sigCtx = canvas.getContext('2d');
+  sigCtx.fillStyle = '#ffffff';
+  sigCtx.fillRect(0, 0, canvas.width, canvas.height);
+  sigCtx.strokeStyle = '#1f2937';
+  sigCtx.lineWidth = 2.2;
+  sigCtx.lineCap = 'round';
+  sigHasStroke = false;
+
+  const posFromEvent = (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const p = e.touches ? e.touches[0] : e;
+    return { x: (p.clientX - rect.left) * (canvas.width / rect.width), y: (p.clientY - rect.top) * (canvas.height / rect.height) };
+  };
+  const start = (e) => { e.preventDefault(); sigDrawing = true; const p = posFromEvent(e); sigCtx.beginPath(); sigCtx.moveTo(p.x, p.y); };
+  const move = (e) => { if (!sigDrawing) return; e.preventDefault(); const p = posFromEvent(e); sigCtx.lineTo(p.x, p.y); sigCtx.stroke(); sigHasStroke = true; };
+  const end = () => { sigDrawing = false; };
+
+  canvas.addEventListener('mousedown', start);
+  canvas.addEventListener('mousemove', move);
+  window.addEventListener('mouseup', end);
+  canvas.addEventListener('touchstart', start, { passive: false });
+  canvas.addEventListener('touchmove', move, { passive: false });
+  canvas.addEventListener('touchend', end);
+}
+
+function clearSignaturePad() {
+  const canvas = document.getElementById('sigPad');
+  if (!canvas || !sigCtx) return;
+  sigCtx.fillStyle = '#ffffff';
+  sigCtx.fillRect(0, 0, canvas.width, canvas.height);
+  sigHasStroke = false;
+}
+
+function confirmSignature(attemptId) {
+  if (!sigHasStroke) { alert('กรุณาวาดลายเซ็นในกรอบก่อนกดยืนยัน'); return; }
+  const canvas = document.getElementById('sigPad');
+  const dataUrl = canvas.toDataURL('image/png');
+  document.getElementById('quizContainer').innerHTML = '<div class="center-msg"><div class="spinner"></div>กำลังบันทึกลายเซ็น...</div>';
+  google.script.run
+    .withSuccessHandler(onSignatureSaved)
+    .withFailureHandler(function (err) { alert('บันทึกลายเซ็นไม่สำเร็จ: ' + (err && err.message ? err.message : err)); backToApp(); })
+    .saveSignature(attemptId, dataUrl);
+}
+
+function onSignatureSaved() {
+  document.getElementById('quizContainer').innerHTML = `
+    <div class="result-box">
+      <div class="result-pass" style="font-size:18px;font-weight:700;">✔ บันทึกลายเซ็นเรียบร้อยแล้ว</div>
+      <div style="font-size:13px;color:var(--muted);margin-top:8px;">ผู้ดูแลระบบสามารถดึงลายเซ็นนี้ไปใช้ในแบบฟอร์มบันทึกการอบรมประจำเดือนได้</div>
+      <button class="btn-primary" style="margin-top:24px;" onclick="backToApp()">กลับสู่หน้าหลัก</button>
+    </div>`;
+}
+
+function skipSignature() { backToApp(); }
+
+function toggleRow(id) { document.getElementById(id).classList.toggle('hidden'); }
+
+/* ---------- content gate ---------- */
+function openContent(courseId) {
+
+  const course = COURSES.find(c => c.id === courseId);
+
+  if (course && course.locked) {
+
+    alert('บทเรียนนี้ยังไม่เปิดให้อ่าน จะเปิดให้อ่านอัตโนมัติเมื่อถึงวันเวลาที่กำหนด');
+
+    return;
+
+  }
+
+  const ready = !!MY_PROGRESS[courseId];
+
+  contentState = { course, ready, maxWatchedRatio: ready ? 1 : 0 };
+
+  document.getElementById('mainApp').classList.add('hidden');
+
+  document.getElementById('contentScreen').classList.remove('hidden');
+
+  renderContent();
+
+}
+
+
+function renderContent() {
+  const { course, ready } = contentState;
+  const typeLabel = course.type === 'video' ? '🎬 คลิปวิดีโอ (ต้องดูอย่างน้อย 30% ก่อนทำแบบทดสอบ)' : '📄 บทความ (ต้องอ่านให้ครบก่อนทำแบบทดสอบ)';
+  let bodyHTML = '';
+  if (course.type === 'article') {
+    bodyHTML = `
+      <div class="content-text" id="articleText" onscroll="onArticleScroll()">${course.content}</div>
+      <div class="gate-status ${ready ? 'ok' : ''}" id="gateStatus">${ready ? '✔ อ่านครบถ้วนแล้ว สามารถทำแบบทดสอบได้' : '⚠ กรุณาเลื่อนอ่านเนื้อหาให้ครบถึงส่วนท้ายก่อนทำแบบทดสอบ'}</div>`;
+  } else {
+    bodyHTML = `
+      <video id="courseVideo" controls onloadedmetadata="onVideoMeta()" ontimeupdate="onVideoTimeUpdate()">
+        <source src="${course.videoUrl}" type="video/mp4">เบราว์เซอร์ของคุณไม่รองรับการเล่นวิดีโอ
+      </video>
+      <div class="watch-progress"><div class="fill" id="watchFill" style="width:${Math.round(contentState.maxWatchedRatio*100)}%"></div></div>
+      <div class="watch-label" id="watchLabel">ดูแล้ว ${Math.round(contentState.maxWatchedRatio*100)}% (ต้องดูอย่างน้อย 30% ของความยาวคลิป)</div>
+      <div class="gate-status ${ready ? 'ok' : ''}" id="gateStatus">${ready ? '✔ ดูครบเงื่อนไขแล้ว สามารถทำแบบทดสอบได้' : '⚠ กรุณาดูคลิปอย่างน้อย 30% ก่อนทำแบบทดสอบ'}</div>`;
+  }
+  document.getElementById('contentContainer').innerHTML = `
+    <h2>${course.title}</h2>
+    <div class="type-tag">${typeLabel}</div>
+    ${bodyHTML}
+    <div class="content-actions">
+      <button class="btn-sm" onclick="exitContent()">กลับหน้าบทเรียน</button>
+      <button class="btn-sm" id="startQuizBtn" ${ready ? '' : 'disabled'} onclick="startQuiz('${course.id}')">เริ่มทำแบบทดสอบ</button>
+    </div>`;
+}
+
+function markReady_() {
+  contentState.ready = true;
+  MY_PROGRESS[contentState.course.id] = true;
+  google.script.run.markContentDone(contentState.course.id); // sync ไปเซิร์ฟเวอร์แบบไม่บล็อก UI
+  const gs = document.getElementById('gateStatus');
+  gs.textContent = contentState.course.type === 'video' ? '✔ ดูครบเงื่อนไขแล้ว สามารถทำแบบทดสอบได้' : '✔ อ่านครบถ้วนแล้ว สามารถทำแบบทดสอบได้';
+  gs.classList.add('ok');
+  document.getElementById('startQuizBtn').disabled = false;
+}
+
+function onArticleScroll() {
+  const el = document.getElementById('articleText');
+  if (el.scrollTop + el.clientHeight >= el.scrollHeight - 15 && !contentState.ready) markReady_();
+}
+
+function onVideoMeta() {}
+
+function onVideoTimeUpdate() {
+  const video = document.getElementById('courseVideo');
+  if (!video || !video.duration) return;
+  const ratio = video.currentTime / video.duration;
+  if (ratio > contentState.maxWatchedRatio) {
+    contentState.maxWatchedRatio = ratio;
+    const pct = Math.min(100, Math.round(ratio * 100));
+    document.getElementById('watchFill').style.width = pct + '%';
+    document.getElementById('watchLabel').textContent = `ดูแล้ว ${pct}% (ต้องดูอย่างน้อย 30% ของความยาวคลิป)`;
+    if (ratio >= 0.30 && !contentState.ready) markReady_();
+  }
+}
+
+function exitContent() {
+  document.getElementById('contentScreen').classList.add('hidden');
+  document.getElementById('mainApp').classList.remove('hidden');
+  renderAll();
+}
+
+/* ---------- quiz ---------- */
+function startQuiz(courseId) {
+    var _c = COURSES.find(function(x){ return x.id === courseId; });
+  if (_c && /CPR|ACLS/i.test(_c.title)) {
+    window.top.location.href = SHIFT_BASE_URL + '?page=cpr';
+    return;
+  }
+  if (!contentState || !contentState.ready || contentState.course.id !== courseId) {
+    alert('กรุณาอ่านเนื้อหา/ดูคลิปให้ครบตามเงื่อนไขก่อนทำแบบทดสอบ');
+    return;
+  }
+  const course = COURSES.find(c => c.id === courseId);
+  quizState = { course, index: 0, selected: null, answers: [] };
+  document.getElementById('contentScreen').classList.add('hidden');
+  document.getElementById('quizScreen').classList.remove('hidden');
+  renderQuestion();
+}
+
+function renderQuestion() {
+  const { course, index } = quizState;
+  const q = course.questions[index];
+  const optHTML = q.options.map((opt, i) => `<div class="option" data-i="${i}" onclick="selectOption(${i})">${opt}</div>`).join('');
+  document.getElementById('quizContainer').innerHTML = `
+    <div class="quiz-progress">${course.title} — คำถามที่ ${index + 1} / ${course.questions.length}</div>
+    <div class="question">${q.q}</div>
+    <div>${optHTML}</div>
+    <div class="quiz-actions">
+      <button class="btn-sm" onclick="exitQuiz()">ออกจากแบบทดสอบ</button>
+      <button class="btn-sm" id="nextBtn" onclick="nextQuestion()" disabled>${index + 1 === course.questions.length ? 'ส่งคำตอบ' : 'ถัดไป'}</button>
+    </div>`;
+  quizState.selected = null;
+}
+
+function selectOption(i) {
+  quizState.selected = i;
+  document.querySelectorAll('.option').forEach(el => el.classList.toggle('selected', parseInt(el.dataset.i) === i));
+  document.getElementById('nextBtn').disabled = false;
+}
+
+function nextQuestion() {
+  quizState.answers[quizState.index] = quizState.selected;
+  if (quizState.index + 1 < quizState.course.questions.length) {
+    quizState.index++;
+    renderQuestion();
+  } else {
+    document.getElementById('quizContainer').innerHTML = '<div class="center-msg"><div class="spinner"></div>กำลังส่งคำตอบ...</div>';
+    google.script.run
+      .withSuccessHandler(onQuizResult)
+      .withFailureHandler(function (err) { alert('ส่งคำตอบไม่สำเร็จ: ' + (err && err.message ? err.message : err)); backToApp(); })
+      .submitQuiz(quizState.course.id, quizState.answers);
+  }
+}
+
+function onQuizResult(result) {
+  const pass = result.pass;
+  document.getElementById('quizContainer').innerHTML = `
+    <div class="result-box">
+      <div style="font-size:14px;color:var(--muted);">ผลการทำแบบทดสอบ: ${quizState.course.title}</div>
+      <div class="result-score">${result.score}/${result.total}</div>
+      <div class="${pass ? 'result-pass' : 'result-fail'}" style="font-size:18px;font-weight:700;">${pass ? '✔ ผ่านเกณฑ์ (' + result.passThresholdPct + '%)' : '✘ ไม่ผ่านเกณฑ์ (' + result.passThresholdPct + '%)'}</div>
+      ${pass
+        ? `<button class="btn-primary" style="margin-top:24px;" onclick="renderSignaturePad('${result.attemptId}', '${String(quizState.course.title).replace(/'/g,"\\'")}')">ถัดไป: เซ็นชื่อยืนยันการอบรม</button>`
+        : `<button class="btn-primary" style="margin-top:24px;" onclick="backToApp()">กลับสู่หน้าหลัก</button>`}
+    </div>`;
+}
+
+function exitQuiz() { backToApp(); }
+
+function backToApp() {
+  document.getElementById('quizScreen').classList.add('hidden');
+  document.getElementById('mainApp').classList.remove('hidden');
+  switchTab('history');
+  loadMyDataAndRender();
+}
+
+/* ---------- admin ---------- */
+const ADMIN_STATUS_LABEL = { passed: 'ผ่านแล้ว', not_passed: 'ยังไม่ผ่าน', not_started: 'ยังไม่เข้าเรียน' };
+const ADMIN_STATUS_BADGE = { passed: 'done', not_passed: 'fail', not_started: 'new' };
+
+function loadCodeStock() {
+
+  google.script.run.withSuccessHandler(function (s) {
+
+    const el = document.getElementById('codeStockBanner');
+
+    el.classList.remove('hidden');
+
+    if (s.remaining < s.threshold) {
+
+      el.style.background = '#fee2e2'; el.style.color = '#991b1b';
+
+      el.textContent = '⚠️ รหัส LINE credit เหลือน้อย! เหลืออยู่ ' + s.remaining + ' รหัสเท่านั้น กรุณาเติมรหัสใหม่ในชีต "CodeStock"';
+
+    } else {
+
+      el.style.background = '#dcfce7'; el.style.color = '#166534';
+
+      el.textContent = '✅ รหัส LINE credit คงเหลือ ' + s.remaining + ' รหัส';
+
+    }
+
+  }).withFailureHandler(function () {}).getCodeStockCount();
+
+}
+
+function loadRedemptions() {
+
+  google.script.run.withSuccessHandler(function (list) {
+
+    const panel = document.getElementById('redemptionsPanel');
+
+    panel.classList.toggle('hidden', list.length === 0);
+
+    document.getElementById('redemptionsBody').innerHTML = list.map(r => `
+
+      <tr>
+
+        <td>${r.date}</td><td>${r.name}</td><td>${r.dept}</td><td>${r.points}</td>
+
+        <td>
+
+          <input type="text" id="serial-${r.rowIndex}" placeholder="Serial Number" style="width:140px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-size:13px;margin-bottom:4px;display:block;">
+
+          <input type="text" id="pin-${r.rowIndex}" placeholder="PIN Code" style="width:140px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-size:13px;display:block;">
+
+        </td>
+
+        <td><button class="btn-sm" onclick="fulfillRedemptionUI(${r.rowIndex})">✔ ส่งแล้ว บันทึก</button></td>
+
+      </tr>`).join('');
+
+
+  }).withFailureHandler(onLoadError).getPendingRedemptions();
+
+}
+
+function fulfillRedemptionUI(rowIndex) {
+
+  const serialNumber = document.getElementById('serial-' + rowIndex).value.trim();
+
+  const pinCode = document.getElementById('pin-' + rowIndex).value.trim();
+
+  if (!serialNumber || !pinCode) { alert('กรุณาใส่ทั้ง Serial Number และ PIN Code ก่อนบันทึก'); return; }
+
+  google.script.run
+
+    .withSuccessHandler(function () { loadRedemptions(); })
+
+    .withFailureHandler(function (err) { alert('บันทึกไม่สำเร็จ: ' + (err && err.message ? err.message : err)); })
+
+    .fulfillRedemption(rowIndex, serialNumber, pinCode);
+
+}
+
+/* ---------- แต้มสะสมของพนักงาน (หน้าแอดมิน) ---------- */
+var POINTS_ADMIN_DATA = [];
+
+function loadPointsAdmin() {
+  var body = document.getElementById('pointsAdminBody');
+  if (!body) return;
+  body.innerHTML = '<tr><td colspan="8">กำลังโหลด…</td></tr>';
+  google.script.run
+    .withSuccessHandler(function (rows) { POINTS_ADMIN_DATA = rows || []; renderPointsAdmin(); })
+    .withFailureHandler(function (err) {
+      body.innerHTML = '<tr><td colspan="8">โหลดไม่สำเร็จ: ' + (err && err.message ? err.message : err) + '</td></tr>';
+    })
+    .getAllEmployeePoints();
+}
+
+function renderPointsAdmin() {
+  var body = document.getElementById('pointsAdminBody');
+  if (!body) return;
+  var box = document.getElementById('pointsSearch');
+  var kw = (box && box.value ? box.value : '').trim().toLowerCase();
+  var rows = POINTS_ADMIN_DATA.filter(function (r) {
+    return !kw || String(r.name).toLowerCase().indexOf(kw) >= 0 || String(r.dept).toLowerCase().indexOf(kw) >= 0;
+  });
+  if (!rows.length) { body.innerHTML = '<tr><td colspan="8">ไม่พบข้อมูล</td></tr>'; return; }
+
+  var sumBal = 0, sumEarn = 0;
+  var html = rows.map(function (r) {
+    sumBal += r.balance; sumEarn += r.earned;
+    var right = r.canEarn
+      ? '<span style="color:#15803d;font-weight:700">สะสมได้</span>'
+      : '<span style="color:#9ca3af;font-weight:700">ไม่มีสิทธิ · ' + (r.position || r.role) + '</span>';
+    var name = r.name + (r.pending ? ' <span style="color:#b45309;font-size:12px">(รอแลกแต้ม)</span>' : '');
+    return '<tr><td>' + name + '</td><td>' + r.dept + '</td><td>' + right +
+      '</td><td style="font-weight:700;color:#b45309">' + r.balance + '</td><td>' + r.earned +
+      '</td><td>' + r.redeemed + '</td><td>' + r.lessons + '</td><td>' + (r.lastEarn || '-') + '</td></tr>';
+  }).join('');
+
+  html += '<tr style="background:#f9fafb;font-weight:700"><td colspan="3">รวม ' + rows.length + ' คน</td><td>' +
+          sumBal + '</td><td>' + sumEarn + '</td><td colspan="3"></td></tr>';
+  body.innerHTML = html;
+}
+
+
+function renderAdmin() {
+    (function ensureAdminTableScroll(){
+    const headEl = document.getElementById('adminTableHead');
+    const tableEl = headEl ? headEl.closest('table') : null;
+    if (tableEl && tableEl.parentElement && !tableEl.parentElement.classList.contains('table-scroll-wrap')) {
+      const wrap = document.createElement('div');
+      wrap.className = 'table-scroll-wrap';
+      tableEl.parentElement.insertBefore(wrap, tableEl);
+      wrap.appendChild(tableEl);
+    }
+  })();
+      function pinRightColumns(){
+    document.querySelectorAll('.table-scroll-wrap table tr').forEach(tr => {
+      const cell = tr.lastElementChild;
+      if (cell) cell.style.right = '0px';
+    });
+  }
+ 
+  // สร้างหัวตารางแบบไดนามิกตามจำนวนบทเรียนจริง เพื่อให้เห็นสถานะรายบทเรียนของแต่ละคนในตารางเดียว
+  const courseHeaderCells = COURSES.map(c => `<th>${c.title}</th>`).join('');
+  document.getElementById('adminTableHead').innerHTML = `
+    <tr><th>ชื่อพนักงาน</th><th>แผนก</th>${courseHeaderCells}<th>ครั้งที่สอบ</th><th>คะแนนเฉลี่ย</th><th>ข้อที่ตอบผิดสะสม</th><th></th></tr>`;
+
+  const ojtSelect = document.getElementById('ojtCourseSelect');
+  if (ojtSelect) ojtSelect.innerHTML = COURSES.map(c => `<option value="${c.id}">${c.title}</option>`).join('');
+  // เพิ่มบทเรียนทักษะ (EKG / CPR) ลงในช่องเลือกแบบฟอร์ม OJT
+  if (ojtSelect) google.script.run.withSuccessHandler(function (sk) {
+    const grp = (label, list) => (list && list.length)
+      ? `<optgroup label="${label}">` + list.map(c => `<option value="${c.id}">${c.title}</option>`).join('') + '</optgroup>' : '';
+    ojtSelect.insertAdjacentHTML('beforeend', grp('🫀 การอ่าน EKG', sk.ekg) + grp('🫁 CPR / ACLS (รายบทบาท)', sk.cpr));
+  }).withFailureHandler(function () {}).getSkillOjtCourses();
+
+  google.script.run.withSuccessHandler(function (employees) {
+    const rows = employees.map(e => {
+      const courseCells = (e.courseStatus || []).map(cs => {
+        const badgeClass = ADMIN_STATUS_BADGE[cs.status] || 'new';
+        const label = ADMIN_STATUS_LABEL[cs.status] || cs.status;
+        const sub = cs.note ? `<div style="font-size:11px;color:#8a7a86;margin-top:4px">${cs.note}</div>` : '';
+return `<td><span class="badge ${badgeClass}">${label}</span>${sub}</td>`;
+      }).join('');
+      return `
+      <tr>
+        <td>${e.name}</td><td>${e.dept}</td>
+        ${courseCells}
+        <td>${e.quizCount}</td><td>${e.avgScore}%</td><td>${e.wrongTotal}</td>
+        <td><button class="btn-sm" onclick="showEmployeeDetail('${e.email}','${e.name.replace(/'/g,"\\'")}','${e.dept.replace(/'/g,"\\'")}')">ดูรายละเอียด</button></td>
+      </tr>`;
+    }).join('');
+    const colCount = 6 + COURSES.length;
+    window.ADMIN_EMPLOYEES = employees; loadSkillProgress();
+    document.getElementById('adminEmployeeBody').innerHTML = rows || `<tr><td colspan="${colCount}">ยังไม่มีข้อมูลพนักงาน</td></tr>`;
+    pinRightColumns();
+  }).withFailureHandler(onLoadError).getAllEmployeesSummary();
+
+  loadRedemptions();
+
+  loadCodeStock();
+
+}
+
+
+
+function showEmployeeDetail(email, name, dept) {
+  google.script.run.withSuccessHandler(function (history) {
+    const rows = history.map((h, i) => {
+      const rowId = 'admWrong-' + i;
+      const wrongItems = h.details.filter(d => !d.correct);
+      const wrongHTML = wrongItems.length
+        ? wrongItems.map(d => `
+            <div class="wrong-item">
+              <div class="wrong-q">${d.q}</div>
+              <div>คำตอบของพนักงาน: <strong class="fail-tag">${d.chosenText}</strong></div>
+              <div>คำตอบที่ถูกต้อง: <strong class="pass-tag">${d.correctText}</strong></div>
+            </div>`).join('')
+        : '<div class="wrong-item ok-item">ตอบถูกทุกข้อในการทำแบบทดสอบครั้งนี้</div>';
+      const sigCell = !h.pass
+        ? '<span class="sig-missing">-</span>'
+        : (h.hasSignature && h.signatureDataUrl)
+          ? `<img class="sig-thumb" src="${h.signatureDataUrl}" onclick="viewSignature(this.src)" alt="ลายเซ็น (คลิกเพื่อดูขนาดเต็ม)">`
+          : '<span class="sig-missing">ยังไม่ได้เซ็นชื่อ</span>';
+      return `
+        <tr>
+          <td>${h.date}</td><td>${h.title}</td><td>${h.score}/${h.total}</td>
+          <td class="${h.pass ? 'pass-tag' : 'fail-tag'}">${h.pass ? 'ผ่าน' : 'ไม่ผ่าน'}</td>
+          <td>${sigCell}</td>
+          <td><button class="btn-sm" onclick="toggleRow('${rowId}')">ดูข้อที่ตอบผิด</button></td>
+        </tr>
+        <tr id="${rowId}" class="wrong-row hidden"><td colspan="6">${wrongHTML}</td></tr>`;
+    }).join('');
+    document.getElementById('adminDetailPanel').innerHTML = `
+      <div class="section-title" style="font-size:16px;margin-top:28px;">รายละเอียด: ${name} (${dept})</div>
+      <table>
+        <thead><tr><th>วันที่</th><th>บทเรียน / แบบทดสอบ</th><th>คะแนน</th><th>ผลลัพธ์</th><th>ลายเซ็น</th><th></th></tr></thead>
+        <tbody>${rows || '<tr><td colspan="6">ยังไม่มีประวัติ</td></tr>'}</tbody>
+      </table>`;
+  }).withFailureHandler(onLoadError).getEmployeeDetail(email);
+}
+
+function downloadReport() {
+  google.script.run.withSuccessHandler(function (csv) {
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'learning_report.csv';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  }).withFailureHandler(onLoadError).buildReportCSV();
+}
+
+function generateOjtForm() {
+  const courseId = document.getElementById('ojtCourseSelect').value;
+  if (!courseId) { alert('กรุณาเลือกบทเรียนก่อน'); return; }
+  google.script.run
+    .withSuccessHandler(function (res) {
+      alert('สร้างแบบฟอร์ม OJT สำเร็จ (' + res.count + ' คน)\n\nระบบสร้างแท็บใหม่ชื่อ "' + res.sheetName + '" ในสเปรดชีตฐานข้อมูล โดยคัดลอกจากแบบฟอร์มต้นแบบ (ไม่ได้แก้ไขต้นแบบ) แล้วเติมเฉพาะ ลำดับที่ / ชื่อ-สกุล / ลายเซ็น ให้เท่านั้น ช่องอื่น ๆ ยังคงต้องกรอกเองตามเดิม\n\nกำลังเปิดชีตให้ — เมื่อเปิดแล้วไปที่เมนู File > Download > Microsoft Excel (.xlsx) เพื่อดาวน์โหลดเป็นไฟล์ Excel');
+      window.open(res.sheetUrl, '_blank');
+    })
+    .withFailureHandler(function (err) { alert('สร้างแบบฟอร์มไม่สำเร็จ: ' + (err && err.message ? err.message : err)); })
+    .buildOjtExportSheet(courseId);
+}
+</script>
+<script>
+
+/* บนมือถือ: ย้ายแถบหมวดหมู่ขึ้นไปไว้เหนือแท็บ ภาพรวม/ประวัติ/แต้มสะสม
+
+   บนคอม: ให้กลับไปอยู่ด้านซ้ายเหมือนเดิม */
+
+(function () {
+
+  function placeCatBar() {
+
+    var bar    = document.getElementById('dashCategorySidebar');
+
+    var tabs   = document.querySelector('.tabs');
+
+    var layout = document.querySelector('#tab-dashboard .courses-layout');
+
+    if (!bar || !tabs) return;
+
+    var mobile = window.matchMedia('(max-width:720px)').matches;
+
+    if (mobile) {
+
+      var nx = bar.nextElementSibling;
+      if (nx && nx.id === 'dashSubBox') nx = nx.nextElementSibling;
+      if (nx !== tabs) tabs.parentNode.insertBefore(bar, tabs);
+
+      bar.classList.add('cat-top');
+      if (window.renderMobileSubBox) window.renderMobileSubBox();
+
+    } else {
+
+      if (layout && bar.parentElement !== layout) layout.insertBefore(bar, layout.firstChild);
+
+      bar.classList.remove('cat-top');
+
+    }
+
+  }
+
+  document.addEventListener('DOMContentLoaded', placeCatBar);
+
+  window.addEventListener('resize', placeCatBar);
+
+  setInterval(placeCatBar, 1000);   // เผื่อกรณีหน้าเว็บวาดใหม่หลังโหลดข้อมูลเสร็จ
+
+})();
+
+</script>
+
+<script>
+
+/* กล่องแจ้งเตือนบทความค้างอ่าน — แสดงทั้งมือถือและคอม */
+
+(function () {
+
+  function unreadList() {
+
+    if (typeof COURSES === 'undefined' || !COURSES.length) return null;
+
+    var prog = (typeof MY_PROGRESS !== 'undefined' && MY_PROGRESS) ? MY_PROGRESS : {};
+
+    return COURSES.filter(function (c) { return !c.locked && !prog[c.id]; });
+
+  }
+
+  function ensureEl() {
+
+    var el = document.getElementById('readAlarm');
+
+    if (el) return el;
+
+    var tabs = document.querySelector('.tabs');
+
+    if (!tabs) return null;
+
+    el = document.createElement('div');
+
+    el.id = 'readAlarm';
+
+    el.className = 'read-alarm';
+
+    tabs.parentNode.insertBefore(el, tabs);
+
+    return el;
+
+  }
+
+  function render() {
+
+    var el = ensureEl();
+
+    if (!el) return;
+
+    var list = unreadList();
+
+    if (list === null) { el.style.display = 'none'; return; }
+
+    el.style.display = 'flex';
+
+    if (list.length) {
+
+      el.className = 'read-alarm alarm-on';
+
+      el.textContent = '🔔 บทความค้างอ่าน ' + list.length + ' เรื่อง';
+
+      el.onclick = function () { try { openContent(list[0].id); } catch (e) {} };
+
+    } else {
+
+      el.className = 'read-alarm alarm-off';
+
+      el.textContent = '✓ ไม่มีบทความค้างอ่าน';
+
+      el.onclick = null;
+
+    }
+
+  }
+
+  document.addEventListener('DOMContentLoaded', render);
+
+  window.addEventListener('resize', render);
+
+  setInterval(render, 1000);
+
+})();
+
+</script>
+
+<script>
+
+/* ===== แผงพิมพ์กระดาษคำตอบรายบุคคล (หน้าแอดมิน) ===== */
+
+(function () {
+
+  var built = false, FILTERS = null;
+
+  function anchorEl() {
+
+    var els = document.querySelectorAll('button, a');
+
+    for (var i = 0; i < els.length; i++) {
+
+      var t = (els[i].textContent || '').replace(/\s+/g, '');
+
+      if (t.indexOf('ดาวน์โหลดรายงาน') !== -1) return els[i];
+
+    }
+
+    return null;
+
+  }
+
+  function build() {
+
+    if (built) return;
+
+    var a = anchorEl();
+
+    if (!a) return;
+
+    built = true;
+
+    var box = document.createElement('div');
+
+    box.className = 'exam-panel';
+
+    box.innerHTML =
+
+      '<h4>🖨️ กระดาษคำตอบ / ส่งออกข้อมูลรายข้อ</h4>'
+
+    + '<p class="sub">ดูคำถาม คำตอบที่พนักงานเลือก เฉลย และลายเซ็น — สั่งพิมพ์เป็น PDF หรือส่งออกไปทำสถิติได้</p>'
+
+    + '<div class="exam-row">'
+
+    +   '<div class="exam-f"><label for="exMode">รูปแบบรายงาน</label><select id="exMode">'
+
+    +     '<option value="one">รายบุคคล — เลือกบทเรียน</option>'
+
+    +     '<option value="person">รายบุคคล — ทุกบทที่เคยทำ</option>'
+
+    +     '<option value="course">รายบทเรียน — พนักงานทุกคน</option>'
+
+    +   '</select></div>'
+
+    +   '<div class="exam-f"><label for="exUser">พนักงาน</label><select id="exUser"></select></div>'
+
+    +   '<div class="exam-f"><label for="exCourse">บทเรียน</label><select id="exCourse"></select></div>'
+
+    + '</div>'
+
+    + '<label class="exam-chk"><input type="checkbox" id="exLatest" checked> เอาเฉพาะครั้งล่าสุดของแต่ละบท (ไม่ติ๊ก = เอาทุกครั้งที่เคยสอบ)</label>'
+
+    + '<div class="exam-acts" style="margin-top:12px">'
+
+    +   '<button class="btn-sm" type="button" id="exView">📄 ดูกระดาษคำตอบ</button>'
+
+    +   '<button class="btn-sm" type="button" id="exXls">📊 ส่งออกเป็น Excel</button>'
+
+    + '</div>'
+
+    + '<div class="exam-note" id="exNote"></div>';
+
+    a.parentNode.insertBefore(box, a.nextSibling);
+
+    var ov = document.createElement('div');
+
+    ov.className = 'exam-overlay';
+
+    ov.id = 'exOverlay';
+
+    ov.innerHTML =
+
+      '<div class="exam-sheetbox">'
+
+    + '<div class="exam-bar"><b id="exCount"></b><span>'
+
+    +   '<button class="btn-sm" type="button" id="exPrint">🖨️ สั่งพิมพ์ / บันทึกเป็น PDF</button> '
+
+    +   '<button class="btn-sm" type="button" id="exClose">ปิด</button>'
+
+    + '</span></div><div id="exBody"></div></div>';
+
+    document.body.appendChild(ov);
+
+    document.getElementById('exMode').addEventListener('change', syncMode);
+
+    document.getElementById('exView').addEventListener('click', doView);
+
+    document.getElementById('exXls').addEventListener('click', doXls);
+
+    document.getElementById('exPrint').addEventListener('click', function () { window.print(); });
+
+    document.getElementById('exClose').addEventListener('click', function () { ov.classList.remove('open'); });
+
+    google.script.run
+
+      .withSuccessHandler(function (f) {
+
+        FILTERS = f;
+
+        document.getElementById('exUser').innerHTML = f.users.map(function (u) {
+
+          return '<option value="' + u.email + '">' + u.name + (u.dept ? ' · ' + u.dept : '') + '</option>';
+
+        }).join('') || '<option value="">— ไม่มีข้อมูล —</option>';
+
+        document.getElementById('exCourse').innerHTML = f.courses.map(function (c) {
+
+          return '<option value="' + c.id + '">' + c.title + '</option>';
+
+        }).join('') || '<option value="">— ไม่มีข้อมูล —</option>';
+        // เพิ่มบทเรียนทักษะ (EKG / CPR) ให้เลือกได้เสมอ แม้ยังไม่มีผลสอบ
+        google.script.run.withSuccessHandler(function (sk) {
+          var sel = document.getElementById('exCourse');
+          var have = {};
+          (f.courses || []).forEach(function (c) { have[c.id] = 1; });
+          if (!(f.courses || []).length) sel.innerHTML = '';
+          [['🫀 การอ่าน EKG', sk.ekg], ['🫁 CPR / ACLS (รายบทบาท)', sk.cpr]].forEach(function (g) {
+            var list = (g[1] || []).filter(function (c) { return !have[c.id]; });
+            if (!list.length) return;
+            sel.insertAdjacentHTML('beforeend', '<optgroup label="' + g[0] + ' · ยังไม่มีผลสอบ">' +
+              list.map(function (c) { return '<option value="' + c.id + '">' + c.title + '</option>'; }).join('') + '</optgroup>');
+          });
+        }).withFailureHandler(function () {}).getSkillOjtCourses();
+
+
+        syncMode();
+
+      })
+
+      .withFailureHandler(function (e) { note('โหลดรายชื่อไม่สำเร็จ: ' + e.message); })
+
+      .getExamFilters();
+
+  }
+
+  function note(m) { document.getElementById('exNote').textContent = m || ''; }
+
+  function syncMode() {
+
+    var m = document.getElementById('exMode').value;
+
+    document.getElementById('exUser').disabled   = (m === 'course');
+
+    document.getElementById('exCourse').disabled = (m === 'person');
+
+  }
+
+  function opts() {
+
+    var m = document.getElementById('exMode').value;
+
+    return {
+
+      email:      (m === 'course') ? '' : document.getElementById('exUser').value,
+
+      courseId:   (m === 'person') ? '' : document.getElementById('exCourse').value,
+
+      latestOnly: document.getElementById('exLatest').checked
+
+    };
+
+  }
+
+  function esc(s) {
+
+    return String(s == null ? '' : s)
+
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+  }
+
+  function paperHTML(p) {
+
+    var pct = p.total ? Math.round(p.score / p.total * 100) : 0;
+
+    var items = p.items.length
+
+      ? p.items.map(function (it) {
+
+          return '<div class="qitem ' + (it.correct ? 'ok' : 'no') + '">'
+
+            + '<div class="qh">ข้อ ' + it.no + '. ' + esc(it.q) + '</div>'
+
+            + '<div class="ln">คำตอบของพนักงาน: <b>' + esc(it.chosen).replace(/^.*✕.*$/gm, '<span style="color:#dc2626">$&</span>') + '</b> '
+
+            + (it.correct ? '<span class="tag-ok">✔ ตอบถูก</span>' : '<span class="tag-no">✘ ตอบผิด</span>') + '</div>'
+
+            + (it.correct ? '' : '<div class="ln">เฉลยที่ถูกต้อง: <b>' + esc(it.answer) + '</b></div>')
+
+            + '</div>';
+
+        }).join('')
+
+      : '<p style="font-size:13px;color:#64748b">ไม่มีรายละเอียดรายข้อของการสอบครั้งนี้</p>';
+
+     var sig = p.signature
+
+      ? '<div style="text-align:center;min-width:250px">'
+
+        + '<img src="' + p.signature + '" alt="ลายเซ็น">'
+
+        + '<div style="border-top:1px solid #475569;margin-top:2px;padding-top:7px;'
+
+        +   'font-size:13.5px;font-weight:700;color:#1f2937">( ' + esc(p.name) + ' )</div>'
+
+        + '<div style="font-size:11.5px;color:#64748b;line-height:1.7;margin-top:2px">'
+
+        +   'ผู้เข้ารับการอบรม<br>ลงชื่อเมื่อ ' + esc(p.signedAt || p.when) + '</div>'
+
+        + '</div>'
+
+      : '<div class="sign-line"><div class="rule"></div>'
+
+        + '<div style="font-size:13.5px;font-weight:700;color:#1f2937">( ' + esc(p.name) + ' )</div>'
+
+        + '<div style="font-size:11.5px;color:#64748b;line-height:1.7">ผู้เข้ารับการอบรม<br>'
+
+        +   'ลงวันที่ ......... / ......... / .........</div>'
+
+        + '</div>';
+
+
+    return '<div class="paper">'
+
+      + '<div class="paper-head"><div class="sys">ระบบสะสมการเรียนรู้พนักงาน · กระดาษคำตอบ</div>'
+
+      + '<h2>' + esc(p.courseTitle) + '</h2></div>'
+
+      + '<div class="paper-info">'
+
+      +   '<div><span>ชื่อ-สกุล</span><br><b>' + esc(p.name) + '</b></div>'
+
+      +   '<div><span>แผนก</span><br><b>' + esc(p.dept || '-') + '</b></div>'
+
+      +   '<div><span>วันเวลาที่ทำแบบทดสอบ</span><br><b>' + esc(p.when) + '</b></div>'
+
+      +   '<div><span>ผลการสอบ</span><br><span class="paper-score ' + (p.pass ? 'p' : 'f') + '">'
+
+      +     p.score + '/' + p.total + ' (' + pct + '%) ' + (p.pass ? 'ผ่าน' : 'ไม่ผ่าน') + '</span></div>'
+
+      + '</div>'
+
+      + items + ekgPaperLink(p, true)
+
+      + '<div class="paper-sign">'
+
+      +   '<div style="font-size:12px;color:#64748b">พิมพ์จากระบบเมื่อ ' + new Date().toLocaleString('th-TH') + '</div>'
+
+      +   sig
+
+      + '</div></div>';
+
+  }
+
+  function doView() {
+
+    note('กำลังดึงข้อมูล…');
+
+    google.script.run
+
+      .withSuccessHandler(function (list) {
+
+        if (!list.length) { note('ไม่พบข้อมูลการสอบตามเงื่อนไขที่เลือก'); return; }
+
+        document.getElementById('exBody').innerHTML = list.map(paperHTML).join('');
+        enhanceEkgPapers(document.getElementById('exBody'), list, true);
+        enhanceCprPapers(document.getElementById('exBody'), list, true);
+
+        document.getElementById('exCount').textContent = 'กระดาษคำตอบ ' + list.length + ' ฉบับ';
+
+        document.getElementById('exOverlay').classList.add('open');
+
+        note('');
+
+      })
+
+      .withFailureHandler(function (e) { note('ดึงข้อมูลไม่สำเร็จ: ' + e.message); })
+
+      .getExamPapers(opts());
+
+  }
+
+  function doXls() {
+
+    note('กำลังสร้างชีตข้อมูล…');
+
+    google.script.run
+
+      .withSuccessHandler(function (r) {
+
+        note('สร้างชีต "' + r.sheetName + '" แล้ว ' + r.rows + ' แถว — เปิดแล้วไปที่ ไฟล์ > ดาวน์โหลด > Microsoft Excel (.xlsx)');
+
+        window.open(r.url, '_blank');
+
+      })
+
+      .withFailureHandler(function (e) { note('สร้างชีตไม่สำเร็จ: ' + e.message); })
+
+      .buildExamStatsSheet(opts());
+
+  }
+
+  document.addEventListener('DOMContentLoaded', build);
+
+  setInterval(build, 1200);   // แผงแอดมินโหลดหลังตรวจสิทธิ์เสร็จ จึงต้องคอยเช็ก
+
+})();
+
+</script>
+
+
+
+<script>
+/* ===== พนักงานพิมพ์กระดาษคำตอบของตัวเอง — ฉบับสมบูรณ์ v2 ===== */
+(function () {
+  var built = false, PAPERS = null;
+
+  function esc(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  function build() {
+    if (built) return;
+    var host = document.getElementById('tab-history');
+    if (!host) return;
+    built = true;
+
+    /* เก็บกวาดของเก่าที่อาจค้างอยู่ */
+    var oldBar = document.querySelector('.my-exam-bar'); if (oldBar) oldBar.parentNode.removeChild(oldBar);
+    var oldOv  = document.getElementById('myExamOv');    if (oldOv)  oldOv.parentNode.removeChild(oldOv);
+
+    var bar = document.createElement('div');
+    bar.className = 'my-exam-bar';
+    bar.innerHTML =
+      '<div><b>🖨️ กระดาษคำตอบของฉัน</b><br>'
+    + '<span>ดูคำถาม คำตอบที่เลือก และเฉลย พิมพ์เก็บเป็นหลักฐานหรือบันทึกเป็น PDF ได้</span></div>'
+    + '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">'
+    +   '<select id="myxSel" class="my-exam-sel"><option>กำลังโหลด…</option></select>'
+    +   '<button class="btn-sm" type="button" id="myxBtn" disabled>กำลังโหลด…</button>'
+    + '</div>';
+    host.insertBefore(bar, host.firstChild);
+
+    var ov = document.createElement('div');
+    ov.className = 'exam-overlay';
+    ov.id = 'myxOv';
+    ov.innerHTML =
+      '<div class="exam-sheetbox">'
+    + '<div class="exam-bar"><b id="myxCount"></b><span>'
+    +   '<button class="btn-sm" type="button" id="myxPrint">🖨️ สั่งพิมพ์ / บันทึกเป็น PDF</button> '
+    +   '<button class="btn-sm" type="button" id="myxClose">ปิด</button>'
+    + '</span></div><div id="myxBody"></div></div>';
+    document.body.appendChild(ov);
+
+    document.getElementById('myxPrint').addEventListener('click', function () { window.print(); });
+    document.getElementById('myxClose').addEventListener('click', function () { ov.classList.remove('open'); });
+    document.getElementById('myxBtn').addEventListener('click', openView);
+
+    load();
+  }
+
+  function load() {
+    google.script.run
+      .withSuccessHandler(function (list) {
+        PAPERS = list || [];
+        var b = document.getElementById('myxBtn');
+        var s = document.getElementById('myxSel');
+        if (!b || !s) return;
+
+        if (!PAPERS.length) {
+          b.textContent = 'ยังไม่มีผลสอบ';
+          b.disabled = true;
+          s.innerHTML = '<option>— ยังไม่มีบทเรียนที่สอบแล้ว —</option>';
+          s.disabled = true;
+          return;
+        }
+
+        b.textContent = '📄 ดู / พิมพ์';
+        b.disabled = false;
+        s.disabled = false;
+
+        var opts = ['<option value="">ทุกบทเรียน (' + PAPERS.length + ' ฉบับ)</option>'];
+        for (var i = 0; i < PAPERS.length; i++) {
+          var t = String(PAPERS[i].courseTitle || '');
+          if (t.length > 44) t = t.slice(0, 42) + '…';
+          opts.push('<option value="' + i + '">' + esc(t) + '</option>');
+        }
+        s.innerHTML = opts.join('');
+      })
+      .withFailureHandler(function (e) {
+        var b = document.getElementById('myxBtn');
+        if (b) { b.textContent = 'โหลดข้อมูลไม่สำเร็จ'; b.disabled = true; }
+      })
+      .getMyExamPapers();
+  }
+
+  function paperHTML(p) {
+    var pct = p.total ? Math.round(p.score / p.total * 100) : 0;
+
+    var items;
+    if (p.items && p.items.length) {
+      items = p.items.map(function (it) {
+        return '<div class="qitem ' + (it.correct ? 'ok' : 'no') + '">'
+          + '<div class="qh">ข้อ ' + it.no + '. ' + esc(it.q) + '</div>'
+          + '<div class="ln">คำตอบของคุณ: <b>' + esc(it.chosen).replace(/^.*✕.*$/gm, '<span style="color:#dc2626">$&</span>') + '</b> '
+          + (it.correct ? '<span class="tag-ok">✔ ตอบถูก</span>' : '<span class="tag-no">✘ ตอบผิด</span>')
+          + '</div>'
+          + (it.correct ? '' : '<div class="ln">เฉลยที่ถูกต้อง: <b>' + esc(it.answer) + '</b></div>')
+          + '</div>';
+      }).join('');
+    } else {
+      items = '<p style="font-size:13px;color:#64748b">ไม่มีรายละเอียดรายข้อของการสอบครั้งนี้</p>';
+    }
+
+    var sig;
+    if (p.signature) {
+      sig = '<div style="text-align:center;min-width:250px">'
+          + '<img src="' + p.signature + '" alt="ลายเซ็น">'
+          + '<div style="border-top:1px solid #475569;margin-top:2px;padding-top:7px;'
+          +   'font-size:13.5px;font-weight:700;color:#1f2937">( ' + esc(p.name) + ' )</div>'
+          + '<div style="font-size:11.5px;color:#64748b;line-height:1.7;margin-top:2px">'
+          +   'ผู้เข้ารับการอบรม<br>ลงชื่อเมื่อ ' + esc(p.signedAt || p.when) + '</div>'
+          + '</div>';
+    } else {
+      sig = '<div class="sign-line"><div class="rule"></div>'
+          + '<div style="font-size:13.5px;font-weight:700;color:#1f2937">( ' + esc(p.name) + ' )</div>'
+          + '<div style="font-size:11.5px;color:#64748b;line-height:1.7">ผู้เข้ารับการอบรม<br>'
+          +   'ลงวันที่ ......... / ......... / .........</div>'
+          + '</div>';
+    }
+
+    return '<div class="paper">'
+      + '<div class="paper-head"><div class="sys">ระบบสะสมการเรียนรู้พนักงาน · กระดาษคำตอบ</div>'
+      + '<h2>' + esc(p.courseTitle) + '</h2></div>'
+      + '<div class="paper-info">'
+      +   '<div><span>ชื่อ-สกุล</span><br><b>' + esc(p.name) + '</b></div>'
+      +   '<div><span>แผนก</span><br><b>' + esc(p.dept || '-') + '</b></div>'
+      +   '<div><span>วันเวลาที่ทำแบบทดสอบ</span><br><b>' + esc(p.when) + '</b></div>'
+      +   '<div><span>ผลการสอบ</span><br><span class="paper-score ' + (p.pass ? 'p' : 'f') + '">'
+      +     p.score + '/' + p.total + ' (' + pct + '%) ' + (p.pass ? 'ผ่าน' : 'ไม่ผ่าน') + '</span></div>'
+      + '</div>'
+      + items + ekgPaperLink(p, false)
+      + '<div class="paper-sign">'
+      +   '<div style="font-size:12px;color:#64748b">พิมพ์จากระบบเมื่อ ' + new Date().toLocaleString('th-TH') + '</div>'
+      +   sig
+      + '</div></div>';
+  }
+
+  function openView() {
+    if (!PAPERS || !PAPERS.length) return;
+    var pick = document.getElementById('myxSel').value;
+    var list = (pick === '') ? PAPERS : [PAPERS[Number(pick)]];
+    document.getElementById('myxBody').innerHTML = list.map(paperHTML).join('');
+    enhanceEkgPapers(document.getElementById('myxBody'), list, false);
+    enhanceCprPapers(document.getElementById('myxBody'), list, false);
+    document.getElementById('myxCount').textContent =
+      (pick === '') ? 'กระดาษคำตอบของฉัน ' + list.length + ' ฉบับ'
+                    : 'กระดาษคำตอบ · ' + list[0].courseTitle;
+    document.getElementById('myxOv').classList.add('open');
+  }
+
+  document.addEventListener('DOMContentLoaded', build);
+  setInterval(build, 1200);
+})();
+</script>
+
+<script>
+/* ===== พิมพ์เนื้อหาบทเรียน (หน้าแอดมิน) เพื่อส่งรายงาน ===== */
+(function () {
+  var built = false;
+
+  function esc(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  function anchorEl() {
+    var els = document.querySelectorAll('button, a');
+    for (var i = 0; i < els.length; i++) {
+      var t = (els[i].textContent || '').replace(/\s+/g, '');
+      if (t.indexOf('ดาวน์โหลดรายงาน') !== -1) return els[i];
+    }
+    return null;
+  }
+
+  function build() {
+    if (built) return;
+    if (typeof COURSES === 'undefined' || !COURSES.length) return;   // รอ COURSES โหลดเสร็จก่อน
+    var a = anchorEl();
+    if (!a) return;
+    built = true;
+
+    var box = document.createElement('div');
+    box.className = 'exam-panel';
+    box.innerHTML =
+      '<h4>🖨️ พิมพ์เนื้อหาบทเรียน</h4>'
+    + '<p class="sub">พิมพ์เนื้อหาบทเรียน (บทความเต็ม / ข้อมูลคลิป) เป็นเอกสาร A4 เพื่อส่งรายงานหรือเก็บเป็นหลักฐานการสอน</p>'
+    + '<div class="exam-row">'
+    +   '<div class="exam-f"><label for="crsPick">บทเรียน</label><select id="crsPick">'
+    +     '<option value="">ทุกบทเรียน (' + COURSES.length + ' บท)</option>'
+    +     COURSES.map(function (c, i) {
+            return '<option value="' + i + '">' + esc(c.title) + '</option>';
+          }).join('')
+    +   '</select></div>'
+    + '</div>'
+    + '<label class="exam-chk"><input type="checkbox" id="crsQ" checked> รวมรายการคำถามแบบทดสอบท้ายบท (ไม่แสดงเฉลย)</label>'
+    + '<div class="exam-acts" style="margin-top:12px">'
+    +   '<button class="btn-sm" type="button" id="crsView">📄 ดู / พิมพ์บทเรียน</button>'
+    + '</div>';
+
+    a.parentNode.insertBefore(box, a.nextSibling);
+
+    var ov = document.createElement('div');
+    ov.className = 'exam-overlay';
+    ov.id = 'crsOv';
+    ov.innerHTML =
+      '<div class="exam-sheetbox">'
+    + '<div class="exam-bar"><b id="crsCount"></b><span>'
+    +   '<button class="btn-sm" type="button" id="crsPrint">🖨️ สั่งพิมพ์ / บันทึกเป็น PDF</button> '
+    +   '<button class="btn-sm" type="button" id="crsClose">ปิด</button>'
+    + '</span></div><div id="crsBody"></div></div>';
+    document.body.appendChild(ov);
+
+    document.getElementById('crsPrint').addEventListener('click', function () { window.print(); });
+    document.getElementById('crsClose').addEventListener('click', function () { ov.classList.remove('open'); });
+    document.getElementById('crsView').addEventListener('click', openView);
+  }
+
+  function courseHTML(c) {
+    var typeLabel = c.type === 'video' ? '🎬 คลิปวิดีโอ' : '📄 บทความ';
+    var cat = c.category || 'ทั่วไป';
+
+    var bodyHTML;
+    if (c.type === 'video') {
+      bodyHTML = '<div class="ln" style="margin-bottom:10px">ลิงก์คลิปวิดีโอ: '
+        + '<a href="' + esc(c.videoUrl || '') + '" target="_blank">' + esc(c.videoUrl || '-') + '</a></div>'
+        + (c.desc ? '<div class="ln">' + esc(c.desc) + '</div>' : '');
+    } else {
+      bodyHTML = '<div style="font-size:13px;line-height:1.9">' + (c.content || '<i>ไม่มีเนื้อหา</i>') + '</div>';
+    }
+
+    var qBox = '';
+    if (document.getElementById('crsQ').checked && c.questions && c.questions.length) {
+      var THAI_OPT_LABEL = ['ก','ข','ค','ง','จ','ฉ','ช','ซ','ฌ','ญ'];
+      qBox = '<div style="margin-top:16px;padding-top:12px;border-top:1px dashed #cbd5e1">'
+        + '<div style="font-weight:700;font-size:13.5px;margin-bottom:8px">รายการคำถามแบบทดสอบท้ายบท (' + c.questions.length + ' ข้อ — ไม่แสดงเฉลย)</div>'
+        + c.questions.map(function (q, i) {
+            var opts = q.options.map(function (o, oi) {
+              var lbl = THAI_OPT_LABEL[oi] || (oi + 1);
+              return '<div class="ln">' + lbl + '. ' + esc(o) + '</div>';
+            }).join('');
+            return '<div class="qitem" style="border-left-color:#94a3b8;background:#f8fafc">'
+              + '<div class="qh">ข้อ ' + (i + 1) + '. ' + esc(q.q) + '</div>' + opts + '</div>';
+          }).join('')
+        + '</div>';
+    }
+
+        return '<div class="paper">'
+      + '<div class="paper-head"><div class="sys">ระบบสะสมการเรียนรู้พนักงาน · เอกสารเนื้อหาบทเรียน</div>'
+      + '<h2>' + esc(c.title) + '</h2></div>'
+      + '<div class="paper-info">'
+      +   '<div><span>หมวดหมู่</span><br><b>' + esc(cat) + '</b></div>'
+      +   '<div><span>ประเภท</span><br><b>' + typeLabel + '</b></div>'
+      +   '<div><span>คำอธิบายย่อ</span><br><b>' + esc(c.desc || '-') + '</b></div>'
+      + '</div>'
+      + bodyHTML
+      + qBox
+      + referenceHTML(c.reference)
+      + '<div style="margin-top:16px;padding-top:10px;border-top:1px dashed #cbd5e1;font-size:11.5px;color:#64748b">'
+      +   'พิมพ์จากระบบเมื่อ ' + new Date().toLocaleString('th-TH')
+      + '</div></div>';
+  }
+
+  function referenceHTML(ref) {
+    if (!ref) return '';
+    var items = Array.isArray(ref) ? ref : [ref];
+    items = items.filter(Boolean);
+    if (!items.length) return '';
+    return '<div style="margin-top:16px;padding-top:12px;border-top:1px dashed #cbd5e1">'
+      + '<div style="font-weight:700;font-size:13.5px;margin-bottom:6px">📚 เอกสารอ้างอิง / ที่มาของข้อมูล</div>'
+      + '<div style="font-size:11.5px;color:#475569;line-height:1.85">'
+      +   items.map(function (r, i) {
+            return (items.length > 1 ? (i + 1) + '. ' : '') + esc(r);
+          }).join('<br>')
+      + '</div></div>';
+  }
+
+  function openView() {
+    var pick = document.getElementById('crsPick').value;
+    var list = (pick === '') ? COURSES : [COURSES[Number(pick)]];
+    document.getElementById('crsBody').innerHTML = list.map(courseHTML).join('');
+    document.getElementById('crsCount').textContent =
+      (pick === '') ? 'เนื้อหาบทเรียนทั้งหมด ' + list.length + ' บท' : 'เนื้อหาบทเรียน · ' + list[0].title;
+    document.getElementById('crsOv').classList.add('open');
+  }
+
+  document.addEventListener('DOMContentLoaded', build);
+  setInterval(build, 1200);
+})();
+</script>
+
+<script>
+(function () {
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', startApp);
+  } else {
+    startApp();
+  }
+})();
+</script>
+
+
+
+<style>
+/* =========================================================================
+   ชุดปรับหน้าจอทั้งหมดของระบบสะสมการเรียนรู้พนักงาน OPD1  รวมไว้ในไฟล์เดียว
+
+   ไฟล์นี้รวม 3 ชุดที่เคยส่งแยกกันไว้ด้วยกันแล้ว คือ
+   1. หน้าบทเรียน ขยายกรอบเนื้อหาให้ใช้พื้นที่จอเต็ม        (opd1-full-guard)
+   2. แถบเลื่อนซ้ายขวา และป้ายบอกความคืบหน้าการอ่าน        (opd1-scroll-guard)
+   3. หน้าแรกบนมือถือ ย่อให้กระชับ                          (opd1-dash-guard)
+
+   ก่อนวางไฟล์นี้ ให้ลบชุดเก่าที่วางไว้ก่อนหน้าออกให้หมดก่อน
+   วิธีหาคือกด Ctrl+F แล้วค้นหาคำสามคำนี้ทีละคำ
+       opd1-full-guard
+       opd1-scroll-guard
+       opd1-dash-guard
+   เจอที่ไหนให้ลบทั้งบล็อกนั้น ตั้งแต่บรรทัดเปิด style ไปจนถึงบรรทัดปิดของบล็อกนั้น
+   ========================================================================= */
+.opd1-all-in-one{color:inherit}
+</style>
+
+<style>
+/* ===== หน้าบทเรียน เน้นพื้นที่อ่านให้มากที่สุด ===== */
+
+.opd1-full-guard{color:inherit}
+
+/* กรอบบทเรียนเดิมถูกจำกัดความกว้างไว้ 720 พิกเซล จอคอมจึงเหลือที่ว่างมาก */
+#contentScreen .content-box{max-width:100% !important}
+.quiz-box{max-width:900px !important}
+
+@media(min-width:1100px){
+  #contentScreen .app{max-width:1180px !important}
+}
+
+/* บีบระยะขอบทุกด้านให้เหลือน้อยที่สุด เพื่อยกพื้นที่ไปให้เนื้อหา */
+#contentScreen .app{padding:10px 14px 14px !important}
+#contentScreen .content-box{padding:14px 16px !important}
+#contentScreen .content-box h2{
+  font-size:17px !important; line-height:1.45 !important; margin:0 0 6px !important;
+}
+
+/* ป้ายบอกประเภทบทเรียน ซ้ำกับข้อความใต้กรอบอยู่แล้ว จึงซ่อนไว้ */
+#contentScreen .content-box .type-tag{display:none !important}
+
+/* แถบสถานะการอ่านของเดิม ซ้ำกับข้อความใต้กรอบเช่นกัน จึงซ่อนไว้ */
+#contentScreen .gate-status{display:none !important}
+
+/* กรอบเนื้อหา สูงตามจอที่ใช้อยู่จริง แทนความสูงตายตัว 360 พิกเซล */
+#contentScreen .content-text{
+  max-height:calc(100vh - 190px) !important;
+  max-height:calc(100dvh - 190px) !important;
+  min-height:340px !important;
+  overflow-y:auto !important;
+  padding:16px 20px !important;
+  margin-bottom:6px !important;
+  line-height:1.95 !important;
+  font-size:15.5px !important;
+}
+
+/* ปุ่มด้านล่าง ย่อลงให้กินที่น้อยที่สุด */
+#contentScreen .content-actions{margin-top:2px !important}
+#contentScreen .content-actions .btn-sm{
+  padding:7px 16px !important; font-size:13px !important; border-width:2px !important;
+}
+
+@media(max-width:640px){
+  #contentScreen .app{padding:8px 10px 10px !important}
+  #contentScreen .content-box{padding:12px 12px !important;border-radius:14px}
+  #contentScreen .content-box h2{font-size:16px !important;margin:0 0 5px !important}
+  #contentScreen .content-text{
+    max-height:calc(100vh - 175px) !important;
+    max-height:calc(100dvh - 175px) !important;
+    min-height:300px !important;
+    padding:13px 15px !important;
+    font-size:16px !important;
+  }
+  #contentScreen .content-actions .btn-sm{padding:7px 12px !important;font-size:12.5px !important}
+}
+
+/* รูปภาพและวิดีโอในบทเรียน ให้พอดีกรอบเสมอ */
+.content-text img,.content-text video,.content-text iframe{
+  display:block;margin:10px auto;
+  max-width:100% !important;height:auto !important;
+}
+.content-text,.content-text p,.content-text div{overflow-wrap:anywhere}
+html,body{overflow-x:hidden}
+</style>
+
+<script>
+/* ===== ปลดล็อกปุ่มทำแบบทดสอบ เมื่อบทความสั้นจนไม่ต้องเลื่อน =====
+   เดิมระบบปลดล็อกจากการเลื่อนอ่านจนสุดกรอบ แต่เมื่อกรอบสูงขึ้นตามจอ
+   บทความสั้นจะแสดงครบในหน้าเดียวจนไม่มีอะไรให้เลื่อน ปุ่มจึงไม่ถูกปลดล็อก
+   สคริปต์นี้คอยตรวจว่าถ้าเนื้อหาแสดงครบแล้ว ให้ถือว่าอ่านครบทันที */
+(function () {
+  function check() {
+    var el = document.getElementById('articleText');
+    if (!el) return;
+    if (typeof contentState === 'undefined' || !contentState || contentState.ready) return;
+    if (el.scrollHeight <= el.clientHeight + 24) {
+      try { markReady_(); } catch (e) {}
+    }
+  }
+  document.addEventListener('DOMContentLoaded', check);
+  window.addEventListener('resize', check);
+  setInterval(check, 800);
+})();
+</script>
+<style>
+/* ===== แถบเลื่อนซ้ายขวาของกล่องบทความ และป้ายบอกความคืบหน้าการอ่าน ===== */
+
+.opd1-scroll-guard{color:inherit}
+
+/* แถบเลื่อนขึ้นลง ใช้ของเครื่องตามปกติ แต่ทำสีให้เข้ากับธีมและหนาขึ้นเล็กน้อย
+   ส่วนแถบเลื่อนซ้ายขวาของเครื่องให้ซ่อนไว้ เพราะใช้แถบสีม่วงที่ทำขึ้นเองแทน */
+#articleText{scrollbar-width:thin;scrollbar-color:#E9538A #FCE4EF;}
+#articleText::-webkit-scrollbar{width:11px;height:0 !important;}
+#articleText::-webkit-scrollbar-track{background:#FCE4EF;border-radius:999px;margin:6px 0;}
+#articleText::-webkit-scrollbar-thumb{
+  background:linear-gradient(180deg,#F27BAC,#E9538A);
+  border-radius:999px;border:2px solid #FCE4EF;
+}
+
+.rd-host{position:relative;}
+
+/* ลูกศรบอกว่ายังมีเนื้อหาอยู่ข้างล่าง */
+.rd-more{
+  position:absolute; left:2px; right:2px; bottom:3px; height:52px;
+  border-radius:0 0 14px 14px; pointer-events:none; z-index:2;
+  background:linear-gradient(180deg,rgba(255,246,250,0) 0%,rgba(255,242,248,.92) 55%,rgba(255,240,246,1) 100%);
+  display:flex; align-items:flex-end; justify-content:center; padding-bottom:7px;
+}
+.rd-more span{
+  animation:rdBounce 1.2s ease-in-out infinite;
+  background:#fff; border:2px solid #F3C6DC; border-radius:999px;
+  padding:2px 11px; font-size:12px; font-weight:700; color:#8A2B5E;
+  box-shadow:0 2px 6px rgba(233,83,138,.2);
+}
+.rd-more.hide{display:none;}
+@keyframes rdBounce{
+  0%,100%{transform:translateY(0);opacity:1}
+  50%{transform:translateY(3px);opacity:.5}
+}
+@media (prefers-reduced-motion:reduce){ .rd-more span{animation:none} }
+
+/* ข้อความบอกสถานะการอ่าน อยู่ใต้กล่อง */
+.rd-txt{
+  margin:4px 0 8px; font-size:12.5px; font-weight:600; color:#8A2B5E; line-height:1.5;
+}
+.rd-txt.done{color:#0A6A4F;}
+
+/* ===== แถบเลื่อนซ้ายขวา อยู่ขอบล่างของกรอบ ===== */
+.rd-hsb{
+  position:absolute; left:10px; right:10px; bottom:9px; height:14px;
+  background:#E4E0FC; border:2px solid #C9C1F7; border-radius:999px;
+  z-index:4; cursor:pointer; display:none;
+}
+.rd-host.has-h .rd-hsb{display:block;}
+.rd-hthumb{
+  position:absolute; top:1px; bottom:1px; left:0; width:60px;
+  background:linear-gradient(90deg,#9B8FEA,#7466DE);
+  border-radius:999px; cursor:grab;
+  box-shadow:0 2px 6px rgba(116,102,222,.45);
+}
+.rd-hthumb:active{cursor:grabbing;background:linear-gradient(90deg,#7466DE,#5B4BD6);}
+.rd-hthumb::after{
+  content:""; position:absolute; top:3px; bottom:3px; left:50%;
+  width:7px; transform:translateX(-50%);
+  background:repeating-linear-gradient(90deg,rgba(255,255,255,.85) 0 1.5px,transparent 1.5px 3.5px);
+  border-radius:2px;
+}
+
+/* เมื่อมีแถบล่าง ให้เว้นที่ให้ไม่ทับกัน */
+.rd-host.has-h #articleText{padding-bottom:34px !important;}
+.rd-host.has-h .rd-more{bottom:26px;}
+
+/* ตารางกว้าง ให้ดันกรอบบทความเลื่อนซ้ายขวาแทนการเลื่อนในตัวเอง
+   พนักงานจะได้ใช้แถบล่างอันเดียวคุมทั้งหมด
+   เนื้อหาที่คัดลอกมามักมีกล่องครอบที่ตั้งค่าเลื่อนเองหรือตัดส่วนเกินทิ้ง
+   จึงต้องสั่งให้กล่องพวกนั้นปล่อยส่วนเกินออกมาถึงกรอบบทความ */
+.content-text table{max-width:none !important;}
+.content-text div,.content-text p,.content-text section,
+.content-text article,.content-text figure,.content-text blockquote,
+.content-text ul,.content-text ol,.content-text pre{
+  overflow-x:visible !important;
+  max-width:none !important;
+}
+
+@media(max-width:640px){
+  .rd-hsb{height:16px;left:8px;right:8px;}
+  .rd-host.has-h #articleText{padding-bottom:38px !important;}
+  .rd-txt{font-size:12.5px;}
+}
+</style>
+
+<script>
+/* ===== แถบเลื่อนซ้ายขวา และป้ายบอกความคืบหน้าการอ่าน =====
+   การเลื่อนขึ้นลงเป็นสิ่งที่ทุกคนทำอยู่แล้ว จึงไม่ต้องมีแถบด้านขวา
+   แต่การเลื่อนซ้ายขวาไม่มีใครคาดคิด จึงต้องมีแถบล่างที่เห็นค้างไว้เสมอ
+   ส่วนป้ายใต้กรอบมีไว้บอกว่าอ่านไปถึงไหนแล้ว เพราะต้องอ่านให้สุดจึงจะทำแบบทดสอบได้ */
+(function () {
+
+  function setup() {
+    var el = document.getElementById('articleText');
+    if (!el) return null;
+
+    var host = el.parentNode;
+    if (!host.classList || !host.classList.contains('rd-host')) {
+      host = document.createElement('div');
+      host.className = 'rd-host';
+      el.parentNode.insertBefore(host, el);
+      host.appendChild(el);
+    }
+
+    if (!host.querySelector('.rd-more')) {
+      var more = document.createElement('div');
+      more.className = 'rd-more';
+      more.innerHTML = '<span>⬇ ยังมีเนื้อหาอยู่ข้างล่าง</span>';
+      host.appendChild(more);
+
+      var hsb = document.createElement('div');
+      hsb.className = 'rd-hsb';
+      hsb.innerHTML = '<span class="rd-hthumb"></span>';
+      host.appendChild(hsb);
+
+      bindDragH(hsb);
+    }
+
+    var txt = document.getElementById('rdTxt');
+    if (!txt || txt.previousElementSibling !== host) {
+      if (txt && txt.parentNode) txt.parentNode.removeChild(txt);
+      txt = document.createElement('div');
+      txt.id = 'rdTxt';
+      txt.className = 'rd-txt';
+      host.parentNode.insertBefore(txt, host.nextSibling);
+    }
+
+    if (el.getAttribute('data-rd') !== '1') {
+      el.setAttribute('data-rd', '1');
+      el.addEventListener('scroll', paint);
+    }
+    return host;
+  }
+
+  /* หาว่ากล่องไหนคือกล่องที่เลื่อนซ้ายขวาได้จริง
+     ปกติคือกรอบบทความเอง แต่ถ้าเนื้อหามีกล่องครอบที่เลื่อนเองอยู่ ก็ใช้กล่องนั้นแทน */
+  function hTarget() {
+    var el = document.getElementById('articleText');
+    if (!el) return null;
+    if (el.scrollWidth - el.clientWidth > 4) return el;
+    var kids = el.querySelectorAll('*');
+    var best = null, most = 4;
+    for (var i = 0; i < kids.length; i++) {
+      var k = kids[i];
+      var over = k.scrollWidth - k.clientWidth;
+      if (over > most) { most = over; best = k; }
+    }
+    return best;
+  }
+
+  function bindDragH(hsb) {
+    var thumb = hsb.querySelector('.rd-hthumb');
+    var dragging = false, grabOffset = 0;
+
+    function moveTo(clientX) {
+      var t = hTarget();
+      if (!t) return;
+      var r = hsb.getBoundingClientRect();
+      var left = clientX - r.left - grabOffset;
+      var maxLeft = hsb.clientWidth - thumb.offsetWidth;
+      if (maxLeft <= 0) return;
+      if (left < 0) left = 0;
+      if (left > maxLeft) left = maxLeft;
+      t.scrollLeft = left / maxLeft * (t.scrollWidth - t.clientWidth);
+    }
+
+    function down(e) {
+      var p = e.touches ? e.touches[0] : e;
+      var tr = thumb.getBoundingClientRect();
+      if (p.clientX >= tr.left && p.clientX <= tr.right) {
+        grabOffset = p.clientX - tr.left;
+      } else {
+        grabOffset = thumb.offsetWidth / 2;
+        moveTo(p.clientX);
+      }
+      dragging = true;
+      e.preventDefault();
+    }
+    function move(e) {
+      if (!dragging) return;
+      var p = e.touches ? e.touches[0] : e;
+      moveTo(p.clientX);
+      e.preventDefault();
+    }
+    function up() { dragging = false; }
+
+    hsb.addEventListener('mousedown', down);
+    window.addEventListener('mousemove', move);
+    window.addEventListener('mouseup', up);
+    hsb.addEventListener('touchstart', down, { passive: false });
+    window.addEventListener('touchmove', move, { passive: false });
+    window.addEventListener('touchend', up);
+  }
+
+  function paint() {
+    var el = document.getElementById('articleText');
+    if (!el) return;
+    var host = el.parentNode;
+    if (!host || !host.querySelector) return;
+    var more = host.querySelector('.rd-more');
+    var txt  = document.getElementById('rdTxt');
+
+    paintH(el, host);
+
+    var room = el.scrollHeight - el.clientHeight;
+
+    if (room <= 24) {
+      if (more) more.className = 'rd-more hide';
+      if (txt) { txt.className = 'rd-txt done'; txt.textContent = '\u2714 อ่านครบแล้ว กดเริ่มทำแบบทดสอบได้เลย'; }
+      return;
+    }
+
+    var pct = Math.round(el.scrollTop / room * 100);
+    if (pct > 100) pct = 100;
+    if (pct < 0) pct = 0;
+
+    if (pct >= 99) {
+      if (more) more.className = 'rd-more hide';
+      if (txt) { txt.className = 'rd-txt done'; txt.textContent = '\u2714 อ่านครบแล้ว กดเริ่มทำแบบทดสอบได้เลย'; }
+    } else {
+      if (more) more.className = 'rd-more';
+      if (txt) { txt.className = 'rd-txt'; txt.textContent = 'อ่านแล้ว ' + pct + '% เลื่อนให้ถึงท้ายบทความก่อน จึงจะทำแบบทดสอบได้'; }
+    }
+  }
+
+  function paintH(el, host) {
+    var hsb = host.querySelector('.rd-hsb');
+    if (!hsb) return;
+
+    var t = hTarget();
+    var roomX = t ? (t.scrollWidth - t.clientWidth) : 0;
+
+    if (!t || roomX <= 4) {
+      host.className = host.className.replace(/\s*has-h/g, '');
+      return;
+    }
+    if (host.className.indexOf('has-h') < 0) host.className += ' has-h';
+
+    if (t !== el && t.getAttribute('data-rdh') !== '1') {
+      t.setAttribute('data-rdh', '1');
+      t.addEventListener('scroll', function () { paintH(el, host); });
+    }
+
+    var thumb = hsb.querySelector('.rd-hthumb');
+    var trackW = hsb.clientWidth;
+    var w = Math.max(44, Math.round(trackW * (t.clientWidth / t.scrollWidth)));
+    var maxLeft = trackW - w;
+    var pos = roomX ? t.scrollLeft / roomX : 0;
+    if (pos > 1) pos = 1;
+    thumb.style.width = w + 'px';
+    thumb.style.left = Math.round(maxLeft * pos) + 'px';
+  }
+
+  function tick() { if (setup()) paint(); }
+
+  document.addEventListener('DOMContentLoaded', tick);
+  window.addEventListener('resize', tick);
+  setInterval(tick, 600);
+})();
+</script>
+<style>
+/* ===== หน้าภาพรวม ทำให้กระชับขึ้นเมื่อเปิดจากมือถือ ===== */
+
+.opd1-dash-guard{color:inherit}
+
+@media(max-width:640px){
+
+  /* กล่องข้อความมุมมองตัวอย่างสำหรับผู้ดูแลระบบ ซ่อนเฉพาะบนมือถือ */
+  #previewBanner{display:none !important}
+
+  /* กล่องสถิติ 5 ใบ → รวมเป็นแถบเดียวแถวเดียว กะทัดรัด */
+  .stat-row{
+    display:grid !important;grid-template-columns:repeat(5,minmax(0,1fr)) !important;
+    gap:0 !important;margin-bottom:12px !important;padding:8px 2px !important;
+    background:#fff !important;border:1.5px solid var(--border) !important;border-radius:14px !important;
+  }
+  .stat-row .stat{
+    background:none !important;border:none !important;box-shadow:none !important;
+    border-radius:0 !important;padding:2px 2px !important;text-align:center !important;min-width:0 !important;
+  }
+  .stat-row .stat + .stat{border-left:1px solid var(--border) !important}
+  .stat .num{font-size:15px !important;line-height:1.25 !important;font-weight:600 !important;white-space:nowrap}
+  .stat .lbl{font-size:0 !important;margin-top:1px !important;line-height:1.2 !important}
+  .stat .lbl::after{content:attr(data-short);font-size:10px;color:var(--muted);white-space:nowrap}
+
+  /* หัวข้อและคำอธิบายด้านบน ย่อลง */
+  .section-title{font-size:17px !important}
+  .section-sub{font-size:12px !important;margin:0 0 10px !important;line-height:1.5}
+  #tab-dashboard > .section-title:first-child::before{
+    width:32px !important;height:32px !important;vertical-align:-9px !important;
+    margin-inline-end:7px !important;
+  }
+
+  /* กล่องชั่วโมงเรียนรู้ และ Top 5 กลุ่มอาการ ย่อลง */
+  .kpi-row{gap:10px !important;margin-bottom:14px !important}
+  .kpi-dx{padding:12px 14px !important;border-radius:16px !important}
+  .kpi-hours{padding:12px 14px !important;border-radius:16px !important}
+  .kpi-hours .big{font-size:26px !important}
+  .kpi-hours .lbl{font-size:11.5px !important}
+  .kpi-hours .brk{font-size:12px !important;margin-top:6px !important;line-height:1.6 !important}
+  .kpi-dx h4{font-size:14px !important}
+
+  /* ตารางอันดับเกม KPI ยุบเหลือปุ่มเดียว ไปดูอันดับเต็มในหน้าเกมแทน */
+  .kpi-lb{
+    background:none !important; border:none !important; box-shadow:none !important;
+    padding:0 !important; border-radius:0 !important;
+  }
+  .kpi-lb > *{display:none !important}
+  .kpi-lb > .cta{display:block !important}
+  .kpi-lb .cta{
+    margin-top:0 !important; padding:13px !important; font-size:14px !important;
+    border-radius:16px !important;
+  }
+
+  /* การ์ดบทเรียน ทำให้เตี้ยลงมาก จะได้เห็นหลายบทในหน้าเดียว */
+  .grid{gap:10px !important}
+  .card{padding:12px !important;border-radius:16px !important}
+  .card h3{font-size:14px !important;line-height:1.4 !important;margin:0 0 6px !important}
+  .card img{height:74px !important;margin:0 0 8px !important;border-radius:10px !important}
+  .card p.desc{display:none !important}
+  .card .meta{font-size:11px !important;margin-bottom:8px !important}
+  .card .btn-sm.full{padding:8px !important;font-size:12.5px !important}
+
+  /* หัวข้อบทเรียนที่แนะนำ ให้ชิดขึ้น */
+  #tab-dashboard .section-title[style]{margin-top:2px !important}
+
+  /* บทเรียนย่อย (การอ่าน EKG) → ชิปเล็กต่อท้ายหมวด ไม่ดันแถวให้สูง */
+  .category-sidebar.cat-top{align-items:center !important;scroll-snap-type:x proximity}
+  .category-sidebar.cat-top .cat-item{scroll-snap-align:start}
+  .category-sidebar.cat-top .ekg-sub{flex:0 0 auto !important;padding:0 !important;margin:0 0 0 -4px !important}
+  .category-sidebar.cat-top .ekg-sub-link{
+    display:inline-flex !important;align-items:center;gap:4px;white-space:nowrap !important;
+    border:1.5px dashed #f3a3be !important;border-radius:999px !important;background:#fff0f5 !important;
+    padding:6px 12px !important;font-size:12px !important;font-weight:600 !important;line-height:1.2 !important;
+  }
+  .category-sidebar.cat-top .ekg-sub-link .ekg-arrow{display:inline !important;color:#f08aad;font-weight:400}
+
+  /* แคปซูลหมวดหมู่ ย่อลง */
+  .category-sidebar.cat-top{margin:2px 0 10px !important;padding-bottom:6px !important}
+  .category-sidebar.cat-top .cat-item{padding:8px 16px !important;font-size:12.5px !important}
+
+  /* แถบเตือนบทความค้างอ่าน ย่อลง */
+  .read-alarm{padding:9px 14px !important;font-size:13px !important;margin:4px 0 10px !important}
+
+  /* แท็บด้านบน ย่อลง */
+  .tabs{margin:12px 0 !important;gap:6px !important}
+  .tab{padding:7px 15px !important;font-size:12.5px !important}
+
+
+  /* แถบด้านบน ให้ปุ่มตกลงมาบรรทัดใหม่แทนที่จะหลุดขอบจอจนมองไม่เห็น */
+  header.topbar{
+    flex-wrap:wrap !important; gap:8px !important;
+    padding:9px 10px !important; justify-content:center !important;
+  }
+  header.topbar .brand{font-size:14px !important;gap:7px !important;flex:0 0 auto}
+  header.topbar .brand .logo{width:28px !important;height:28px !important}
+  header.topbar > div:not(.brand){
+    flex-wrap:wrap !important; justify-content:center !important;
+    gap:8px !important; width:100% !important;
+  }
+  header.topbar .user-info{
+    width:100% !important; order:-1; text-align:center;
+    font-size:11.5px !important; line-height:1.5 !important;
+  }
+  .points-widget{min-width:76px !important;min-height:46px !important;padding:5px 10px !important}
+  .points-widget-num{font-size:16px !important}
+  .points-widget-lbl{font-size:9.5px !important;margin:1px 0 4px !important}
+  .points-widget-btn{font-size:10px !important;padding:3px 9px !important}
+  .btn-sm.btn-kpigame,.btn-sm.btn-shift{
+    min-height:46px !important; padding:6px 13px !important; font-size:12.5px !important;
+  }
+  #backToAdminBtn{min-height:46px !important;padding:6px 11px !important;font-size:12px !important}
+
+  /* จอแคบมาก ซ่อนชื่อระบบไว้ เหลือแค่รูปมาสคอต จะได้มีที่ให้ปุ่ม */
+  @media(max-width:430px){
+    header.topbar .brand{font-size:0 !important}
+  }
+
+  /* ระยะขอบหน้า */
+  .app{padding:14px 12px 40px !important}
+}
+.table-scroll-wrap{
+  overflow-x: auto;
+  overflow-y: auto;
+  max-height: 70vh;
+  margin-bottom: 10px;
+  border-radius: 8px;
+  scrollbar-width: auto;
+}
+.table-scroll-wrap::-webkit-scrollbar{
+  height: 10px;
+  width: 10px;
+}
+.table-scroll-wrap::-webkit-scrollbar-track{
+  background: #f1f5f9;
+  border-radius: 6px;
+}
+.table-scroll-wrap::-webkit-scrollbar-thumb{
+  background: #94a3b8;
+  border-radius: 6px;
+}
+.table-scroll-wrap::-webkit-scrollbar-thumb:hover{
+  background: #64748b;
+}
+.table-scroll-wrap table{
+  border-collapse: separate;
+  border-spacing: 0;
+  overflow: visible !important;
+}
+.table-scroll-wrap table th:first-child,
+.table-scroll-wrap table td:first-child{
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  background: #fff;
+  box-shadow: 2px 0 4px rgba(0,0,0,0.08);
+}
+.table-scroll-wrap table th:nth-last-child(-n+1),
+.table-scroll-wrap table td:nth-last-child(-n+1){
+  position: sticky;
+  z-index: 2;
+  white-space: nowrap;
+  box-shadow: -2px 0 4px rgba(0,0,0,0.08);
+}
+.table-scroll-wrap table td:nth-last-child(-n+1){
+  background: #fff;
+}
+.table-scroll-wrap table th{
+  position: sticky;
+  top: 0;
+  z-index: 3;
+}
+.table-scroll-wrap table th:first-child,
+.table-scroll-wrap table th:last-child{
+  z-index: 4;
+}
+
+/* ===== ลิงก์บทเรียนย่อย (การอ่าน EKG) ใต้หมวด ===== */
+.ekg-sub{padding:0 0 0 12px;margin:-4px 0 6px}
+.ekg-sub-link{display:block;padding:8px 14px;font-size:13px;font-weight:700;color:#e8396b;
+  border-left:2px solid #e8396b;text-decoration:none;cursor:pointer}
+.ekg-sub-link .ekg-arrow{display:none}
+</style>
+
+<script>
+/* เปลี่ยนข้อความบนปุ่มเมื่อเปิดจากมือถือ ให้สื่อว่ากดเข้าไปดูอันดับได้ด้วย */
+(function () {
+  function relabel() {
+    var b = document.querySelector('.kpi-lb .cta');
+    if (!b) return;
+    var small = window.matchMedia('(max-width:640px)').matches;
+    var wanted = small ? '\ud83c\udfc6 ดูอันดับ และเล่นเกม KPI Challenge'
+                       : '\ud83c\udfae เข้าเล่นเกม KPI Challenge';
+    if (b.textContent !== wanted) b.textContent = wanted;
+  }
+  document.addEventListener('DOMContentLoaded', relabel);
+  window.addEventListener('resize', relabel);
+  setInterval(relabel, 900);
+})();
+</script>
+
+
+<!-- ===================== ปรับหน้าภาพรวมบนมือถือ รอบ 2 (ตามแบบ) ===================== -->
+<style>
+#dashSubBox,#catBarLabel{display:none}
+#dashSubBox[hidden]{display:none !important}
+@media(max-width:640px){
+
+  /* ---- แถบด้านบน: รวมให้เหลือ 2–3 บรรทัดเตี้ย ๆ สีเดิม ---- */
+  header.topbar{
+    flex-wrap:nowrap !important; align-items:flex-start !important;
+    justify-content:flex-start !important; gap:10px !important; padding:8px 12px !important;
+  }
+  header.topbar .brand{flex:0 0 auto !important;font-size:0 !important;gap:0 !important;margin-top:1px}
+  header.topbar .brand .logo{width:30px !important;height:30px !important;border-radius:9px !important}
+  header.topbar > div:not(.brand){
+    flex:1 1 auto !important; min-width:0 !important; width:auto !important;
+    display:grid !important; grid-template-columns:1.25fr 1fr 1fr !important;
+    gap:6px !important; align-items:stretch !important;
+  }
+  header.topbar .user-info{
+    grid-column:1/-1 !important; order:0 !important; text-align:left !important;
+    width:auto !important; font-size:11.5px !important; line-height:1.35 !important;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis; padding-top:1px;
+  }
+  .points-widget.show{
+    flex-direction:row !important; align-items:center !important; justify-content:center !important;
+    gap:5px !important; min-width:0 !important; min-height:40px !important;
+    padding:4px 6px !important; border-radius:12px !important;
+  }
+  .points-widget-num{font-size:17px !important;line-height:1 !important}
+  .points-widget-lbl{display:none !important}
+  .points-widget-btn{font-size:10.5px !important;padding:3px 7px !important;border-width:1.5px !important}
+  .btn-sm.btn-kpigame,.btn-sm.btn-shift{
+    min-height:40px !important; padding:4px 6px !important; font-size:12.5px !important;
+    border-radius:12px !important; white-space:nowrap !important;
+  }
+  #backToAdminBtn{
+    grid-column:1/-1 !important; min-height:0 !important; padding:5px 10px !important;
+    font-size:11.5px !important; border-radius:10px !important; border-width:1.5px !important;
+  }
+
+  /* ---- แถบบทความค้างอ่าน: ป้ายเล็ก ---- */
+  .read-alarm{
+    width:fit-content !important; padding:6px 14px !important; font-size:12.5px !important;
+    margin:2px 0 12px !important; box-shadow:none !important; justify-content:flex-start !important;
+  }
+
+  /* ---- หมวดบทเรียน ---- */
+  #catBarLabel{display:block;font-size:12px;color:var(--muted);margin:0 0 6px 2px;font-weight:500}
+  .category-sidebar.cat-top{margin:0 0 8px !important;padding:2px 2px 4px !important;gap:8px !important}
+  .category-sidebar.cat-top .ekg-sub{display:none !important}
+  .category-sidebar.cat-top .cat-item,
+  .category-sidebar.cat-top .cat-item:nth-child(n){
+    background:#fff !important; color:#244a73 !important; box-shadow:inset 0 0 0 1.5px #cfd9e6 !important;
+    padding:7px 15px !important; font-size:13px !important; border-radius:999px !important;
+  }
+  .category-sidebar.cat-top .cat-item.active,
+  .category-sidebar.cat-top .cat-item:nth-child(n).active{
+    background:#244a73 !important; color:#fff !important; box-shadow:none !important;
+  }
+
+  /* ---- แถวบทเรียนย่อย (ขึ้นเฉพาะเมื่อเลือกหมวดที่มีบทย่อย) ---- */
+  #dashSubBox{
+    display:flex; align-items:center; gap:6px; overflow-x:auto; scrollbar-width:none;
+    margin:-2px 0 14px; padding:6px 8px; background:#fff5f9;
+    border:1.5px dashed #f3b6cc; border-radius:12px;
+  }
+  #dashSubBox::-webkit-scrollbar{display:none}
+  #dashSubBox[hidden]{display:none}
+  #dashSubBox .sub-lbl{flex:0 0 auto;color:#e0457b;font-size:15px;padding:0 2px 0 4px}
+  #dashSubBox .sub-chip{
+    flex:0 0 auto; white-space:nowrap; text-decoration:none; font-size:13px; font-weight:600;
+    padding:6px 14px; border-radius:999px; background:#e0457b; color:#fff;
+    box-shadow:0 2px 6px rgba(224,69,123,.25);
+  }
+
+  /* ---- แท็บ: ปุ่มแบ่ง 3 ช่องเท่ากัน ---- */
+  .tabs{
+    display:grid !important; grid-template-columns:repeat(3,1fr) !important; gap:0 !important;
+    background:#fff !important; border:1.5px solid var(--border) !important; border-radius:12px !important;
+    padding:4px !important; margin:0 0 14px !important;
+  }
+  .tab{padding:8px 4px !important;font-size:13px !important;text-align:center !important;border-radius:9px !important;white-space:nowrap}
+  .tab.active{background:#fde4ee !important;color:#e0457b !important;box-shadow:none !important;font-weight:600 !important}
+
+  /* ---- ทักทาย ---- */
+  #tab-dashboard > .section-title:first-child{margin-bottom:0 !important}
+  #tab-dashboard > .section-title:first-child + .section-sub{font-size:0 !important;margin:0 0 10px !important}
+  #tab-dashboard > .section-title:first-child + .section-sub::after{
+    content:"ความคืบหน้าของคุณ · ซิงก์ทุกอุปกรณ์"; font-size:12px; margin-inline-start:41px;
+  }
+
+  /* ---- สถิติ: แถบความคืบหน้า + ตัวเลขเล็ก 4 ช่อง ---- */
+  .stat-row{
+    grid-template-columns:repeat(4,minmax(0,1fr)) !important;
+    padding:10px 12px 8px !important; border-radius:16px !important;
+  }
+  .stat-row .stat:nth-child(1){
+    grid-column:1/-1 !important; display:flex !important; justify-content:space-between !important;
+    align-items:baseline !important; padding:0 0 16px !important; margin-bottom:8px !important;
+    position:relative !important; text-align:left !important;
+    border-bottom:1px dashed var(--border) !important;
+  }
+  .stat-row .stat:nth-child(1) .lbl{order:-1;font-size:13px !important;color:var(--text) !important}
+  .stat-row .stat:nth-child(1) .lbl::after{content:none}
+  .stat-row .stat:nth-child(1) .num{font-size:16px !important}
+  .stat-row .stat:nth-child(1)::before,
+  .stat-row .stat:nth-child(1)::after{
+    content:""; position:absolute; left:0; bottom:7px; height:6px; border-radius:99px;
+  }
+  .stat-row .stat:nth-child(1)::before{right:0;background:#eee}
+  .stat-row .stat:nth-child(1)::after{width:var(--pct,0%);background:#1f9d6b}
+  .stat-row .stat:nth-child(2){border-left:none !important}
+  .stat-row .stat:nth-child(n+2) .num{font-size:15px !important}
+}
+</style>
+<script>
+/* กล่องบทเรียนย่อยบนมือถือ + ป้าย "หมวดบทเรียน" */
+window.renderMobileSubBox = function () {
+  var bar = document.getElementById('dashCategorySidebar');
+  if (!bar || !bar.parentNode) return;
+  var label = document.getElementById('catBarLabel');
+  if (!label) { label = document.createElement('div'); label.id = 'catBarLabel'; label.textContent = 'หมวดบทเรียน'; }
+  if (bar.previousElementSibling !== label) bar.parentNode.insertBefore(label, bar);
+  var box = document.getElementById('dashSubBox');
+  if (!box) { box = document.createElement('div'); box.id = 'dashSubBox'; }
+  if (bar.nextElementSibling !== box) bar.parentNode.insertBefore(box, bar.nextSibling);
+  var cat = (typeof SELECTED_CATEGORY_DASH !== 'undefined') ? SELECTED_CATEGORY_DASH : 'ทั้งหมด';
+  var base = (typeof SHIFT_BASE_URL !== 'undefined' ? SHIFT_BASE_URL : '');
+  /* รายการบทเรียนย่อยของแต่ละหมวดหลัก — เพิ่มหมวด/บทย่อยใหม่ได้ที่นี่ */
+  var SUB_MENUS = {
+    'ฝึกทักษะฉุกเฉิน': [ { label: '📖 การอ่าน EKG', url: base + '?page=ekg' } ]
+  };
+  var subs = SUB_MENUS[cat] || [];
+  box.hidden = !subs.length;
+  if (box.dataset.cat === cat) return;
+  box.dataset.cat = cat;
+  box.innerHTML = subs.length ?
+    '<span class="sub-lbl">↳</span>' + subs.map(function (m) {
+      return '<a class="sub-chip" href="' + m.url + '" target="_top">' + m.label + '</a>';
+    }).join('') : '';
+};
+</script>
+
+<script>
+/* ===== เปิดบทเรียนตรงจากลิงก์แจ้งเตือน: ...?course=<รหัสบทเรียน> ===== */
+(function () {
+  function start(courseId) {
+    if (!courseId) return;
+    var tries = 0;
+    var t = setInterval(function () {
+      tries++;
+      var ready = typeof COURSES !== 'undefined' && COURSES.length &&
+                  !document.getElementById('mainApp').classList.contains('hidden') &&
+                  document.getElementById('dashCourseGrid') &&
+                  document.getElementById('dashCourseGrid').children.length;
+      if (ready) {
+        clearInterval(t);
+        var found = COURSES.some(function (c) { return String(c.id) === String(courseId); });
+        if (!found) return;
+        var c = COURSES.find(function (x) { return String(x.id) === String(courseId); });
+        try { openContent(c.id); } catch (e) { console.warn(e); }
+      } else if (tries > 60) { clearInterval(t); }   // รอสูงสุดราว 30 วินาที
+    }, 500);
+  }
+  try {
+    if (window.google && google.script && google.script.url) {
+      google.script.url.getLocation(function (loc) { start(loc.parameter && loc.parameter.course); });
+    }
+  } catch (e) {}
+})();
+</script>
+
+<style>
+.skill-panel{margin-top:26px;background:#fff;border:2px solid var(--border);border-radius:18px;padding:14px 16px}
+.skill-head{display:flex;justify-content:space-between;align-items:flex-end;gap:10px;flex-wrap:wrap;margin-bottom:8px}
+.skill-tools{display:flex;gap:8px;align-items:center}
+.skill-tools input{border:1.5px solid var(--border);border-radius:10px;padding:7px 10px;font:inherit;font-size:13px;min-width:170px}
+.skill-legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin:4px 0 10px}
+.sk-dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px;vertical-align:-1px}
+.sk-dot.passed{background:#1f9d6b}.sk-dot.in_progress{background:#f0a531}.sk-dot.none{background:#d9d3dc}
+.skill-table td,.skill-table th{vertical-align:middle}
+.sk-mod{min-width:170px}
+.sk-bar{display:flex;height:8px;border-radius:99px;overflow:hidden;background:#eee7ee;margin:3px 0 4px}
+.sk-bar i{display:block;height:100%}
+.sk-bar .p{background:#1f9d6b}.sk-bar .g{background:#f0a531}
+.sk-num{font-size:12.5px;font-weight:600}
+.sk-sub{font-size:11px;color:var(--muted)}
+.sk-detail td{background:#fcf8fb}
+.sk-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;padding:4px 0}
+.sk-card h5{margin:0 0 6px;font-size:13px}
+.sk-row{display:flex;align-items:center;gap:8px;padding:5px 0;border-top:1px dashed var(--border);font-size:12.5px}
+.sk-row:first-of-type{border-top:none}
+.sk-row .t{flex:1;min-width:0}
+.sk-row .m{font-size:11px;color:var(--muted);text-align:right;white-space:nowrap}
+@media print{.no-print{display:none !important}}
+.ekg-qimg{display:block;width:100%;max-width:640px;margin:6px 0;border:1px solid #eee;border-radius:4px}
+.ekg-unit{margin:14px 0 4px;page-break-inside:avoid}
+.ekg-unit-h{font-weight:700;font-size:13.5px}
+.ekg-opt{font-size:13px;padding:1px 0 1px 10px;line-height:1.6}
+.ekg-opt.ans{color:#0A6A4F;font-weight:600}
+.ekg-opt.wrong{color:#B3134F;font-weight:600}
+.ekg-exp{font-size:12px;color:#475569;margin-top:3px;line-height:1.6}
+</style>
+<script>
+/* ===== หน้า Admin: ความคืบหน้าบทเรียนด้านทักษะ ===== */
+var SKILL_DATA = null, SKILL_OPEN = {};
+function loadSkillProgress() {
+  var body = document.getElementById('skillBody');
+  if (!body) return;
+  body.innerHTML = '<tr><td>กำลังโหลด…</td></tr>';
+  google.script.run
+    .withSuccessHandler(function (res) { SKILL_DATA = res; renderSkillProgress(); })
+    .withFailureHandler(function (err) {
+      body.innerHTML = '<tr><td style="color:#b3134f">โหลดข้อมูลไม่สำเร็จ: ' + (err && err.message || err) +
+        '<br><small>ตรวจว่าเพิ่มไฟล์ SkillProgress.gs แล้ว และสร้างเวอร์ชันใหม่แล้ว</small></td></tr>';
+    })
+    .getSkillProgressAll();
+}
+function skEsc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+function renderSkillProgress() {
+  if (!SKILL_DATA) return;
+  var mods = SKILL_DATA.modules, prog = SKILL_DATA.progress || {};
+  var q = (document.getElementById('skillSearch').value || '').trim().toLowerCase();
+  var emps = (window.ADMIN_EMPLOYEES || []).filter(function (e) {
+    return !q || (String(e.name) + ' ' + String(e.dept)).toLowerCase().indexOf(q) > -1;
+  });
+  document.getElementById('skillHead').innerHTML = '<tr><th>ชื่อพนักงาน</th><th>แผนก</th>' +
+    mods.map(function (m) { return '<th>' + m.icon + ' ' + skEsc(m.title) + ' <span class="sk-sub">(' + m.lessons.length + ' บท)</span></th>'; }).join('') +
+    '<th>เข้าเรียนล่าสุด</th><th></th></tr>';
+  var cols = mods.length + 4;
+  var html = emps.map(function (e, idx) {
+    var key = String(e.email).toLowerCase(), p = prog[key] || {};
+    var cells = mods.map(function (m) {
+      var mp = p[m.key] || {}, n = m.lessons.length, pass = 0, go = 0;
+      m.lessons.forEach(function (l) { var s = mp[l.id] && mp[l.id].status; if (s === 'passed') pass++; else if (s === 'in_progress') go++; });
+      if (!n) return '<td class="sk-mod"><span class="sk-sub">ยังไม่มีบท</span></td>';
+      return '<td class="sk-mod"><div class="sk-num">' + (pass === n ? '✓ ครบทุกบท' : 'ผ่าน ' + pass + '/' + n + ' บท') + '</div>' +
+        '<div class="sk-bar"><i class="p" style="width:' + (pass / n * 100) + '%"></i><i class="g" style="width:' + (go / n * 100) + '%"></i></div>' +
+        '<div class="sk-sub">' + (go ? 'กำลังเรียน ' + go + ' บท' : (pass || go) ? '' : 'ยังไม่เข้าเรียน') + '</div></td>';
+    }).join('');
+    var open = SKILL_OPEN[key];
+    var row = '<tr><td>' + skEsc(e.name) + '</td><td>' + skEsc(e.dept) + '</td>' + cells +
+      '<td class="sk-sub">' + (p.last || '-') + '</td>' +
+      '<td><button class="btn-sm" onclick="toggleSkillRow(\'' + skEsc(key) + '\')">' + (open ? 'ซ่อน' : 'ดูบทย่อย') + '</button></td></tr>';
+    if (open) {
+      row += '<tr class="sk-detail"><td colspan="' + cols + '"><div class="sk-grid">' + mods.map(function (m) {
+        var mp = p[m.key] || {};
+        return '<div class="sk-card"><h5>' + m.icon + ' ' + skEsc(m.title) + '</h5>' + m.lessons.map(function (l) {
+          var r = mp[l.id], st = r ? r.status : 'none';
+          var badge = st === 'passed' ? '<span class="badge done">' + (m.key === 'cpr' ? 'ฝึกครบ' : 'ผ่าน') + '</span>'
+            : st === 'in_progress' ? '<span class="badge fail">กำลังเรียน</span>' : '<span class="badge new">ยังไม่เข้า</span>';
+          var meta = [];
+          if (r && r.score != null && r.total) meta.push(r.score + '/' + r.total);
+          if (r && r.note) meta.push(skEsc(r.note));
+          if (r && r.date) meta.push(r.date);
+          return '<div class="sk-row"><i class="sk-dot ' + st + '"></i><span class="t">' + skEsc(l.title) + '</span>' +
+            '<span class="m">' + meta.join(' · ') + '</span>' + badge + '</div>';
+        }).join('') + '</div>';
+      }).join('') + '</div></td></tr>';
+    }
+    return row;
+  }).join('');
+  document.getElementById('skillBody').innerHTML = html || '<tr><td colspan="' + cols + '">ไม่พบพนักงาน</td></tr>';
+}
+/* ปุ่มเปิดกระดาษคำตอบ EKG แบบมีรูปกราฟ (ใช้ในหน้ากระดาษคำตอบของ Admin และของพนักงาน) */
+function ekgPaperLink(p, isAdmin) {
+  var cid = String((p && p.courseId) || '');
+  if (cid.indexOf('CPR-') === 0 && false) {
+    var cidk = isAdmin && p.attemptId ? p.attemptId : 'latest:' + cid;
+    return '<div class="no-print" style="margin:10px 0"><button class="btn-sm" type="button" ' +
+      'onclick="window.open(SHIFT_BASE_URL + \'?page=cpr&paper=' + encodeURIComponent(cidk) + '\', \'_blank\')">' +
+      '🖼️ เปิดกระดาษคำตอบแบบ Full timeline (มีภาพสถานการณ์)</button></div>';
+  }
+  if (!p || cid.indexOf('EKG-') !== 0) return '';
+  var id = isAdmin && p.attemptId ? p.attemptId : 'latest:' + p.courseId;
+  return '<div class="no-print" style="margin:10px 0"><button class="btn-sm" type="button" ' +
+    'onclick="window.open(SHIFT_BASE_URL + \'?page=ekg&paper=' + encodeURIComponent(id) + '\', \'_blank\')">' +
+    '🖼️ เปิดกระดาษคำตอบแบบมีรูปกราฟ (พิมพ์จากหน้านั้น)</button></div>';
+}
+/* ใส่รูปกราฟลงในกระดาษคำตอบบท EKG (รูปเป็นส่วนหนึ่งของคำถาม) */
+function enhanceEkgPapers(box, list, isAdmin) {
+  if (!box || !list) return;
+  var papers = box.querySelectorAll('.paper'), keys = [];
+  list.forEach(function (p, pi) {
+    if (String(p.courseId || '').indexOf('EKG-') !== 0 || !papers[pi]) return;
+    var qs = papers[pi].querySelectorAll('.qitem');
+    var items = p.items || [];
+    var full = items.some(function (it) { return /^กราฟที่ \d+/.test(it.q); });
+    var key = (isAdmin && p.attemptId) ? p.attemptId : 'latest:' + p.courseId;
+    var prev = -1;
+    items.forEach(function (it, i) {
+      var u = full ? (Number((/^กราฟที่ (\d+)/.exec(it.q) || [])[1]) - 1) : i;
+      if (u === prev || !qs[i] || isNaN(u)) return;
+      prev = u;
+      var img = document.createElement('img');
+      img.className = 'ekg-qimg'; img.alt = ''; img.dataset.key = key; img.dataset.u = u;
+      var head = qs[i].querySelector('.qh');
+      if (full) {
+        var wrap = document.createElement('div');
+        wrap.className = 'ekg-unit';
+        wrap.innerHTML = '<div class="ekg-unit-h">กราฟที่ ' + (u + 1) + '</div>';
+        wrap.appendChild(img);
+        qs[i].parentNode.insertBefore(wrap, qs[i]);
+      } else if (head) {
+        head.parentNode.insertBefore(img, head.nextSibling);
+      }
+    });
+    keys.push(key);
+  });
+  if (!keys.length) return;
+  var TH = 'กขคงจฉชซ';
+  function esc2(v) { return String(v == null ? '' : v).replace(/[&<>"]/g, function (c) { return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+  google.script.run.withSuccessHandler(function (map) {
+    box.querySelectorAll('img.ekg-qimg').forEach(function (img) {
+      var src = ((map[img.dataset.key] || {}).imgs || [])[Number(img.dataset.u)];
+      if (src) img.src = src;
+      else { var w = img.closest('.ekg-unit'); (w || img).remove(); }
+    });
+    // ช้อยส์ครบทุกข้อ + ข้อที่เลือก + เฉลย + คำอธิบาย
+    list.forEach(function (p, pi) {
+      if (String(p.courseId || '').indexOf('EKG-') !== 0 || !papers[pi]) return;
+      var key = (isAdmin && p.attemptId) ? p.attemptId : 'latest:' + p.courseId;
+      var ex = (map[key] || {}).items || [];
+      if (!ex.length) return;
+      var who = isAdmin ? 'ที่พนักงานเลือก' : 'ที่เลือก';
+      papers[pi].querySelectorAll('.qitem').forEach(function (q, i) {
+        var x = ex[i];
+        if (!x || !x.o || !x.o.length) return;
+        var ok = x.p === x.a;
+        q.querySelectorAll('.ln').forEach(function (l) { l.remove(); });
+        var h = x.o.map(function (o, j) {
+          var me = j === x.p, right = j === x.a;
+          return '<div class="ekg-opt' + (right ? ' ans' : '') + (me && !right ? ' wrong' : '') + '">' +
+            (me ? '●' : '○') + ' ' + TH.charAt(j) + '. ' + esc2(o) +
+            (right ? ' <b>✓ เฉลย</b>' : '') + (me && !right ? ' <b>✘ ' + who + '</b>' : '') + '</div>';
+        }).join('');
+        if (x.p < 0) h += '<div class="ekg-opt wrong">(ไม่ได้ตอบ)</div>';
+        h += '<div class="ln">' + (ok ? '<span class="tag-ok">✔ ตอบถูก</span>' : '<span class="tag-no">✘ ตอบผิด</span>') + '</div>';
+        if (x.e) h += '<div class="ekg-exp">💡 ' + esc2(x.e) + '</div>';
+        if (x.s) h += '<div class="ekg-exp"><b>คำตอบของกราฟนี้:</b> ' + esc2(x.s) + '</div>';
+        q.insertAdjacentHTML('beforeend', h);
+      });
+    });
+  }).withFailureHandler(function () {}).getEkgPaperExtras(keys);
+}
+function toggleSkillRow(key) { SKILL_OPEN[key] = !SKILL_OPEN[key]; renderSkillProgress(); }
+</script>
+
+<style>
+.pt h1{font-size:16px}
+.pt-info{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:8px 10px;margin:6px 0}
+.pt-info span{display:block;font-size:10.5px;color:#64748b}
+.pt-chip{display:inline-block;border-radius:999px;padding:1px 8px;font-size:11px;font-weight:600;white-space:nowrap}
+.pt-score{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}
+.pt-big{flex:1 1 180px;border-radius:8px;padding:6px 10px;font-size:22px;font-weight:700}
+.pt-big small{display:block;font-size:11px;font-weight:600}
+.pt-big.ok{background:#E6F6EC;color:#0A6A4F}.pt-big.no{background:#FDE8EE;color:#B3134F}
+.pt-st{flex:1 1 90px;border:1px solid #e2e8f0;border-radius:8px;padding:5px 8px;text-align:center}
+.pt-st b{display:block;font-size:17px}.pt-st span{font-size:10px;color:#64748b}
+.pt-case{background:#FFF7E8;border-left:3px solid #F0A531;padding:6px 10px;border-radius:0 6px 6px 0;font-size:12px;margin:6px 0}
+.pt-legend{font-size:11px;color:#64748b;margin:6px 0}
+.pt-tl{border-left:2px solid #cbd5e1;margin-left:10px;padding-left:12px}
+.pt-phase{margin:12px 0 6px -12px;padding:3px 10px;border-left:4px solid;background:#f1f5f9;font-size:12px}
+.pt-row{display:flex;gap:6px;align-items:baseline;font-size:11.5px;color:#64748b;padding:2px 0}
+.pt-t{flex:1}
+.pt-n{display:inline-block;min-width:22px;text-align:center;font-size:10.5px;color:#475569;background:#e2e8f0;border-radius:4px}
+.pt-n.big{font-size:12px;background:#1f2937;color:#fff}
+.pt-card{border:1.5px solid #cbd5e1;border-radius:8px;margin:8px 0;padding:8px 10px;page-break-inside:avoid;background:#fff}
+.pt-card.ok{border-color:#7FD9BC}.pt-card.no{border-color:#F5A3C0}
+.pt-ch{display:flex;gap:6px;align-items:center;flex-wrap:wrap;font-size:12.5px}
+.pt-res{margin-left:auto;font-weight:700;font-size:11.5px}
+.pt-card.ok .pt-res{color:#0A6A4F}.pt-card.no .pt-res{color:#B3134F}
+.pt-body{display:grid;grid-template-columns:minmax(0,42%) minmax(0,1fr);gap:10px;margin-top:6px}
+@media (max-width:560px){.pt-body{grid-template-columns:1fr}.pt-info{grid-template-columns:1fr 1fr}}
+.pt-vis img{width:100%;border-radius:6px;display:block;margin-bottom:4px}
+.pt-mon{background:#0B1824;border-radius:6px;padding:4px 6px;color:#cfe}
+.pt-mon-h{display:flex;gap:8px;font-size:10.5px}
+.pt-mon svg{width:100%;height:32px;display:block}
+.pt-sit{color:#B3134F;font-size:11.5px}
+.pt-p{font-weight:700;font-size:12.5px;margin:2px 0 4px}
+.pt-o{font-size:12px;padding:1px 0 1px 8px;line-height:1.55}
+.pt-o.ans{color:#0A6A4F;font-weight:600}.pt-o.wrong{color:#B3134F;font-weight:600}
+.pt-grp{font-size:11.5px;font-weight:700;margin-top:3px}
+.pt-note{font-size:11px;color:#64748b}
+.pt-fb{font-size:11.5px;margin-top:4px;padding:3px 8px;border-radius:4px}
+.pt-fb.ok{background:#F0FAF4;color:#1A6A34}.pt-fb.bad{background:#FFF0F3;color:#B82556}
+.pt-path{margin-top:4px;background:#FFF7E8;border-radius:6px;padding:4px 8px;font-size:11.5px}
+.pt-ps{display:flex;gap:6px}.pt-ps span{min-width:14px;color:#9A6412;font-weight:700}
+.pt-ps i{font-style:normal;margin-left:auto;white-space:nowrap}
+.pt-ps-sum{color:#64748b;margin-top:2px}
+.pt-act{font-size:11.5px;color:#334155;margin-top:4px;border-top:1px dashed #e2e8f0;padding-top:3px}
+.pt-foot{display:flex;justify-content:space-between;align-items:flex-end;gap:10px;flex-wrap:wrap;margin-top:14px;border-top:1px dashed #cbd5e1;padding-top:8px;font-size:11px;color:#64748b}
+.pp-sig2{text-align:center;min-width:220px;color:#1f2937;font-size:12.5px}
+.pp-sig2 img{height:60px;display:block;margin:0 auto}
+.pp-sig2 .rule{border-bottom:1px solid #475569;height:44px;margin-bottom:4px}
+@media print{.pt-card,.pt-phase{-webkit-print-color-adjust:exact;print-color-adjust:exact}.pt-mon,.pt-big,.pt-chip,.pt-fb,.pt-path,.pt-case{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+.pp-page.pt{padding:0}
+
+.ill{margin:6px 0 2px}
+.ill-row{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:flex-end;padding:4px 6px;border-radius:6px;background:#F7FAFC;margin-top:4px}
+.ill-row.ok{background:#F0FAF4}.ill-row.no{background:#FFF0F3}
+.ill-lab{flex:0 0 100%;font-size:11px;font-weight:700;color:#475569}
+.ill-row.ok .ill-lab{color:#1A6A34}.ill-row.no .ill-lab{color:#B82556}
+.ill-it{display:flex;flex-direction:column;align-items:center;font-size:10px;color:#475569;text-align:center;max-width:160px}
+.ill-it.syr small{margin-top:-2px}
+
+.cpr-attach-h{margin:18px 0 0;padding:8px 12px;background:#FFF7E8;border-left:4px solid #F0A531;border-radius:0 8px 8px 0;font-size:13px}
+@media print{.cpr-paper{page-break-before:always}}
+</style>
+<script>
+/* ===== กระดาษคำตอบ CPR แบบ Full timeline (หน้า Admin และกระดาษคำตอบของฉัน) ===== */
+(function () {
+var RHY={vf:{n:'VF',c:'#FF6B7A'},pvt:{n:'pVT',c:'#FF6B7A'},vt:{n:'VT (มีชีพจร)',c:'#FF8A5B'},pea:{n:'PEA',c:'#FFB020'},asys:{n:'Asystole',c:'#FF4D5E'},nsr:{n:'Sinus',c:'#39E67A'},brady:{n:'Sinus Brady',c:'#F4D03F'},st:{n:'Sinus Tachy',c:'#A8D85C'}};
+function ecgPath(t){var p='',i,b,ph,y;
+if(t==='vf'){for(i=0;i<=400;i+=5)p+=(i?'L':'M')+i+','+(16+Math.sin(i*.35)*6+Math.sin(i*.13+1)*5).toFixed(1);return p;}
+if(t==='asys'){for(i=0;i<=400;i+=8)p+=(i?'L':'M')+i+','+(16+Math.sin(i*.05)*.8).toFixed(1);return p;}
+if(t==='vt'||t==='pvt'){for(i=0;i<=400;i+=4)p+=(i?'L':'M')+i+','+(16-Math.sin(i*.16)*12).toFixed(1);return p;}
+var beats=t==='brady'?3:t==='st'?9:t==='pea'?4:5;b=400/beats;
+for(i=0;i<=400;i+=2){ph=(i%b)/b;y=16;if(ph>.20&&ph<.23)y=19;else if(ph>=.23&&ph<.27)y=3;else if(ph>=.27&&ph<.30)y=20;else if(ph>.45&&ph<.6)y=16-Math.sin((ph-.45)/.15*Math.PI)*3;p+=(i?'L':'M')+i+','+y;}
+return p;}
+function sColor(s){return s>=65?'#39E67A':s>=40?'#A8D85C':s>=25?'#FFB020':'#FF4D5E';}
+function sLabel(s){return s>=70?'คงที่ / ดีขึ้น':s>=45?'พอประคอง':s>=30?'วิกฤต':s>=15?'ทรุดหนัก':'ใกล้เสียชีวิต';}
+
+/* ===== ภาพประกอบในกระดาษคำตอบ: ถุงน้ำเกลือ / ขวดยา / syringe ===== */
+var FLUIDS=[{re:/NSS|0\.9\s*%|Normal saline/i,n:'NSS 0.9%',c:'#5DADE2'},{re:/D5W|D5\b|Dextrose 5/i,n:'D5W',c:'#F39C12'},{re:/LRS|Ringer/i,n:'LRS',c:'#48C9B0'},{re:/D50W|50%\s*Dex/i,n:'D50W',c:'#E67E22'}];
+function fluidOf_(t){t=String(t||'');var best=null,bp=1e9;
+for(var k=0;k<FLUIDS.length;k++){var m=FLUIDS[k].re.exec(t);if(!m)continue;
+if(/(?:ไม่ต้อง|ไม่ใช้|ไม่ให้|ไม่เอา|งด|ห้าม)\s*$/.test(t.slice(Math.max(0,m.index-16),m.index)))continue;
+if(m.index<bp){bp=m.index;best=FLUIDS[k];}}
+return best;}
+function markCss_(me,ok){return ok?'#1E8449':me?'#C0305A':'#B8C4CF';}
+function bagSvg_(f,me,ok){var st=markCss_(me,ok);
+return '<div class="ill-it"><svg viewBox="0 0 64 96" width="58" height="87"><circle cx="32" cy="6" r="4" fill="none" stroke="#9fb3c8" stroke-width="2"/>'+
+'<path d="M12 10h40a6 6 0 0 1 6 6v48a16 16 0 0 1-16 16H22A16 16 0 0 1 6 64V16a6 6 0 0 1 6-6z" fill="#F2FAFF" stroke="'+st+'" stroke-width="'+(me||ok?3.5:2)+'"/>'+
+'<rect x="10" y="44" width="44" height="30" rx="4" fill="'+f.c+'" opacity=".35"/><rect x="13" y="22" width="38" height="17" rx="3" fill="'+f.c+'"/>'+
+'<text x="32" y="34" font-size="7.2" text-anchor="middle" fill="#fff" font-weight="700">'+f.n+'</text><rect x="28" y="80" width="8" height="12" rx="2" fill="#9fb3c8"/></svg>'+
+'<small style="color:'+st+'">'+(ok?'✓ เฉลย':me?'✘ ที่เลือก':'')+'</small></div>';}
+function vialSvg_(v,tag){return '<div class="ill-it"><svg viewBox="0 0 44 70" width="40" height="64"><rect x="14" y="2" width="16" height="8" rx="2" fill="#8795a1"/>'+
+'<path d="M12 12h20v6l4 6v40a4 4 0 0 1-4 4H12a4 4 0 0 1-4-4V24l4-6z" fill="#fff" stroke="#8795a1" stroke-width="1.5"/>'+
+'<rect x="9" y="30" width="26" height="26" fill="'+v.color+'"/><text x="22" y="41" font-size="5.2" text-anchor="middle" fill="#fff" font-weight="700">'+escP2_(v.name).slice(0,12)+'</text>'+
+'<text x="22" y="51" font-size="5.5" text-anchor="middle" fill="#fff">'+escP2_(v.sub)+'</text></svg><small>'+(tag||'')+'</small></div>';}
+function syrSvg_(v,ml){var cap=ml<=1?1:ml<=3?3:ml<=5?5:ml<=10?10:ml<=20?20:50,fr=Math.min(1,ml/cap);
+return '<div class="ill-it syr"><svg viewBox="0 0 150 40" width="150" height="40"><rect x="4" y="16" width="10" height="8" fill="#9aa9b6"/><rect x="14" y="18" width="10" height="4" fill="#9aa9b6"/>'+
+'<rect x="24" y="10" width="92" height="20" rx="3" fill="#fff" stroke="#6b7c8a" stroke-width="1.5"/>'+
+'<rect x="'+(24+92*(1-fr))+'" y="12" width="'+(92*fr)+'" height="16" fill="'+v.color+'" opacity=".85"/>'+
+'<rect x="116" y="15" width="10" height="10" fill="#9aa9b6"/><line x1="126" y1="20" x2="146" y2="20" stroke="#6b7c8a" stroke-width="1.5"/>'+
+'<text x="70" y="8" font-size="8" text-anchor="middle" fill="#334">syringe '+cap+' mL</text></svg><small><b>'+ml+' mL</b> '+escP2_(v.name+' '+v.sub)+'</small></div>';}
+function escP2_(t){return String(t==null?'':t).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]});}
+function trayIll_(tray,V,label,cls){if(!tray)return '';var all=(tray.drug||[]).map(function(x){return [x,'ยา']}).concat((tray.flush||[]).map(function(x){return [x,'flush']}));
+if(!all.length)return '';
+return '<div class="ill-row '+cls+'"><div class="ill-lab">'+label+'</div>'+all.map(function(a){var v=V[a[0].id]||{name:a[0].id,sub:'',color:'#999'};
+return syrSvg_(v,a[0].ml).replace('<small>','<small>'+(a[1]==='flush'?'🔁 flush · ':'💉 '));}).join('')+'</div>';}
+function illHTML_(ev,rec,V){
+if(ev.isMix){var m=ev.mixData,ans=m.answers&&m.answers[0];
+return '<div class="ill"><div class="ill-row"><div class="ill-lab">ขวดยาที่มีให้เลือก</div>'+m.vials.map(function(id){var v=V[id]||{name:id,sub:'',color:'#999'};return vialSvg_(v,'');}).join('')+'</div>'+
+(rec&&rec.mix?trayIll_(rec.mix,V,rec.ok?'✔ ที่เตรียม':'✘ ที่เตรียม',rec.ok?'ok':'no'):'')+
+(ans?trayIll_(ans,V,'✓ เฉลย','ok'):'')+'</div>';}
+if(ev.choices){var ch=rec&&rec.chosen,seen={},list=[];
+ev.choices.forEach(function(c){var f=fluidOf_(c.t);if(!f)return;
+var e=seen[f.n];if(!e){e=seen[f.n]={f:f,me:false,ok:false};list.push(e);}
+if(c.t===ch)e.me=true;if(c.ok)e.ok=true;});
+if(list.length)return '<div class="ill"><div class="ill-row"><div class="ill-lab">ชนิดสารน้ำในตัวเลือก</div>'+list.map(function(e){return bagSvg_(e.f,e.me,e.ok);}).join('')+'</div></div>';}
+return '';}
+
+var TL = null, TLQ = [];
+function tl(cb) {
+  if (TL) return cb(TL);
+  TLQ.push(cb); if (TLQ.length > 1) return;
+  google.script.run.withSuccessHandler(function (d) { TL = d; var q = TLQ; TLQ = []; q.forEach(function (f) { f(d); }); })
+    .withFailureHandler(function () { TLQ = []; }).getCprTimelineData();
+}
+function e(v) { return String(v == null ? '' : v).replace(/[&<>"]/g, function (c) { return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+function pl(t) { return String(t || '').replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim(); }
+var BG = {physician:'#E3F1FB',mednurse:'#EEF7E1',airway:'#F3EAF9',recorder:'#FDF1DC'};
+var FG = {physician:'#1F6FA8',mednurse:'#4E7A12',airway:'#7A4B98',recorder:'#9A6412'};
+function chip(r, D) { return '<span class="pt-chip" style="background:' + (BG[r] || '#eee') + ';color:' + (FG[r] || '#333') + '">' + e(D.roles[r] || r) + '</span>'; }
+function mon(ev) { var r = RHY[ev.ecg] || RHY.vf;
+  return '<div class="pt-mon"><div class="pt-mon-h"><b style="color:' + r.c + '">' + r.n + '</b><span>HR ' + e(ev.hr || '---') + '</span><span>ชีพจร ' + (ev.pulse === 'yes' ? 'คลำได้' : 'คลำไม่ได้') + '</span></div>' +
+    '<svg viewBox="0 0 400 32" preserveAspectRatio="none"><path d="' + ecgPath(ev.ecg) + '" fill="none" stroke="' + r.c + '" stroke-width="1.6"/></svg></div>'; }
+function opts(ev, rec, D) {
+  var ch = String(rec && rec.chosen || '');
+  function mk(me, ok, t) { return '<div class="pt-o' + (ok ? ' ans' : '') + (me && !ok ? ' wrong' : '') + '">' + (me ? '●' : '○') + ' ' + t +
+    (ok ? ' <b>✓ เฉลย</b>' : '') + (me && !ok ? ' <b>✘ ที่เลือก</b>' : '') + (me && ok ? ' <b>(ที่เลือก)</b>' : '') + '</div>'; }
+  if (ev.isChecklist) { var sel = ch.split(', ');
+    return '<div class="pt-note">เลือกได้หลายข้อ — ✓ = ต้องบันทึก</div>' + ev.items.map(function (x) { return mk(sel.indexOf(x.t) > -1, x.c, e(x.t)); }).join(''); }
+  if (ev.isEquip) { var got = ch.split(', ');
+    return ev.equipData.groups.map(function (g) { return '<div class="pt-grp">' + g.icon + ' ' + e(g.title) + '</div>' +
+      g.items.map(function (x) { return mk(got.indexOf(x.name) > -1, x.correct, e(x.name) + ' <small>(' + e(x.desc) + ')</small>'); }).join(''); }).join(''); }
+  if (ev.isMix) return '<div class="pt-note">ขวดยาที่มีให้เลือก: ' + ev.mixData.vials.map(function (v) { var x = D.vials[v]; return e(x ? (typeof x === 'string' ? x : x.name + ' ' + x.sub) : v); }).join(' · ') + '</div>' +
+    '<div class="pt-o ' + (rec && rec.ok ? 'ans' : 'wrong') + '">● ที่เตรียม: ' + e(ch || '-') + '</div>' +
+    '<div class="pt-o ans">✓ เฉลย: ' + ev.mixData.recipe.map(function (x) { return e(x.name) + ' ' + e(x.vol); }).join(' · ') + '</div>';
+  return (ev.choices || []).map(function (c, j) { return mk(c.t === ch, !!c.ok, 'กขคงจฉ'.charAt(j) + '. ' + e(c.t)); }).join('');
+}
+function fbs(ev, rec) {
+  var h = '';
+  if (ev.choices) { var me = ev.choices.filter(function (c) { return c.t === (rec && rec.chosen); })[0], ok = ev.choices.filter(function (c) { return c.ok; })[0];
+    if (me && !me.ok) h += '<div class="pt-fb bad">✘ ' + e(pl(me.fb)) + '</div>';
+    if (ok) h += '<div class="pt-fb ok">💡 ' + e(pl(ok.fb)) + '</div>'; }
+  else if (ev.isMix) h += '<div class="pt-fb ok">💡 ' + e(pl(ev.mixData.explain)) + '</div>';
+  else if (ev.isEquip) h += '<div class="pt-fb ok">💡 ' + e(pl(ev.equipData.explain)) + '</div>';
+  else if (ev.fbOk) h += '<div class="pt-fb ' + (rec && rec.ok ? 'ok' : 'bad') + '">' + (rec && rec.ok ? '💡 ' : '✘ ') + e(pl(rec && rec.ok ? ev.fbOk : ev.fbBad)) + '</div>';
+  var p = rec && rec.path;
+  if (p && p.kind !== 'ok' && p.stages && p.stages.length)
+    h += '<div class="pt-path"><b>⚠️ ผลที่เกิดกับผู้ป่วยจากการเลือกผิด</b>' + p.stages.map(function (s, k) {
+      return '<div class="pt-ps"><span>' + (k + 1) + '</span>' + e(s.h) + ' <i style="color:' + sColor(s.s) + '">สภาพ ' + s.s + ' · ' + e(sLabel(s.s)) + '</i></div>'; }).join('') +
+      '<div class="pt-ps-sum">จุดต่ำสุด ' + p.worst + ' → กลับมา ' + p.last + (p.bads ? ' · แก้ผิดระหว่างทาง ' + p.bads + ' ครั้ง' : '') + '</div></div>';
+  return h;
+}
+function paper(p, D, isAdmin) {
+  var role = p.role, recs = {}, m = p.meta || {}, E = D.events, last = '', n = 0;
+  (p.details || []).forEach(function (d) { if (d && d.i != null) recs[d.i] = { chosen: d.chosenText, ok: !!d.correct, path: d.path || null, mix: d.mix || null }; });
+  var pct = p.total ? Math.round(p.score / p.total * 100) : 0;
+  var h = '<div class="paper cpr-paper"><div class="paper-head"><div class="sys">ระบบสะสมการเรียนรู้พนักงาน · กระดาษคำตอบแบบจำลองสถานการณ์ (Full timeline)</div>' +
+    '<h2>CPR / ACLS: ' + e(D.roles[role] || role) + '</h2></div>' +
+    '<div class="pt-info"><div><span>ชื่อ-สกุล</span><b>' + e(p.name || '-') + '</b></div><div><span>แผนก</span><b>' + e(p.dept || '-') + '</b></div>' +
+    '<div><span>บทบาทที่ฝึก</span><b>' + chip(role, D) + '</b></div><div><span>วันเวลาที่ฝึก</span><b>' + e(p.when || '-') + '</b></div></div>' +
+    '<div class="pt-score"><div class="pt-big ' + (p.pass ? 'ok' : 'no') + '">' + p.score + '/' + p.total + '<small>ถูกตั้งแต่ครั้งแรก (' + pct + '%) · ' + (p.pass ? 'ผ่าน' : 'ไม่ผ่าน') + '</small></div>' +
+    (m.mistakes != null ? '<div class="pt-st"><b>' + m.mistakes + '</b><span>ตัดสินใจผิดทั้งหมด</span></div><div class="pt-st"><b>' + (m.harm || 0) + '</b><span>ครั้งที่ผู้ป่วยทรุดลง</span></div>' +
+      '<div class="pt-st"><b>' + (m.rescued || 0) + '</b><span>แก้สถานการณ์สำเร็จ</span></div>' : '') + '</div>' +
+    '<div class="pt-case"><b>🏥 สถานการณ์</b> ผู้ป่วยชาย 58 ปี หมดสติ ไม่หายใจ คลำชีพจรไม่ได้ · ประวัติไตวาย · ทีมกู้ชีพ 4 บทบาท · ' + E.length + ' เหตุการณ์ · แนวทาง Thai Resuscitation Council ค.ศ. 2025</div>' +
+    '<div class="pt-legend">' + chip(role, D) + ' = จุดตัดสินใจของ' + (isAdmin ? 'พนักงาน' : 'คุณ') + ' (แสดงเต็ม) · บทบาทอื่นแสดงเป็นลำดับเหตุการณ์ย่อ</div><div class="pt-tl">';
+  E.forEach(function (ev, i) {
+    if (ev.ecg !== last) { last = ev.ecg; var r = RHY[ev.ecg] || RHY.vf;
+      h += '<div class="pt-phase" style="border-color:' + r.c + '">จังหวะหัวใจ: <b>' + r.n + '</b>' + (ev.ecg === 'vf' ? ' (shockable)' : ev.ecg === 'pea' ? ' (non-shockable)' : ev.pulse === 'yes' ? ' · ROSC มีชีพจร' : '') + '</div>'; }
+    if (ev.role !== role) { h += '<div class="pt-row"><span class="pt-n">' + ev.n + '</span>' + chip(ev.role, D) + '<span class="pt-t"><b>' + e(ev.title) + '</b> — ' + e(ev.action) + '</span></div>'; return; }
+    n++; var rec = recs[i] || null, ok = rec && rec.ok;
+    h += '<div class="pt-card ' + (rec ? (ok ? 'ok' : 'no') : '') + '"><div class="pt-ch"><span class="pt-n big">' + ev.n + '</span>' + chip(ev.role, D) +
+      '<b>จุดตัดสินใจที่ ' + n + ' · ' + e(ev.title) + '</b><span class="pt-res">' + (rec ? (ok ? '✔ ถูกตั้งแต่ครั้งแรก' : '✘ ครั้งแรกตอบผิด') : '—') + '</span></div>' +
+      '<div class="pt-body"><div class="pt-vis">' + (p.images && p.images[i] ? '<img src="' + p.images[i] + '" alt="ฉากสถานการณ์">' : '') + mon(ev) + '</div>' +
+      '<div class="pt-q">' + (ev.sit ? '<div class="pt-sit">🏥 ' + e(ev.sit) + '</div>' : '') + '<div class="pt-p">' + e(ev.prompt) + '</div>' + opts(ev, rec, D) + '</div></div>' + illHTML_(ev, rec, D.vials) +
+      fbs(ev, rec) + '<div class="pt-act">✔ สิ่งที่ควรทำ: ' + e(ev.action) + '</div></div>';
+  });
+  h += '</div>';
+  var sig = p.signature
+    ? '<div style="text-align:center;min-width:250px"><img src="' + p.signature + '" alt="ลายเซ็น" style="height:60px"><div style="border-top:1px solid #475569;margin-top:2px;padding-top:7px;font-size:13.5px;font-weight:700">( ' + e(p.name) + ' )</div>' +
+      '<div style="font-size:11.5px;color:#64748b;line-height:1.7">ผู้เข้ารับการอบรม<br>ลงชื่อเมื่อ ' + e(p.signedAt || p.when) + '</div></div>'
+    : '<div class="sign-line"><div class="rule"></div><div style="font-size:13.5px;font-weight:700">( ' + e(p.name) + ' )</div><div style="font-size:11.5px;color:#64748b;line-height:1.7">ผู้เข้ารับการอบรม<br>ลงวันที่ ......... / ......... / .........</div></div>';
+  return h + '<div class="paper-sign"><div style="font-size:12px;color:#64748b">พิมพ์จากระบบเมื่อ ' + new Date().toLocaleString('th-TH') + '</div>' + sig + '</div></div>';
+}
+function isS1(p) { var c = String(p.courseId || ''); return c === 'S1' || (/CPR/i.test(p.courseTitle || '') && c.indexOf('CPR-') !== 0 && c.indexOf('EKG-') !== 0); }
+
+/* เรียกหลังวาดกระดาษคำตอบ: แทนที่กระดาษบท CPR ด้วยแบบ Full timeline และแนบผลรายบทบาทท้ายบท S1 */
+window.enhanceCprPapers = function (box, list, isAdmin) {
+  if (!box || !list) return;
+  var papers = box.querySelectorAll('.paper');
+  list.forEach(function (p, pi) {
+    var el = papers[pi]; if (!el) return;
+    var cid = String(p.courseId || '');
+    if (cid.indexOf('CPR-') === 0) {
+      var key = (isAdmin && p.attemptId) ? p.attemptId : 'latest:' + cid;
+      google.script.run.withSuccessHandler(function (cp) {
+        tl(function (D) { var w = document.createElement('div'); w.innerHTML = paper(cp, D, isAdmin); el.parentNode.replaceChild(w.firstChild, el); });
+      }).withFailureHandler(function () {}).getCprPaper(key);
+    } else if (isS1(p)) {
+      google.script.run.withSuccessHandler(function (arr) {
+        if (!arr || !arr.length) return;
+        tl(function (D) {
+          var w = document.createElement('div');
+          w.innerHTML = '<div class="cpr-attach-h no-print">📎 แนบกระดาษคำตอบรายบทบาทจากเครื่องฝึก CPR / ACLS (' + arr.length + ' บทบาท)</div>' +
+            arr.map(function (cp) { return paper(cp, D, isAdmin); }).join('');
+          while (w.firstChild) el.parentNode.insertBefore(w.lastChild, el.nextSibling);
+        });
+      }).withFailureHandler(function () {}).getCprRolePapers(isAdmin ? (p.email || '') : '');
+    }
+  });
+};
+})();
+</script>
+</body>
+</html>

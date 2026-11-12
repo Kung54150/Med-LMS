@@ -1,0 +1,903 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ขอเวรหยุด</title>
+  <style>
+    :root{
+      --teal:#0e7c86; --teal-dark:#075964; --teal-light:#e6f4f5;
+      --amber:#c9820a; --red:#c0392b; --cp:#2b6cb0; --late:#7a5cc9; --er:#0f9d6b; --ink:#1f2d2f; --muted:#6b7c7e;
+      --line:#dbe6e7; --bg:#f6faf9; --card:#ffffff;
+    }
+    *{box-sizing:border-box;}
+    body{margin:0;font-family:"Sarabun","Segoe UI",sans-serif;background:var(--bg);color:var(--ink);}
+    .wrap{max-width:720px;margin:0 auto;padding:14px 12px 40px;}
+    header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+    h1{font-size:18px;margin:0;color:var(--teal-dark);}
+    .me{font-size:12px;color:var(--muted);text-align:right;}
+    .monthpick{position:relative;margin-bottom:10px;}
+    .monthpick-btn{width:100%;font-family:inherit;font-size:13.5px;font-weight:600;color:var(--ink);
+      background:var(--card);border:1px solid var(--line);border-radius:12px;padding:9px 12px;
+      display:flex;align-items:center;gap:8px;cursor:pointer;text-align:left;}
+    .monthpick-btn:hover{border-color:var(--teal);}
+    .monthpick-btn .car{margin-left:auto;color:var(--muted);font-size:11px;transition:transform .15s;}
+    .monthpick.open .monthpick-btn .car{transform:rotate(180deg);}
+    .monthpick-pop{position:absolute;left:0;right:0;top:calc(100% + 6px);background:#fff;
+      border:1px solid var(--line);border-radius:14px;box-shadow:0 10px 28px rgba(15,30,32,.16);
+      padding:12px;z-index:30;display:none;}
+    .monthpick-pop.show{display:block;}
+    .mp-yearrow{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+    .mp-yearrow button{border:none;background:var(--teal-light);color:var(--teal-dark);width:30px;height:30px;
+      border-radius:8px;font-size:15px;cursor:pointer;}
+    .mp-yearrow .mp-ylabel{font-weight:700;font-size:14px;color:var(--teal-dark);}
+    .mp-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;}
+    .mp-month{border:1px solid var(--line);background:var(--bg);border-radius:9px;padding:9px 0;
+      font-size:13px;font-family:inherit;cursor:pointer;color:var(--ink);}
+    .mp-month:hover{border-color:var(--teal);}
+    .mp-month.today-mo{border-color:var(--teal);color:var(--teal-dark);font-weight:700;}
+    .mp-month.active{background:var(--teal);color:#fff;border-color:var(--teal);font-weight:700;}
+    .deadline{font-size:12px;padding:8px 10px;border-radius:10px;margin-bottom:10px;}
+    .deadline.open{background:#eaf6ea;color:#256029;border:1px solid #bfe3bf;}
+    .deadline.locked{background:#fbeaea;color:var(--red);border:1px solid #f0c4c0;}
+    /* minmax(0,1fr) = ยอมให้ช่องหดเล็กกว่าเนื้อหาได้ กันตารางดันจนล้นจอ */
+    .grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;}
+    .wd{text-align:center;font-size:11px;color:var(--muted);padding:4px 0;}
+    .day{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:6px 4px;min-height:82px;
+      cursor:pointer;position:relative;min-width:0;overflow:hidden;}
+    .day.today{border-color:var(--teal);box-shadow:0 0 0 1px var(--teal) inset;}
+    .day.mine{background:var(--teal-light);}
+        .day.adhoc{background:#fff6ea;border-color:#e8c07a;}
+    .day.adhoc.mine{background:#f5eee0;}
+    .day .lockmark{position:absolute;bottom:3px;right:4px;font-size:10px;line-height:1;}
+    .adhoc-banner{background:#fff6ea;border:1px solid #e8c07a;border-radius:10px;
+      padding:9px 11px;font-size:12px;color:#8a5a06;margin-bottom:10px;line-height:1.55;}
+    .adhoc-banner b{color:#6d4705;}
+    .day .num{font-size:12px;font-weight:600;color:var(--ink);}
+    .day .badges{margin-top:4px;display:flex;flex-direction:column;gap:2px;}
+    .badge{font-size:9px;line-height:1.3;border-radius:5px;padding:1px 3px;display:flex;
+      justify-content:space-between;gap:2px;white-space:nowrap;min-width:0;overflow:hidden;}
+    .badges{min-width:0;}
+    /* จอแคบมาก (เครื่องเล็ก/ตั้งฟอนต์ใหญ่) ย่อป้ายลงอีกขั้น */
+    @media (max-width:390px){
+      .badge{font-size:8px;padding:1px 2px;}
+      .day{padding:5px 3px;}
+      .grid{gap:4px;}
+    }
+    .badge.ok{background:#eef7ee;color:#2e7d32;}
+    .badge.full{background:#fdecea;color:var(--red);font-weight:600;}
+    .mark{position:absolute;top:4px;right:5px;font-size:10px;font-weight:700;border-radius:50%;
+      width:16px;height:16px;display:flex;align-items:center;justify-content:center;}
+    .mark.off{background:var(--red);color:#fff;}
+    .mark.short{background:var(--amber);color:#fff;}
+    .mark.cp{background:var(--cp);color:#fff;}
+    .mark.late{background:var(--late);color:#fff;}
+    .mark.er{background:var(--er);color:#fff;}
+    .legend{display:flex;gap:12px;font-size:11px;color:var(--muted);margin:10px 2px;flex-wrap:wrap;}
+    .legend span{display:inline-flex;align-items:center;gap:4px;}
+    .dot{width:9px;height:9px;border-radius:50%;display:inline-block;}
+    .dot.off{background:var(--red);} .dot.short{background:var(--amber);} .dot.cp{background:var(--cp);} .dot.late{background:var(--late);} .dot.er{background:var(--er);}
+    .sheet-bg{position:fixed;inset:0;background:rgba(15,30,32,.4);display:none;align-items:center;justify-content:center;z-index:20;padding:16px;}
+    .sheet-bg.show{display:flex;}
+    .sheet{background:#fff;width:100%;max-width:480px;max-height:85vh;overflow-y:auto;border-radius:16px;padding:18px 18px 22px;}
+    .sheet h3{margin:0 0 4px;font-size:16px;}
+    .sheet .sub{font-size:12px;color:var(--muted);margin-bottom:14px;}
+    .opt{display:flex;align-items:center;justify-content:space-between;border:1px solid var(--line);
+      border-radius:10px;padding:10px 12px;margin-bottom:8px;}
+    .opt .qtxt{font-size:12px;color:var(--muted);}
+    .opt button{border:none;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;}
+    .btn-off{background:var(--red);color:#fff;} .btn-short{background:var(--amber);color:#fff;} .btn-cp{background:var(--cp);color:#fff;} .btn-late{background:var(--late);color:#fff;} .btn-er{background:var(--er);color:#fff;}
+    .btn-cancel{background:#eee;color:#444;} .btn-close{background:none;color:var(--muted);width:100%;padding:10px;margin-top:6px;border:none;font-size:13px;}
+    .btn-off:disabled,.btn-short:disabled,.btn-cp:disabled,.btn-late:disabled,.btn-er:disabled{background:#ddd;color:#999;cursor:not-allowed;}
+    .toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--ink);color:#fff;
+      padding:10px 16px;border-radius:20px;font-size:13px;z-index:40;opacity:0;transition:opacity .25s;pointer-events:none;}
+    .toast.show{opacity:1;}
+    /* หน้าต่างแก้โควต้าเฉพาะกิจ (คลิกขวาที่ช่องวันที่ — แอดมินเท่านั้น) */
+    .qm-bg{position:fixed;inset:0;background:rgba(15,30,32,.5);display:none;
+      align-items:center;justify-content:center;z-index:300;padding:16px;}
+    .qm-bg.show{display:flex;}
+    .qm{background:#fff;border-radius:16px;width:100%;max-width:560px;max-height:88vh;
+      overflow-y:auto;padding:20px 22px 18px;box-shadow:0 18px 50px rgba(7,89,100,.3);}
+    .qm h3{margin:0 0 2px;font-size:16px;color:var(--teal-dark);}
+    .qm .qm-sub{font-size:12px;color:var(--muted);margin-bottom:14px;line-height:1.55;}
+    .qm-grp{border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:10px;}
+    .qm-grp h4{margin:0 0 8px;font-size:13.5px;color:var(--teal-dark);}
+    .qm-head{display:grid;grid-template-columns:1fr 64px 72px;gap:8px;font-size:11px;
+      color:var(--muted);margin-bottom:5px;}
+    .qm-head span:not(:first-child){text-align:center;}
+    .qm-row{display:grid;grid-template-columns:1fr 64px 72px;gap:8px;align-items:center;
+      margin-bottom:6px;font-size:13px;}
+    .qm-row .cur{text-align:center;color:var(--muted);font-size:12.5px;font-weight:600;}
+    .qm-row input{width:100%;text-align:center;padding:6px;border:1px solid var(--line);
+      border-radius:7px;font-family:inherit;font-size:13px;}
+    .qm-row input:focus{outline:none;border-color:var(--teal);}
+    .qm-note{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:8px;
+      font-family:inherit;font-size:13px;margin-top:4px;}
+    .qm-acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;}
+    .qm-acts button{flex:1;min-width:112px;border:none;border-radius:9px;padding:10px;
+      font-family:inherit;font-size:13.5px;font-weight:700;cursor:pointer;}
+    .qm-zero{background:#fff3e0;color:#9a4b00;}
+    .qm-del{background:#fdecea;color:var(--red);}
+    .qm-save{background:var(--teal);color:#fff;}
+    .qm-close{background:none;color:var(--muted);width:100%;padding:9px;border:none;
+      font-size:13px;cursor:pointer;margin-top:4px;font-family:inherit;}
+    .day.adminEditable{cursor:context-menu;}
+
+    .loading{text-align:center;color:var(--muted);font-size:13px;padding:30px 0;}
+    .summary-row{margin-top:16px;display:flex;gap:12px;align-items:stretch;flex-wrap:wrap;}
+    .mysummary{flex:1 1 240px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;}
+    .mysummary h4{font-size:13px;margin:0 0 8px;color:var(--teal-dark);}
+    .mysummary .chip{display:inline-flex;align-items:center;gap:6px;background:var(--bg);border:1px solid var(--line);
+      border-radius:20px;padding:6px 12px;margin:0 6px 6px 0;font-size:12.5px;}
+    .mysummary .chip .dot{width:8px;height:8px;border-radius:50%;flex:none;}
+    .mysummary .chip .dot.off{background:var(--red);} .mysummary .chip .dot.short{background:var(--amber);}
+    .mysummary .empty{font-size:12.5px;color:var(--muted);}
+    .notebox{flex:1 1 240px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;
+      display:flex;flex-direction:column;}
+    .notebox h4{font-size:13px;margin:0 0 4px;color:var(--teal-dark);}
+    .notebox .nb-hint{font-size:11px;color:var(--muted);margin-bottom:8px;line-height:1.45;}
+    .notebox textarea{width:100%;flex:1;min-height:76px;resize:vertical;font-family:inherit;font-size:12.5px;
+      color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:#fff;}
+    .notebox textarea:focus{outline:none;border-color:var(--teal);}
+    .nb-actions{display:flex;align-items:center;gap:10px;margin-top:8px;}
+    .nb-save{border:none;background:var(--teal);color:#fff;border-radius:8px;padding:7px 14px;
+      font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit;}
+    .nb-save:disabled{background:#ccc;cursor:not-allowed;}
+    .nb-status{font-size:11.5px;color:var(--muted);}
+    .reqlist{border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:10px;background:var(--bg);}
+    .reqlist .rl-title{font-weight:700;font-size:12.5px;margin-bottom:6px;color:var(--teal-dark);}
+    .reqlist .rl-row{font-size:12px;margin-bottom:3px;line-height:1.5;}
+    .reqlist .rl-row b{color:var(--ink);}
+    .reqlist .rl-empty{color:var(--muted);}
+    .backbar{margin-bottom:12px;display:flex;gap:8px;flex-wrap:wrap;}
+    .backbar a,.backbar button.navbtn{display:inline-flex;align-items:center;gap:6px;font-size:14px;font-weight:700;
+      color:var(--teal-dark);text-decoration:none;background:var(--teal-light);
+      border:1.5px solid var(--teal);border-radius:10px;padding:9px 16px;cursor:pointer;font-family:inherit;}
+    .backbar a:hover,.backbar button.navbtn:hover{background:var(--teal);color:#fff;}
+    .viewposbar{display:none;align-items:center;gap:8px;margin-bottom:10px;font-size:12.5px;flex-wrap:wrap;
+      background:var(--teal-light);border:1px solid var(--teal);border-radius:10px;padding:8px 12px;}
+    .viewposbar.show{display:flex;}
+    .viewposbar select{font-family:inherit;font-size:13px;font-weight:600;padding:6px 9px;
+      border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink);}
+    .viewposbar .vp-note{color:var(--teal-dark);}
+    .cf-bg{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.45);
+  display:none;align-items:center;justify-content:center;z-index:9000;padding:16px;}
+.cf-bg.show{display:flex;}
+.cf{background:#fff;border-radius:16px;max-width:340px;width:100%;padding:20px 18px;
+  text-align:center;box-shadow:0 12px 40px rgba(0,0,0,.28);}
+.cf-icon{font-size:38px;margin-bottom:6px;}
+.cf-msg{font-size:15px;line-height:1.6;color:#263238;margin-bottom:18px;white-space:pre-line;}
+.cf-acts{display:flex;gap:10px;}
+.cf-acts button{flex:1;border:0;border-radius:10px;padding:13px 8px;font-size:15px;
+  font-weight:600;cursor:pointer;font-family:inherit;}
+.cf-no{background:#eceff1;color:#455a64;}
+.cf-yes{background:#00897b;color:#fff;}
+.cf-bg.alert .cf-no{display:none;}
+.cf-busy{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);
+  background:#263238;color:#fff;padding:10px 18px;border-radius:20px;font-size:14px;
+  z-index:9500;display:none;}
+.cf-busy.show{display:block;}
+
+  </style>
+</head>
+<body>
+
+  <div class="wrap">
+    <div class="backbar">
+      <a href="<?!= ScriptApp.getService().getUrl() ?>">🏠 กลับหน้าหลัก (Med-LMS)</a>
+      <button type="button" class="navbtn" id="goAdminBtn" style="display:none;" onclick="goAdminShift()">⚙️ ตั้งค่าเวรหยุด</button>
+    </div>
+    <header>
+      <h1>🗓️ ขอเวรหยุด</h1>
+      <div class="me" id="meBox">กำลังโหลด...</div>
+    </header>
+
+    <!-- แถบสลับดูปฏิทิน/โควต้าของตำแหน่งอื่น — โชว์เฉพาะ admin/หัวหน้าแผนก เท่านั้น (ดูอย่างเดียว ขอเวรแทนใครไม่ได้จากตรงนี้) -->
+    <div class="viewposbar" id="viewPosBar">
+      <span>🔎 ดูปฏิทินของตำแหน่ง:</span>
+      <select id="viewPosSelect" onchange="onViewPosChange()"></select>
+      <span class="vp-note" id="viewPosNote"></span>
+      
+    </div>
+
+    <div class="monthpick" id="monthPickWrap">
+      <button type="button" class="monthpick-btn" id="monthPickBtn" onclick="toggleMonthPicker()">📅 <span id="monthPickBtnLabel">เลือกเดือน</span><span class="car">▾</span></button>
+      <div class="monthpick-pop" id="monthPickPop">
+        <div class="mp-yearrow">
+          <button type="button" onclick="mpChangeYear(-1)">‹</button>
+          <div class="mp-ylabel" id="mpYearLabel">-</div>
+          <button type="button" onclick="mpChangeYear(1)">›</button>
+        </div>
+        <div class="mp-grid" id="mpGrid"></div>
+      </div>
+    </div>
+
+    <div class="deadline" id="deadlineBox">-</div>
+        <div id="adhocNotice"></div>
+
+    <div class="legend">
+      <span><i class="dot off"></i> วันที่คุณขอหยุด (X)</span>
+      <span><i class="dot short"></i> วันที่คุณขอเวรสั้น</span>
+      <span id="legendCP" style="display:none;"><i class="dot cp"></i> วันที่คุณขอขึ้น CP</span>
+      <span><i class="dot late"></i> วันที่คุณขอสาย</span>
+      <span id="legendER" style="display:none;"><i class="dot er"></i> วันที่คุณขอไปแผนกอื่น</span>
+    </div>
+
+    <div class="grid" id="wdRow"></div>
+    <div class="grid" id="calGrid"><div class="loading">กำลังโหลดปฏิทิน...</div></div>
+
+    <div class="summary-row">
+      <div class="mysummary" id="mySummary"></div>
+      <div class="notebox">
+        <h4>📝 หมายเหตุเพิ่มเติม</h4>
+        <div class="nb-hint">เขียนเหตุผล/ข้อความพิเศษถึงหัวหน้าแผนกสำหรับเดือนนี้ได้ที่นี่ — ข้อความนี้จะถูกดึงไปพร้อมกับคำขอทั้งหมดตอน Admin ส่งออกรายงานประจำเดือน</div>
+        <textarea id="myNoteText" maxlength="1000" placeholder="เช่น เดือนนี้ขอเวรสั้นแทน Off เพราะติดธุระด่วนช่วงกลางเดือนค่ะ"></textarea>
+        <div class="nb-actions">
+          <button class="nb-save" id="nbSaveBtn" onclick="saveMyNote()">บันทึกหมายเหตุ</button>
+          <span class="nb-status" id="nbStatus"></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sheet-bg" id="sheetBg" onclick="closeSheetIfBg(event)">
+    <div class="sheet">
+      <h3 id="sheetDate">-</h3>
+      <div class="sub" id="sheetSub">-</div>
+      <div id="sheetBody"></div>
+      <button class="btn-close" onclick="closeSheet()">ปิด</button>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+  <div class="qm-bg" id="qmBg" onclick="if(event.target===this) qmClose()">
+    <div class="qm">
+      <h3 id="qmTitle">🔧 โควต้าเฉพาะกิจ</h3>
+      <div class="qm-sub">ช่อง "ตั้งใหม่" ที่<b>เว้นว่าง</b> = ใช้โควต้าประจำตามเดิม · ใส่ <b>0</b> = วันนั้นขอประเภทนั้นไม่ได้เลย<br>คอลัมน์ "ปัจจุบัน" คือจำนวนที่ใช้อยู่จริงในขณะนี้</div>
+      <div id="qmBody"></div>
+      <div style="font-size:12px;color:var(--muted);margin-top:10px;">หมายเหตุ (พนักงานจะเห็นข้อความนี้)</div>
+      <input type="text" class="qm-note" id="qmNote" maxlength="300" placeholder="เช่น ตรวจ HA ทั้งโรงพยาบาล">
+      <div class="qm-acts">
+        <button class="qm-zero" onclick="qmFillZero()">ปิดรับทั้งวัน</button>
+        <button class="qm-del" onclick="qmDelete()">ลบเฉพาะกิจ</button>
+        <button class="qm-save" onclick="qmSave()">บันทึก</button>
+      </div>
+      <button class="qm-close" onclick="qmClose()">ปิดหน้าต่าง</button>
+    </div>
+  </div>
+
+
+<script>
+  // ===== เชื่อมสลับไปหน้า "ตั้งค่าเวรหยุด" (admin) โดยไม่ต้องกลับหน้าหลักก่อน (ใช้ URL เดิม + ?page=...) =====
+  // ปุ่มนี้ซ่อนไว้ก่อน จะโชว์ให้เห็นก็ต่อเมื่อโหลดข้อมูลแล้วรู้ว่า me.isAdmin = true เท่านั้น (ดูใน onData)
+  var SHIFT_BASE_URL = '<?!= ScriptApp.getService().getUrl() ?>';
+  function goAdminShift(){ window.top.location.href = SHIFT_BASE_URL + '?page=adminshift'; }
+
+  const WD_TH = ['อา','จ','อ','พ','พฤ','ศ','ส'];
+  const TH_MONTHS_FULL = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+  const TH_MONTHS_SHORT = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+  let currentMonth = null; // "YYYY-MM"
+  let viewData = null;
+  let selectedDay = null;
+  let mpViewYear = null; // ปีที่กำลังดูอยู่ในป๊อปอัปเลือกเดือน (ค.ศ.)
+  let viewPosition = null; // ตำแหน่งที่กำลังดูปฏิทิน/โควต้าอยู่ (admin เท่านั้นที่สลับได้) — null = ดูตำแหน่งของตัวเอง
+
+  // ===== สลับดูปฏิทิน/โควต้าตำแหน่งอื่น (admin/หัวหน้าแผนกเท่านั้น) — ดูอย่างเดียว ไม่ใช่ขอเวรแทนใคร =====
+  // ในดรอปดาวน์รวม PN กับ NA เป็นตัวเลือกเดียว "PN/NA (รวมกัน)" (value ภายในใช้ 'PNNA') เพราะ PN กับ NA ใช้โควต้ากลุ่มเดียวกัน
+  // (Shift_quotaGroup_ ฝั่งเซิร์ฟเวอร์นับ PN และ NA รวมกัน) ตัวเลข byPosition['PN'] กับ byPosition['NA'] จึงเหมือนกันเป๊ะอยู่แล้ว
+  // posDataKey แปลงค่าที่เลือกในดรอปดาวน์ (อาจเป็น 'PNNA') ให้เป็น key จริงที่ใช้ค้น day.byPosition[...] ('PN' เป็นตัวแทน)
+  // posDisplayLabel แปลงกลับเป็นข้อความที่โชว์ให้ผู้ใช้เห็น ('PN/NA')
+  // posCanCP/posCanER คัดลอกตรรกะมาจาก Shift_canRequestCP_/Shift_canRequestER_ ฝั่งเซิร์ฟเวอร์ (ShiftRequestBackend.gs)
+  // ใช้แค่ตัดสินใจว่าจะโชว์ป้าย CP/ER ของตำแหน่งที่กำลังดูอยู่ไหม ไม่เกี่ยวกับการอนุญาตจริง (เซิร์ฟเวอร์เช็คเองอยู่แล้วตอน submit)
+  function posDataKey(vp){ return (vp==='PN'||vp==='NA'||vp==='PNNA') ? 'PN' : vp; }
+  function posDisplayLabel(vp){ return (vp==='PN'||vp==='NA'||vp==='PNNA') ? 'PN/NA' : vp; }
+  function posCanCP(pos){ return pos === 'RN'; }
+  function posCanER(pos){ return pos === 'PN' || pos === 'NA' || pos === 'PNNA'; }
+  function getViewPos(){ return viewPosition || (viewData && viewData.me.position); }
+  function ensureViewPosOptions(){
+    const sel = document.getElementById('viewPosSelect');
+    if(sel.dataset.filled) return;
+    sel.dataset.filled = '1';
+    [{v:'RN',l:'RN'}, {v:'PNNA',l:'PN/NA (รวมกัน)'}, {v:'หัวหน้าแผนก',l:'หัวหน้าแผนก'}].forEach(o=>{
+      const opt = document.createElement('option'); opt.value = o.v; opt.textContent = o.l;
+      sel.appendChild(opt);
+    });
+  }
+  function updateViewPosNote(){
+    const note = document.getElementById('viewPosNote');
+    const isOwn = posDataKey(getViewPos()) === posDataKey(viewData.me.position);
+    note.textContent = isOwn
+      ? '(ตำแหน่งของฉันเอง — ขอเวรได้ตามปกติ)'
+      : '⚠ โหมดดูอย่างเดียว — คลิกวันที่จะเห็นแค่โควต้า/รายชื่อคนขอ ขอเวรแทนใครจากตรงนี้ไม่ได้ (ไปที่ "แก้ไขคำขอแทนพนักงาน" ในหน้าตั้งค่าแทน)';
+  }
+  function onViewPosChange(){
+    viewPosition = document.getElementById('viewPosSelect').value;
+    updateViewPosNote();
+      loadAdhocMap_();   // ดึงค่าเฉพาะกิจที่เคยตั้งไว้ของเดือนนี้มาเตรียมไว้
+
+    renderCalendar();
+  }
+
+  function pad2(n){ return String(n).padStart(2,'0'); }
+  function todayStr(){ const d=new Date(); return d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate()); }
+
+  function init(){
+    const d = new Date();
+    currentMonth = d.getFullYear()+'-'+pad2(d.getMonth()+1);
+    updateMonthPickerLabel();
+    WD_TH.forEach(w=>{
+      const el = document.createElement('div'); el.className='wd'; el.textContent=w;
+      document.getElementById('wdRow').appendChild(el);
+    });
+    document.addEventListener('click', function(e){
+      const wrap = document.getElementById('monthPickWrap');
+      if(wrap && !wrap.contains(e.target)) closeMonthPicker();
+    });
+    load();
+  }
+
+  function updateMonthPickerLabel(){
+    const [y,m] = currentMonth.split('-').map(Number);
+    document.getElementById('monthPickBtnLabel').textContent = TH_MONTHS_FULL[m-1]+' '+(y+543);
+  }
+
+  // ----- ป๊อปอัปเลือกเดือนแบบปฏิทิน (แทนช่องกรอกเดือนแบบเดิมของเบราว์เซอร์) -----
+  function toggleMonthPicker(){
+    const pop = document.getElementById('monthPickPop');
+    if(pop.classList.contains('show')){ closeMonthPicker(); return; }
+    mpViewYear = Number(currentMonth.split('-')[0]);
+    renderMonthPickerGrid();
+    pop.classList.add('show');
+    document.getElementById('monthPickWrap').classList.add('open');
+  }
+  function closeMonthPicker(){
+    document.getElementById('monthPickPop').classList.remove('show');
+    document.getElementById('monthPickWrap').classList.remove('open');
+  }
+  function mpChangeYear(delta){
+    mpViewYear += delta;
+    renderMonthPickerGrid();
+  }
+  function renderMonthPickerGrid(){
+    document.getElementById('mpYearLabel').textContent = (mpViewYear+543);
+    const grid = document.getElementById('mpGrid');
+    grid.innerHTML = '';
+    const [curY, curM] = currentMonth.split('-').map(Number);
+    const now = new Date();
+    TH_MONTHS_SHORT.forEach((label, idx)=>{
+      const mo = idx+1;
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      let cls = 'mp-month';
+      if(mpViewYear===curY && mo===curM) cls += ' active';
+      else if(mpViewYear===now.getFullYear() && mo===(now.getMonth()+1)) cls += ' today-mo';
+      btn.className = cls;
+      btn.textContent = label;
+      btn.onclick = ()=> mpSelectMonth(mpViewYear, mo);
+      grid.appendChild(btn);
+    });
+  }
+  function mpSelectMonth(y, m){
+    currentMonth = y+'-'+pad2(m);
+    updateMonthPickerLabel();
+    closeMonthPicker();
+    load();
+  }
+
+  function load(){
+    document.getElementById('calGrid').innerHTML = '<div class="loading">กำลังโหลดปฏิทิน...</div>';
+    google.script.run.withSuccessHandler(onData).withFailureHandler(onError).Shift_getMonthlyView(currentMonth);
+    loadMyNote();
+        loadAdhocNotice();
+  }
+
+  // ----- หมายเหตุเพิ่มเติมของพนักงาน (แยกต่างหากจากคำขอ ต่อเดือน) -----
+  function loadMyNote(){
+    const ta = document.getElementById('myNoteText');
+    const status = document.getElementById('nbStatus');
+    ta.value = '';
+    status.textContent = 'กำลังโหลด...';
+    const forMonth = currentMonth;
+    google.script.run.withSuccessHandler(res=>{
+      if(forMonth !== currentMonth) return; // ผู้ใช้เปลี่ยนเดือนไปแล้วระหว่างรอโหลด — ไม่เอาข้อมูลเก่ามาทับ
+      ta.value = (res && res.ok) ? (res.note || '') : '';
+      status.textContent = '';
+    }).withFailureHandler(err=>{
+      if(forMonth !== currentMonth) return;
+      status.textContent = 'โหลดหมายเหตุไม่สำเร็จ: '+(err && err.message ? err.message : err);
+    }).Shift_getMyNote(currentMonth);
+  }
+
+  function saveMyNote(){
+    const btn = document.getElementById('nbSaveBtn');
+    const status = document.getElementById('nbStatus');
+    const note = document.getElementById('myNoteText').value;
+    btn.disabled = true;
+    status.textContent = 'กำลังบันทึก...';
+    google.script.run.withSuccessHandler(res=>{
+      btn.disabled = false;
+      status.textContent = res.ok ? '✅ บันทึกแล้ว' : (res.message || 'บันทึกไม่สำเร็จ');
+      if(res.ok) setTimeout(()=>{ status.textContent=''; }, 2500);
+    }).withFailureHandler(err=>{
+      btn.disabled = false;
+      status.textContent = 'เกิดข้อผิดพลาด: '+(err && err.message ? err.message : err);
+    }).Shift_saveMyNote(currentMonth, note);
+  }
+
+  function onError(err){
+    document.getElementById('calGrid').innerHTML = '<div class="loading">เกิดข้อผิดพลาด: '+(err && err.message ? err.message : err)+'</div>';
+  }
+
+  function onData(res){
+    if(!res || !res.ok){
+      document.getElementById('calGrid').innerHTML = '<div class="loading">'+(res && res.message ? res.message : 'ไม่สามารถโหลดข้อมูลได้')+'</div>';
+      return;
+    }
+    viewData = res;
+    document.getElementById('goAdminBtn').style.display = res.me.isAdmin ? 'inline-flex' : 'none';
+    document.getElementById('meBox').textContent = res.me.name+' • '+res.me.position+(res.me.level?(' ('+res.me.level+')'):'');
+    updateMonthPickerLabel();
+
+    // แถบสลับดูตำแหน่งอื่น — โชว์เฉพาะ admin (ไม่รีเซ็ตตำแหน่งที่เลือกไว้ตอนเปลี่ยนเดือน)
+    if(res.me.isAdmin){
+      ensureViewPosOptions();
+      document.getElementById('viewPosBar').classList.add('show');
+      const curVp = getViewPos();
+      document.getElementById('viewPosSelect').value = (curVp==='PN'||curVp==='NA') ? 'PNNA' : curVp;
+      updateViewPosNote();
+    } else {
+      document.getElementById('viewPosBar').classList.remove('show');
+      viewPosition = null;
+    }
+
+    const dl = new Date(res.deadline);
+    const dlBox = document.getElementById('deadlineBox');
+    if(res.isLocked){
+      dlBox.className='deadline locked';
+      dlBox.textContent = '🔒 ปิดรับคำขอของเดือนนี้แล้ว (เดดไลน์ผ่านไปเมื่อ '+dl.toLocaleString('th-TH')+')';
+    } else {
+      dlBox.className='deadline open';
+      dlBox.textContent = '⏰ ขอ/แก้ไข/ยกเลิกได้ถึง '+dl.toLocaleString('th-TH')+' น.';
+    }
+    if(res.me.isAdmin) loadAdhocMap_();
+    renderCalendar();
+    renderMySummary(res.days);
+  }
+
+  // วาดตารางปฏิทิน (badges โควต้าของตำแหน่งที่กำลังดูอยู่) — แยกออกมาจาก onData เพื่อให้สลับตำแหน่งดูได้ทันทีโดยไม่ต้องโหลดข้อมูลใหม่
+  // (Shift_getMonthlyView ส่ง byPosition มาครบทุกตำแหน่งอยู่แล้วในการโหลดครั้งเดียว)
+  function renderCalendar(){
+    if(!viewData) return;
+    const vp = posDataKey(getViewPos());
+    const canCP = posCanCP(vp);
+    const canER = posCanER(vp);
+    document.getElementById('legendCP').style.display = canCP ? 'inline-flex' : 'none';
+    document.getElementById('legendER').style.display = canER ? 'inline-flex' : 'none';
+
+    const grid = document.getElementById('calGrid');
+    grid.innerHTML = '';
+    const firstWd = viewData.days[0].weekday;
+    for(let i=0;i<firstWd;i++){ const pad=document.createElement('div'); grid.appendChild(pad); }
+
+    viewData.days.forEach(day=>{
+            const el = document.createElement('div');
+      el.className = 'day' + (day.date===todayStr() ? ' today':'') + (day.myRequest ? ' mine':'') + (day.isOverride ? ' adhoc':'');
+      if(day.isOverride){
+        el.title = 'วันนี้หัวหน้าแผนกตั้งโควต้าเป็นกรณีพิเศษ' + (day.overrideNote ? ('\n📌 ' + day.overrideNote) : '');
+        const lk = document.createElement('div'); lk.className='lockmark'; lk.textContent='🔧';
+        el.appendChild(lk);
+      }
+      const num = document.createElement('div'); num.className='num'; num.textContent = Number(day.date.slice(8,10));
+      el.appendChild(num);
+
+      const badges = document.createElement('div'); badges.className='badges';
+      const posInfo = day.byPosition[vp];
+      if(posInfo){
+        const offFull = posInfo.offCount >= posInfo.maxOff;
+        const shortFull = posInfo.shortCount >= posInfo.shortSlots;
+        const b1=document.createElement('div'); b1.className='badge '+(offFull?'full':'ok');
+        b1.innerHTML='X <span>'+posInfo.offCount+'/'+posInfo.maxOff+'</span>'; badges.appendChild(b1);
+        const b2=document.createElement('div'); b2.className='badge '+(shortFull?'full':'ok');
+        b2.innerHTML='สั้น <span>'+posInfo.shortCount+'/'+posInfo.shortSlots+'</span>'; badges.appendChild(b2);
+        if(canCP){
+          const cpFull = posInfo.cpCount >= posInfo.cpSlots;
+          const b3=document.createElement('div'); b3.className='badge '+(cpFull?'full':'ok');
+          b3.innerHTML='CP <span>'+posInfo.cpCount+'/'+posInfo.cpSlots+'</span>'; badges.appendChild(b3);
+        }
+        const lateFull = posInfo.lateCount >= posInfo.lateSlots;
+        const b4=document.createElement('div'); b4.className='badge '+(lateFull?'full':'ok');
+        b4.innerHTML='สาย <span>'+posInfo.lateCount+'/'+posInfo.lateSlots+'</span>'; badges.appendChild(b4);
+        if(canER){
+          // แผนกอื่นเต็มได้ 2 ทาง: โควต้าแผนกอื่นเองเต็ม หรือโควต้าวันหยุดเต็ม (ใช้ร่วมกัน)
+          const erFull = (posInfo.erCount >= posInfo.erSlots) || (posInfo.offCount >= posInfo.maxOff);
+          const b5=document.createElement('div'); b5.className='badge '+(erFull?'full':'ok');
+          b5.innerHTML='อื่นๆ <span>'+posInfo.erCount+'/'+posInfo.erSlots+'</span>'; badges.appendChild(b5);
+        }
+      }
+      el.appendChild(badges);
+
+      if(day.myRequest){
+        const markCls = day.myRequest==='Off'?'off':day.myRequest==='ShortShift'?'short':day.myRequest==='CP'?'cp':day.myRequest==='ER'?'er':'late';
+        const markTxt = day.myRequest==='Off' ? 'R' : day.myRequest==='ShortShift' ? 'ส' : day.myRequest==='CP' ? 'C' : day.myRequest==='ER' ? 'อ' : 'L';
+        const mk = document.createElement('div');
+        mk.className = 'mark '+markCls;
+        mk.textContent = markTxt;
+        el.appendChild(mk);
+      }
+
+      // คลิกปกติ = เปิดรายละเอียด/ขอเวร
+      el.onclick = ()=> openSheet(day);
+
+      // แอดมิน: คลิกขวา (หรือกดค้างบนมือถือ) = แก้โควต้าเฉพาะกิจ
+      if(viewData.me.isAdmin){
+        el.classList.add('adminEditable');
+        el.addEventListener('contextmenu', function(e){
+          e.preventDefault();
+          openQuotaModal(day.date);
+        });
+      }
+
+      grid.appendChild(el);
+    });
+  }
+
+  function renderMySummary(days){
+    const mine = days.filter(d=>d.myRequest);
+    const el = document.getElementById('mySummary');
+    if(!mine.length){
+      el.innerHTML = '<div class="empty">คุณยังไม่มีคำขอในเดือนนี้</div>';
+      return;
+    }
+    const chips = mine.map(d=>{
+      const dayNum = Number(d.date.slice(8,10));
+      const cls = d.myRequest==='Off' ? 'off' : d.myRequest==='ShortShift' ? 'short' : d.myRequest==='CP' ? 'cp' : d.myRequest==='ER' ? 'er' : 'late';
+      const label = d.myRequest==='Off' ? 'ขอหยุด (R)' : d.myRequest==='ShortShift' ? 'ขอเวรสั้น' : d.myRequest==='CP' ? 'ขอขึ้น CP' : d.myRequest==='ER' ? 'ขอไปแผนกอื่น (R*)' : 'ขอสาย';
+
+      return '<span class="chip"><span class="dot '+cls+'"></span>วันที่ '+dayNum+' — '+label+'</span>';
+    }).join('');
+    el.innerHTML = '<h4>สรุปคำขอของคุณเดือนนี้ ('+mine.length+' วัน)</h4>' + chips;
+  }
+
+  function openSheet(day){
+    selectedDay = day;
+    const rawVp = getViewPos();
+    const vp = posDataKey(rawVp); // key จริงที่ใช้ค้น day.byPosition
+    const vpLabel = posDisplayLabel(rawVp); // ข้อความที่โชว์ให้ผู้ใช้เห็น (PN/NA รวมกัน แสดงเป็น "PN/NA")
+    const isOwnPos = (vp === posDataKey(viewData.me.position));
+    const posInfo = day.byPosition[vp];
+    const canCP = posCanCP(vp);
+    const canER = posCanER(vp);
+    document.getElementById('sheetDate').textContent = day.date + ' (' + WD_TH[day.weekday] + ')';
+    document.getElementById('sheetSub').textContent = 'ตำแหน่ง '+vpLabel+' — โควต้า Off '+posInfo.offCount+'/'+posInfo.maxOff+' • เวรสั้น '+posInfo.shortCount+'/'+posInfo.shortSlots
+      + (canCP ? ' • CP '+posInfo.cpCount+'/'+posInfo.cpSlots : '')
+      + (canER ? ' • แผนกอื่น '+posInfo.erCount+'/'+posInfo.erSlots : '')
+      + ' • สาย '+posInfo.lateCount+'/'+posInfo.lateSlots;
+
+    const body = document.getElementById('sheetBody');
+    body.innerHTML = '';
+        if(day.isOverride){
+      const ab = document.createElement('div');
+      ab.className = 'adhoc-banner';
+      ab.innerHTML = '🔧 <b>วันนี้ตั้งโควต้าเป็นกรณีพิเศษ</b> — ตัวเลขโควต้าด้านบนเป็นค่าที่หัวหน้าแผนกกำหนดไว้เฉพาะวันนี้ ไม่ใช่โควต้าปกติ'
+        + (day.overrideNote ? ('<div style="margin-top:5px;">📌 ' + escSR(day.overrideNote) + '</div>') : '');
+      body.appendChild(ab);
+    }
+    const locked = viewData.isLocked;
+
+    // แสดงรายชื่อคนที่ขอไว้แล้วในวันนี้ (ตำแหน่งที่กำลังดูอยู่ / กลุ่มโควต้าเดียวกัน) ให้เห็นก่อนตัดสินใจ
+    const namesBox = document.createElement('div'); namesBox.className='reqlist';
+    namesBox.innerHTML = '<div class="rl-title">👀 ใครขอไว้แล้วบ้าง (ตำแหน่ง '+vpLabel+')</div>'
+      + '<div class="rl-row"><b>หยุด (R) — ใช้โควต้าร่วมกับแผนกอื่น:</b> '+(posInfo.offNames && posInfo.offNames.length ? posInfo.offNames.join(', ') : '<span class="rl-empty">ยังไม่มีใครขอ</span>')+'</div>'
+      + '<div class="rl-row"><b>เวรสั้น:</b> '+(posInfo.shortNames && posInfo.shortNames.length ? posInfo.shortNames.join(', ') : '<span class="rl-empty">ยังไม่มีใครขอ</span>')+'</div>'
+      + (canCP ? '<div class="rl-row"><b>ขึ้น CP:</b> '+(posInfo.cpNames && posInfo.cpNames.length ? posInfo.cpNames.join(', ') : '<span class="rl-empty">ยังไม่มีใครขอ</span>')+'</div>' : '')
+      + (canER ? '<div class="rl-row"><b>ไปแผนกอื่น (R*):</b> '+(posInfo.erNames && posInfo.erNames.length ? posInfo.erNames.join(', ') : '<span class="rl-empty">ยังไม่มีใครขอ</span>')+'</div>' : '')
+      + '<div class="rl-row"><b>สาย:</b> '+(posInfo.lateNames && posInfo.lateNames.length ? posInfo.lateNames.join(', ') : '<span class="rl-empty">ยังไม่มีใครขอ</span>')+'</div>';
+    body.appendChild(namesBox);
+
+    if(!isOwnPos){
+      // กำลังดูตำแหน่งอื่นที่ไม่ใช่ของตัวเอง — โหมดดูอย่างเดียว ไม่แสดงปุ่มขอ/ยกเลิกเวรเลย (ป้องกันกดพลาดแล้วไปขอเวรผิดตำแหน่งให้ตัวเอง)
+      const ro = document.createElement('div'); ro.className='opt';
+      ro.innerHTML = '<div style="color:var(--muted);font-size:12.5px;">🔎 กำลังดูตำแหน่ง "'+vpLabel+'" แบบดูอย่างเดียว — สลับกลับ "ตำแหน่งของฉัน" ที่แถบด้านบนก่อน ถ้าต้องการขอเวรของตัวเอง<br>ถ้าต้องการขอ/แก้/ยกเลิกเวร<b>แทนพนักงานคนอื่น</b> ให้ไปที่หน้าตั้งค่า → แท็บ "แก้ไขคำขอแทนพนักงาน" แทน</div>';
+      body.appendChild(ro);
+    } else if(day.myRequest){
+      const curLabel = day.myRequest==='Off' ? 'ขอหยุด (X)' : day.myRequest==='ShortShift' ? 'ขอเวรสั้น' : day.myRequest==='CP' ? 'ขอขึ้น CP' : day.myRequest==='ER' ? 'ขอไป ER' : 'ขอสาย';
+      const info = document.createElement('div'); info.className='opt';
+      info.innerHTML = '<div>คำขอปัจจุบันของคุณ: <b>'+curLabel+'</b></div>';
+      body.appendChild(info);
+      const cancelBtn = document.createElement('button');
+      cancelBtn.className='btn-cancel'; cancelBtn.style.width='100%'; cancelBtn.textContent='ยกเลิกคำขอนี้';
+      cancelBtn.disabled = locked;
+      cancelBtn.onclick = ()=> doCancel(day.date);
+      body.appendChild(cancelBtn);
+    } else {
+      const offRow = document.createElement('div'); offRow.className='opt';
+      const offFull = posInfo.offCount >= posInfo.maxOff;
+      offRow.innerHTML = '<div>ขอวันหยุด (X)<div class="qtxt">เหลือ '+Math.max(0,posInfo.maxOff-posInfo.offCount)+' ที่'+(canER && posInfo.erCount ? ' (มีคนขอไปแผนกอื่น '+posInfo.erCount+' คน ใช้โควต้านี้ร่วมกัน)' : '')+'</div></div>';
+      const offBtn = document.createElement('button'); offBtn.className='btn-off'; offBtn.textContent='ขอหยุด';
+      offBtn.disabled = locked || offFull; offBtn.onclick = ()=> doSubmit(day.date,'Off');
+      offRow.appendChild(offBtn); body.appendChild(offRow);
+
+      const shortRow = document.createElement('div'); shortRow.className='opt';
+      const shortFull = posInfo.shortCount >= posInfo.shortSlots;
+      shortRow.innerHTML = '<div>ขอเวรสั้น<div class="qtxt">เหลือ '+Math.max(0,posInfo.shortSlots-posInfo.shortCount)+' ที่</div></div>';
+      const shortBtn = document.createElement('button'); shortBtn.className='btn-short'; shortBtn.textContent='ขอเวรสั้น';
+      shortBtn.disabled = locked || shortFull; shortBtn.onclick = ()=> doSubmit(day.date,'ShortShift');
+      shortRow.appendChild(shortBtn); body.appendChild(shortRow);
+
+      if(canCP){
+        const cpRow = document.createElement('div'); cpRow.className='opt';
+        const cpFull = posInfo.cpCount >= posInfo.cpSlots;
+        cpRow.innerHTML = '<div>ขอไปขึ้น CP<div class="qtxt">เหลือ '+Math.max(0,posInfo.cpSlots-posInfo.cpCount)+' ที่ • ไม่กระทบโควต้าหยุด</div></div>';
+        const cpBtn = document.createElement('button'); cpBtn.className='btn-cp'; cpBtn.textContent='ขอ CP';
+        cpBtn.disabled = locked || cpFull; cpBtn.onclick = ()=> doSubmit(day.date,'CP');
+        cpRow.appendChild(cpBtn); body.appendChild(cpRow);
+      }
+
+      if(canER){
+        const erRow = document.createElement('div'); erRow.className='opt';
+        // คนที่ไปช่วยแผนกอื่นได้ ต้องเป็นคนที่หยุดจาก OPD1 → ใช้โควต้าวันหยุดร่วมกัน
+        const erOwnFull = posInfo.erCount >= posInfo.erSlots;
+        const erOffFull = posInfo.offCount >= posInfo.maxOff;
+        const erFull = erOwnFull || erOffFull;
+        const erLeft = Math.min(Math.max(0, posInfo.erSlots - posInfo.erCount), Math.max(0, posInfo.maxOff - posInfo.offCount));
+        const erWhy = erOffFull ? ' — โควต้าวันหยุดเต็มแล้ว' : (erOwnFull ? ' — โควต้าแผนกอื่นเต็มแล้ว' : '');
+        erRow.innerHTML = '<div>ขอไปแผนกอื่น<div class="qtxt">เหลือ '+erLeft+' ที่ • ใช้โควต้าวันหยุด (X) ร่วมกัน'+erWhy+'</div></div>';
+        const erBtn = document.createElement('button'); erBtn.className='btn-er'; erBtn.textContent='ขอแผนกอื่น';
+        erBtn.disabled = locked || erFull; erBtn.onclick = ()=> doSubmit(day.date,'ER');
+        erRow.appendChild(erBtn); body.appendChild(erRow);
+      }
+
+
+      const lateRow = document.createElement('div'); lateRow.className='opt';
+      const lateFull = posInfo.lateCount >= posInfo.lateSlots;
+      lateRow.innerHTML = '<div>ขอสาย<div class="qtxt">เหลือ '+Math.max(0,posInfo.lateSlots-posInfo.lateCount)+' ที่ • ไม่กระทบโควต้าหยุด</div></div>';
+      const lateBtn = document.createElement('button'); lateBtn.className='btn-late'; lateBtn.textContent='ขอสาย';
+      lateBtn.disabled = locked || lateFull; lateBtn.onclick = ()=> doSubmit(day.date,'Late');
+      lateRow.appendChild(lateBtn); body.appendChild(lateRow);
+    }
+
+    if(locked){
+      const lockMsg = document.createElement('div'); lockMsg.className='qtxt';
+      lockMsg.style.marginTop='8px'; lockMsg.textContent='🔒 เลยกำหนดเวลาแก้ไขคำขอของเดือนนี้แล้ว';
+      body.appendChild(lockMsg);
+    }
+    document.getElementById('sheetBg').classList.add('show');
+  }
+
+  function closeSheet(){ document.getElementById('sheetBg').classList.remove('show'); }
+  function closeSheetIfBg(e){ if(e.target.id==='sheetBg') closeSheet(); }
+
+  function showToast(msg){
+    const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show');
+    setTimeout(()=>t.classList.remove('show'), 2600);
+  }
+
+function doSubmit(dateStr, type){
+  askConfirm('ยืนยันการส่งคำขอวันที่ ' + dateStr + ' ?', function(){ doSubmitGo(dateStr, type); });
+}
+function doSubmitGo(dateStr, type){
+  closeSheet();
+  cfBusy(true);
+  google.script.run.withSuccessHandler(res=>{
+    cfBusy(false);
+    showToast(res.message);
+    load();
+  }).withFailureHandler(err=>{
+    cfBusy(false);
+    showAlert('เกิดข้อผิดพลาด:\n'+(err && err.message ? err.message : err), '⚠️');
+  }).Shift_submitRequest(dateStr, type);
+}
+function doCancel(dateStr){
+  askConfirm('ยืนยันยกเลิกคำขอวันที่ ' + dateStr + ' ?', function(){ doCancelGo(dateStr); });
+}
+
+function doCancelGo(dateStr){
+  closeSheet();
+  cfBusy(true);
+  google.script.run.withSuccessHandler(res=>{
+    cfBusy(false);
+    showToast(res.message);
+    load();
+  }).withFailureHandler(err=>{
+    cfBusy(false);
+    showAlert('เกิดข้อผิดพลาด:\n'+(err && err.message ? err.message : err), '⚠️');
+  }).Shift_cancelRequest(dateStr);
+}
+  function escSR(s){
+    return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function loadAdhocNotice(){
+    const box = document.getElementById('adhocNotice');
+    if(!box) return;
+    box.innerHTML = '';
+    const forMonth = currentMonth;
+    google.script.run.withSuccessHandler(res=>{
+      if(forMonth !== currentMonth) return;
+      if(!res || !res.ok || !res.notices || !res.notices.length) return;
+      box.innerHTML = '<div class="adhoc-banner">🔧 <b>เดือนนี้มีวันที่ตั้งโควต้าเป็นกรณีพิเศษ '
+        + res.notices.length + ' วัน</b>'
+        + res.notices.map(n=>'<div style="margin-top:4px;">• ' + escSR(n.date) + ' (' + escSR(n.weekdayLabel) + ') — '
+            + escSR(n.detail) + (n.note ? (' <span style="opacity:.85;">📌 ' + escSR(n.note) + '</span>') : '') + '</div>').join('')
+        + '</div>';
+    }).withFailureHandler(()=>{}).Shift_getOverrideNotices(forMonth);
+  }
+  /* ===== แก้โควต้าเฉพาะกิจด้วยการคลิกขวาที่ช่องวันที่ (แอดมินเท่านั้น) =====
+     ใช้ฟังก์ชันฝั่งเซิร์ฟเวอร์ชุดเดียวกับแท็บ "โควต้าเฉพาะกิจ" ในหน้าตั้งค่า
+     ทุกฟังก์ชันเช็ค Shift_isAdmin_() ที่เซิร์ฟเวอร์อยู่แล้ว จึงปลอดภัยแม้หน้าจอถูกงัด */
+  const QM_GROUPS = [
+    { key:'RN',   label:'RN',             posKey:'RN',          cp:true,  er:false },
+    { key:'PNNA', label:'PN/NA (รวมกัน)',  posKey:'PN',          cp:false, er:true  },
+    { key:'HEAD', label:'หัวหน้าแผนก',     posKey:'หัวหน้าแผนก',  cp:true,  er:false }
+  ];
+  let ADHOC_MAP = {};   // { 'YYYY-MM-DD': { RN:{...}, PNNA:{...}, HEAD:{...} } }
+  let qmDate = null;
+
+  // โหลดค่าที่เคยตั้งเฉพาะกิจไว้ของเดือนนี้มาเก็บไว้ เพื่อเติมลงฟอร์มตอนเปิดหน้าต่าง
+  function loadAdhocMap_(){
+    if(!viewData || !viewData.me.isAdmin) return;
+    const forMonth = currentMonth;
+    google.script.run.withSuccessHandler(function(res){
+      if(forMonth !== currentMonth) return;
+      ADHOC_MAP = {};
+      if(res && res.ok && res.items){
+        res.items.forEach(function(it){
+          if(!ADHOC_MAP[it.date]) ADHOC_MAP[it.date] = {};
+          ADHOC_MAP[it.date][it.group] = it;
+        });
+      }
+    }).withFailureHandler(function(){ ADHOC_MAP = {}; }).Shift_getQuotaOverrides(forMonth);
+  }
+
+  function openQuotaModal(dateStr){
+    try{ closeSheet(); }catch(e){}
+    if(!viewData || !viewData.me.isAdmin) return;
+    const day = viewData.days.find(d=>d.date === dateStr);
+    if(!day) return;
+    qmDate = dateStr;
+    document.getElementById('qmTitle').textContent = '🔧 โควต้าเฉพาะกิจ — ' + dateStr + ' (' + day.weekdayLabel + ')';
+
+    const ov = ADHOC_MAP[dateStr] || {};
+    let note = '';
+    let html = '';
+    QM_GROUPS.forEach(function(g){
+      const p = day.byPosition[g.posKey] || {};
+      const raw = ov[g.key] || {};
+      if(raw.note && !note) note = raw.note;
+      const rows = [
+        { f:'maxOff',     l:'วันหยุด (X)', cur:p.maxOff },
+        { f:'shortSlots', l:'เวรสั้น',      cur:p.shortSlots },
+        { f:'cpSlots',    l:'ขึ้น CP',      cur:p.cpSlots,   show:g.cp },
+        { f:'lateSlots',  l:'สาย',          cur:p.lateSlots },
+        { f:'erSlots',    l:'แผนกอื่น',     cur:p.erSlots,   show:g.er }
+      ];
+      html += '<div class="qm-grp"><h4>' + g.label + '</h4>'
+        + '<div class="qm-head"><span>ประเภท</span><span>ปัจจุบัน</span><span>ตั้งใหม่</span></div>';
+      rows.forEach(function(r){
+        if(r.show === false) return;
+        const v = (raw[r.f] === 0 || raw[r.f]) ? raw[r.f] : '';
+        html += '<div class="qm-row"><span>' + r.l + '</span>'
+          + '<span class="cur">' + (r.cur == null ? '-' : r.cur) + '</span>'
+          + '<input type="number" min="0" data-g="' + g.key + '" data-f="' + r.f + '" value="' + v + '" placeholder="—"></div>';
+      });
+      html += '</div>';
+    });
+    document.getElementById('qmBody').innerHTML = html;
+    document.getElementById('qmNote').value = note;
+    document.getElementById('qmBg').classList.add('show');
+  }
+
+  function qmClose(){ document.getElementById('qmBg').classList.remove('show'); }
+
+  function qmFillZero(){
+    document.querySelectorAll('#qmBody input').forEach(function(inp){ inp.value = 0; });
+  }
+
+  function qmSave(){
+    if(!qmDate) return;
+    const note = document.getElementById('qmNote').value.trim();
+    const items = [];
+    QM_GROUPS.forEach(function(g){
+      const it = { date:qmDate, group:g.key, note:note,
+                   maxOff:'', shortSlots:'', cpSlots:'', lateSlots:'', erSlots:'' };
+      document.querySelectorAll('#qmBody input[data-g="' + g.key + '"]').forEach(function(inp){
+        it[inp.dataset.f] = (inp.value === '') ? '' : Math.max(0, Number(inp.value) || 0);
+      });
+      items.push(it);
+    });
+    google.script.run.withSuccessHandler(function(res){
+      if(!res || !res.ok){ showToast((res && res.message) || 'บันทึกไม่สำเร็จ'); return; }
+      qmClose();
+      if(res.conflicts && res.conflicts.length){
+              showAlert('บันทึกแล้ว แต่พบคำขอเดิมที่เกินโควต้าใหม่ (ระบบไม่ได้ลบให้)\n\n'
+          + res.conflicts.map(function(c){
+              return c.date + ' · ' + c.groupLabel + ' · ' + c.typeLabel
+                + ' : มี ' + c.count + ' คน เกินโควต้าใหม่ ' + c.max + ' คน\n   → ' + c.names.join(', ');
+            }).join('\n\n')
+                  + '\n\nกรุณาไปยกเลิกคำขอที่หน้าตั้งค่า → แท็บ "แก้ไขคำขอแทนพนักงาน"', '⚠️');
+      } else {
+        showToast('บันทึกโควต้าเฉพาะกิจเรียบร้อย');
+      }
+      load();   // โหลดปฏิทินใหม่ ตัวเลขและป้าย 🔧 จะอัปเดตทันที
+    }).withFailureHandler(function(err){
+      showToast('เกิดข้อผิดพลาด: ' + (err && err.message ? err.message : err));
+    }).Shift_saveQuotaOverrides(items);
+  }
+
+    function qmDelete(){
+    if(!qmDate) return;
+    askConfirm('ลบโควต้าเฉพาะกิจของวันที่ ' + qmDate + ' ทั้งหมด?\n\nวันนั้นจะกลับไปใช้โควต้าประจำตามเดิม', function(){
+      google.script.run.withSuccessHandler(function(res){
+        qmClose();
+        showToast((res && res.message) || 'ลบไม่สำเร็จ');
+        load();
+      }).withFailureHandler(function(err){
+        showAlert('เกิดข้อผิดพลาด: ' + (err && err.message ? err.message : err), '⚠️');
+      }).Shift_deleteQuotaOverride(qmDate, '');
+    });
+  }
+
+  // กด Esc ปิดหน้าต่าง
+  document.addEventListener('keydown', function(e){
+    if(e.key === 'Escape') qmClose();
+  });
+
+  // init() ถูกเรียกจากแผงรหัสผ่านด้านล่างแทน (หลังใส่รหัสถูกต้อง)
+</script>
+
+<script>
+(function () {
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();
+var _cfCb = null;
+function askConfirm(msg, onYes){
+  _cfCb = onYes;
+  var bg = document.getElementById('cfBg');
+  document.getElementById('cfIcon').textContent = '❓';
+  document.getElementById('cfMsg').textContent = msg;
+  bg.classList.remove('alert');
+  bg.classList.add('show');
+}
+function showAlert(msg, icon){
+  _cfCb = null;
+  var bg = document.getElementById('cfBg');
+  document.getElementById('cfIcon').textContent = icon || 'ℹ️';
+  document.getElementById('cfMsg').textContent = msg;
+  bg.classList.add('alert');
+  bg.classList.add('show');
+}
+function cfClose(){
+  document.getElementById('cfBg').classList.remove('show');
+  _cfCb = null;
+}
+function cfYes(){
+  var cb = _cfCb;
+  cfClose();
+  if (cb) cb();
+}
+function cfBusy(on){
+  var b = document.getElementById('cfBusy');
+  if (b) b.classList.toggle('show', !!on);
+}
+
+</script>
+<div class="cf-bg" id="cfBg">
+  <div class="cf">
+    <div class="cf-icon" id="cfIcon">❓</div>
+    <div class="cf-msg" id="cfMsg"></div>
+    <div class="cf-acts">
+      <button class="cf-no" onclick="cfClose()">ยกเลิก</button>
+      <button class="cf-yes" onclick="cfYes()">ตกลง</button>
+    </div>
+  </div>
+</div>
+<div class="cf-busy" id="cfBusy">⏳ กำลังบันทึก...</div>
+</body>
+</html>
+
