@@ -1067,6 +1067,118 @@ if (document.readyState === 'loading') {
       <select id="ojtCourseSelect" class="btn-sm" style="cursor:pointer;"></select>
       <button class="btn-sm" onclick="generateOjtForm()">📝 สร้างแบบฟอร์ม</button>
     </div>
+
+    <div style="margin-bottom:16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;background:#f9fafb;border:1px solid var(--border);border-radius:10px;padding:10px 14px;">
+      <span style="font-size:13px;font-weight:600;color:var(--muted);">Top 5 กลุ่มอาการประจำเดือน (หน้าภาพรวมพนักงาน):</span>
+      <input type="file" id="dxFile" accept=".xlsx,.xls,.csv" style="display:none" onchange="dxUploadPick(this)">
+      <button class="btn-sm" onclick="document.getElementById('dxFile').click()">📤 อัปโหลดไฟล์ Top 5 ประจำเดือน</button>
+      <span style="font-size:12px;color:var(--muted);">ใช้ชีต "กลุ่มอาการ_รายเดือน" (หัวตาราง: กลุ่มอาการ | ม.ค. | ก.พ. ...)</span>
+      <div id="dxUploadBox" class="hidden" style="width:100%"></div>
+    </div>
+    <script>
+    var DX_UP = null;
+    function dxLoadXlsx(cb){
+      if (window.XLSX) return cb();
+      var sc = document.createElement('script');
+      sc.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+      sc.onload = cb;
+      sc.onerror = function(){ dxUpMsg('โหลดตัวอ่านไฟล์ Excel ไม่สำเร็จ กรุณาตรวจอินเทอร์เน็ตแล้วลองใหม่', true); };
+      document.head.appendChild(sc);
+    }
+    function dxUpMsg(t, err){
+      var b = document.getElementById('dxUploadBox');
+      b.classList.remove('hidden');
+      b.innerHTML = '<div style="font-size:13px;color:' + (err ? '#b91c1c' : '#166534') + '">' + dxEsc(t) + '</div>';
+    }
+    function dxUploadPick(inp){
+      var f = inp.files && inp.files[0];
+      inp.value = '';
+      if (!f) return;
+      dxUpMsg('กำลังอ่านไฟล์ ' + f.name + ' …');
+      dxLoadXlsx(function(){
+        var rd = new FileReader();
+        rd.onload = function(e){
+          try { dxParse(new Uint8Array(e.target.result)); }
+          catch (er) { dxUpMsg('อ่านไฟล์ไม่สำเร็จ: ' + (er && er.message ? er.message : er), true); }
+        };
+        rd.readAsArrayBuffer(f);
+      });
+    }
+    function dxParse(buf){
+      var wb = XLSX.read(buf, { type: 'array' });
+      var MS = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+      // เลือกชีต: ชื่อ "กลุ่มอาการ_รายเดือน" ก่อน ไม่งั้นลองทุกชีตจนเจอหัวตารางเดือน
+      var names = wb.SheetNames.slice();
+      names.sort(function(a, b){ return (b.indexOf('กลุ่มอาการ_รายเดือน') === 0) - (a.indexOf('กลุ่มอาการ_รายเดือน') === 0); });
+      for (var si = 0; si < names.length; si++){
+        var rows = XLSX.utils.sheet_to_json(wb.Sheets[names[si]], { header: 1, defval: '' });
+        var hi = -1, colOf = {};
+        for (var r = 0; r < Math.min(rows.length, 15); r++){
+          var map = {}, cnt = 0;
+          for (var c = 1; c < rows[r].length; c++){
+            var t = String(rows[r][c]).trim();
+            var mi = MS.indexOf(t);
+            if (mi >= 0 && map[mi] === undefined){ map[mi] = c; cnt++; }
+          }
+          if (cnt >= 3){ hi = r; colOf = map; break; }
+        }
+        if (hi < 0) continue;
+        var year = 0;
+        for (var r2 = 0; r2 < hi; r2++){
+          var mt = String(rows[r2][0] || '').match(/25\d\d/);
+          if (mt){ year = Number(mt[0]); break; }
+        }
+        var out = [];
+        for (var r3 = hi + 1; r3 < rows.length; r3++){
+          var nm = String(rows[r3][0] || '').trim();
+          if (!nm) break;
+          if (nm.indexOf('รวม') === 0 || nm.indexOf('ทั้งหมด') === 0) continue;
+          var v = [];
+          for (var m = 0; m < 12; m++){
+            var n = colOf[m] === undefined ? 0 : Number(rows[r3][colOf[m]]);
+            v.push(isNaN(n) ? 0 : n);
+          }
+          out.push({ name: nm, v: v });
+        }
+        if (!out.length) continue;
+        DX_UP = { year: year, rows: out, sheet: names[si], months: Object.keys(colOf).map(Number).sort(function(a, b){ return a - b; }) };
+        return dxPreview(MS);
+      }
+      throw new Error('ไม่พบตารางที่มีหัวคอลัมน์เดือน (ม.ค. ก.พ. ...) ในไฟล์นี้');
+    }
+    function dxPreview(MS){
+      var u = DX_UP, b = document.getElementById('dxUploadBox');
+      b.classList.remove('hidden');
+      var h = '<div style="font-size:13px;margin:6px 0">ชีต <b>' + dxEsc(u.sheet) + '</b> · ' + u.rows.length + ' กลุ่มอาการ · เดือนที่พบ ' +
+              u.months.map(function(m){ return MS[m]; }).join(' ') + '</div>' +
+              '<div style="font-size:13px;margin:6px 0">ปี พ.ศ. <input id="dxYear" type="number" value="' + (u.year || '') + '" style="width:84px;padding:4px 6px"> ' +
+              '<span style="color:var(--muted)">(ตรวจจากหัวไฟล์ แก้ได้)</span></div>' +
+              '<div class="table-scroll-wrap" style="max-height:260px"><table class="skill-table"><thead><tr><th>กลุ่มอาการ</th>' +
+              u.months.map(function(m){ return '<th>' + MS[m] + '</th>'; }).join('') + '</tr></thead><tbody>';
+      u.rows.forEach(function(r){
+        h += '<tr><td>' + dxEsc(r.name) + '</td>' + u.months.map(function(m){ return '<td>' + (r.v[m] || 0).toLocaleString() + '</td>'; }).join('') + '</tr>';
+      });
+      h += '</tbody></table></div>' +
+           '<div style="margin-top:8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">' +
+           '<button class="btn-primary" id="dxSaveBtn" onclick="dxUploadSave()">✔ ยืนยันบันทึก (แทนที่ข้อมูลเดิมทั้งหมด)</button>' +
+           '<button class="btn-sm" onclick="dxUploadCancel()">ยกเลิก</button></div>';
+      b.innerHTML = h;
+    }
+    function dxUploadCancel(){ DX_UP = null; document.getElementById('dxUploadBox').classList.add('hidden'); }
+    function dxUploadSave(){
+      if (!DX_UP) return;
+      var btn = document.getElementById('dxSaveBtn');
+      btn.disabled = true; btn.textContent = 'กำลังบันทึก…';
+      DX_UP.year = Number(document.getElementById('dxYear').value) || 0;
+      google.script.run.withSuccessHandler(function(r){
+        DX_UP = null;
+        dxUpMsg('✔ บันทึกแล้ว ' + r.count + ' กลุ่มอาการ กล่อง Top 5 ในหน้าภาพรวมอัปเดตแล้ว');
+      }).withFailureHandler(function(e){
+        btn.disabled = false; btn.textContent = '✔ ยืนยันบันทึก (แทนที่ข้อมูลเดิมทั้งหมด)';
+        dxUpMsg('บันทึกไม่สำเร็จ: ' + (e && e.message ? e.message : e), true);
+      }).saveTopDiagnosis({ year: DX_UP.year, rows: DX_UP.rows });
+    }
+    </script>
     <div id="codeStockBanner" class="hidden" style="margin-bottom:16px;padding:10px 16px;border-radius:10px;font-size:13px;font-weight:700;"></div>
 
     <div id="redemptionsPanel" class="hidden" style="margin-bottom:16px;background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;padding:14px 16px;">

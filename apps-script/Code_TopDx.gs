@@ -13,6 +13,7 @@
  *     แถวที่ 1 เป็นหัวตาราง   กลุ่มอาการ | ม.ค. | ก.พ. | มี.ค. | ... | ธ.ค.
  *     แถวถัดไปใส่ชื่อกลุ่มอาการและจำนวนครั้งของแต่ละเดือน
  *     ถ้ามีชีตนี้ ระบบจะใช้ข้อมูลจากชีตแทนตัวเลขที่ฝังไว้ในโค้ดทันที
+ *   ทาง A2 (ปุ่มอัปโหลด) หน้าแอดมินมีปุ่ม "อัปโหลดไฟล์ Top 5 ประจำเดือน" อ่านไฟล์ Excel/CSV แล้วเขียนชีต TopDiagnosis ให้เอง (saveTopDiagnosis)
  *   ทาง B  แก้ตัวเลขในตาราง DX_DATA ด้านล่างนี้โดยตรง แล้ว Deploy ใหม่
  */
 
@@ -20,7 +21,16 @@ var DX_SHEET = 'TopDiagnosis';
 
 var DX_MONTHS = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
 var DX_MONTHS_FULL = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
-var DX_YEAR = 2569;
+var DX_YEAR = 2569;               // ค่าเริ่มต้น ถ้าอัปโหลดไฟล์ ระบบจะเก็บปีของไฟล์ไว้ใน Script Properties คีย์ DX_YEAR
+var DX_YEAR_PROP = 'DX_YEAR';
+
+function DX_year_(){
+  try{
+    var y = Number(PropertiesService.getScriptProperties().getProperty(DX_YEAR_PROP));
+    if (y >= 2500 && y <= 2700) return y;
+  }catch(e){}
+  return DX_YEAR;
+}
 
 /* ตัวเลขจากไฟล์ สถิติผู้ป่วยตามกลุ่มอาการ อายุรกรรม ม.ค. ถึง ส.ค. 2569
    นับจำนวนครั้งที่เข้ารับบริการ 1 ครั้งนับ 1 กลุ่มอาการหลัก */
@@ -121,7 +131,7 @@ function getTopDiagnosis(monthIndex){
   return {
     ok: true,
     monthIndex: m,
-    monthLabel: DX_MONTHS_FULL[m] + ' ' + DX_YEAR,
+    monthLabel: DX_MONTHS_FULL[m] + ' ' + DX_year_(),
     total: total,
     topShare: total ? Math.round(sumTop / total * 100) : 0,
     items: items,
@@ -132,4 +142,43 @@ function getTopDiagnosis(monthIndex){
 /** ใช้ทดสอบใน Editor กด Run แล้วดูใน Execution log */
 function DX_test(){
   Logger.log(JSON.stringify(getTopDiagnosis(), null, 2));
+}
+
+/**
+ * บันทึกข้อมูลที่อัปโหลดจากหน้าแอดมิน ลงชีต TopDiagnosis (เขียนทับทั้งชีต)
+ * @param {{year:number, rows:Array<{name:string, v:number[]}>}} payload  v มี 12 ค่า (ม.ค. ถึง ธ.ค.)
+ */
+function saveTopDiagnosis(payload){
+  requireAdmin_();
+  if (!payload || !Array.isArray(payload.rows) || !payload.rows.length) throw new Error('ไม่พบข้อมูลที่จะบันทึก');
+  if (payload.rows.length > 100) throw new Error('จำนวนแถวมากเกินไป');
+
+  var rows = [];
+  payload.rows.forEach(function(r){
+    var name = String((r && r.name) || '').trim();
+    if (!name || name.indexOf('รวม') === 0) return;
+    var nums = [];
+    for (var m = 0; m < 12; m++){
+      var n = Number(r.v && r.v[m]);
+      nums.push(isNaN(n) || n < 0 ? 0 : Math.round(n));
+    }
+    rows.push([name].concat(nums));
+  });
+  if (!rows.length) throw new Error('ไม่พบแถวกลุ่มอาการที่ใช้ได้');
+
+  var lock = LockService.getScriptLock();
+  lock.waitLock(15000);
+  try{
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sh = ss.getSheetByName(DX_SHEET) || ss.insertSheet(DX_SHEET);
+    sh.clearContents();
+    sh.getRange(1, 1, 1, 13).setValues([['กลุ่มอาการ'].concat(DX_MONTHS)]);
+    sh.getRange(2, 1, rows.length, 13).setValues(rows);
+    sh.setFrozenRows(1);
+    var y = Number(payload.year);
+    if (y >= 2500 && y <= 2700) PropertiesService.getScriptProperties().setProperty(DX_YEAR_PROP, String(y));
+  } finally {
+    lock.releaseLock();
+  }
+  return { ok: true, count: rows.length };
 }
